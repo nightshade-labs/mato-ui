@@ -1,0 +1,6 @@
+{
+  "name": "Demo Solana Token",
+  "symbol": "tSOL",
+  "description": "A Solana demo token",
+  "image": "https://cdn.jsdelivr.net/gh/eki-solana/eki/public/solana-sol-logo.png"
+}

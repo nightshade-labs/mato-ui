@@ -1,0 +1,56 @@
+import * as anchor from "@coral-xyz/anchor";
+import { clusterApiUrl, PublicKey } from "@solana/web3.js";
+import { getProgram } from "../anchor/src";
+
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { idWallet } from "./helpers";
+
+process.env.ANCHOR_PROVIDER_URL = clusterApiUrl("devnet");
+// process.env.ANCHOR_PROVIDER_URL = "http://127.0.0.1:8899";
+process.env.ANCHOR_WALLET = idWallet;
+
+// Need to first run create mint script and insert the mint addresses here
+const exits = new PublicKey("AT2EXhZkHUPZGcDEBMBb1nZoRwqvugupUaDV5n5Jb59Z");
+const prices = new PublicKey("E6atgb7vjtya69tRpdGxDRPUruyMZjP8Y5CmvBano3X8");
+const overflows = new PublicKey("5ziM9ssXKrN4zT4SaYxBcbdvZyEMg2xorT9HpVcQ943J");
+
+(async () => {
+  const provider = anchor.AnchorProvider.env();
+  const program = getProgram(provider);
+
+  const [market] = PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("market"),
+      exits.toBuffer(),
+      prices.toBuffer(),
+      overflows.toBuffer(),
+    ],
+    program.programId
+  );
+
+  const [bookkeeping] = PublicKey.findProgramAddressSync(
+    [Buffer.from("bookkeeping"), market.toBuffer()],
+    program.programId
+  );
+
+  const accounts: Record<string, PublicKey> = {
+    tokenProgram: TOKEN_PROGRAM_ID,
+    market: market,
+    bookkeeping: bookkeeping,
+    exits: exits,
+    prices: prices,
+    overflows: overflows,
+  };
+
+  while (true) {
+    await program.methods
+      .updateBookkeeping()
+      .accountsPartial({ ...accounts })
+      .rpc({ skipPreflight: true });
+
+    console.log("Books updated");
+    await new Promise((f) => setTimeout(f, 20 * 60 * 1000));
+  }
+})()
+  .then(() => console.log("Market initialized!"))
+  .catch((e) => console.log(e));
