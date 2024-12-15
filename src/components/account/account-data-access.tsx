@@ -84,7 +84,7 @@ export function useTransferSol({ address }: { address: PublicKey }) {
         // Send transaction and await for signature
         await connection.confirmTransaction(
           { signature, ...latestBlockhash },
-          "confirmed"
+          "confirmed",
         );
 
         console.log(signature);
@@ -139,7 +139,7 @@ export function useRequestAirdrop({ address }: { address: PublicKey }) {
 
       await connection.confirmTransaction(
         { signature, ...latestBlockhash },
-        "confirmed"
+        "confirmed",
       );
       return signature;
     },
