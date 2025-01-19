@@ -29,8 +29,8 @@ const prices = new PublicKey("4y1XPiQex3TD3TqXXN4UMfkGJRiEgJj81JEDZA1aqGxp");
 
   const accounts: Record<string, PublicKey> = {
     tokenProgram: TOKEN_PROGRAM_ID,
-    // market: market,
-    // bookkeeping: bookkeeping,
+    market: market,
+    bookkeeping: bookkeeping,
     exits: exits,
     prices: prices,
   };
