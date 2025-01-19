@@ -32,25 +32,17 @@ export function useMatoProgram() {
   const publicKey = provider.publicKey ?? PublicKey.default;
 
   let exitsAddress = new PublicKey(
-    "AT2EXhZkHUPZGcDEBMBb1nZoRwqvugupUaDV5n5Jb59Z"
+    "4ChXLnj9r3KBuxxv6C2ii9jsmDWJVKyTCRLysPtykHWY"
   );
   let pricesAddress = new PublicKey(
-    "E6atgb7vjtya69tRpdGxDRPUruyMZjP8Y5CmvBano3X8"
-  );
-  let overflowAddress = new PublicKey(
-    "5ziM9ssXKrN4zT4SaYxBcbdvZyEMg2xorT9HpVcQ943J"
+    "4y1XPiQex3TD3TqXXN4UMfkGJRiEgJj81JEDZA1aqGxp"
   );
 
-  let solMint = new PublicKey("3gBEWKo5LzJchbYHPNj7RvpWgnVB82NRxTDwufb3LLpG");
-  let usdcMint = new PublicKey("eZPu9HgerixxXzetscuTzY5wFMjxDMMMtcNftzeRPr3");
+  let solMint = new PublicKey("ApyFDKqwHGcghiFVQLJ5z6XUcTBjVtasjxjnF22Pvpzm");
+  let usdcMint = new PublicKey("2oC4Uu9mQn1KU8FYfL8d5ECi4u2ESQKbb3xTb4wmtJnq");
 
   let [marketPda] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from("market"),
-      exitsAddress.toBuffer(),
-      pricesAddress.toBuffer(),
-      overflowAddress.toBuffer(),
-    ],
+    [Buffer.from("market"), exitsAddress.toBuffer(), pricesAddress.toBuffer()],
     program.programId
   );
 
@@ -133,7 +125,6 @@ export function useMatoProgram() {
           // bookkeeping: bookkeeping,
           exits: exitsAddress,
           prices: pricesAddress,
-          overflows: overflowAddress,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({ skipPreflight: true }),
@@ -166,7 +157,6 @@ export function useMatoProgram() {
           // bookkeeping: bookkeeping,
           exits: exitsAddress,
           prices: pricesAddress,
-          overflows: overflowAddress,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({ skipPreflight: true }),
@@ -209,7 +199,6 @@ export function useMatoProgram() {
           // bookkeeping: bookkeepingPda,
           exits: exitsAddress,
           prices: pricesAddress,
-          overflows: overflowAddress,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({ skipPreflight: true });
@@ -250,7 +239,6 @@ export function useMatoProgram() {
           // bookkeeping: bookkeeping,
           exits: exitsAddress,
           prices: pricesAddress,
-          overflows: overflowAddress,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({ skipPreflight: true });
@@ -292,7 +280,6 @@ export function useMatoProgram() {
           // bookkeeping: bookkeeping,
           exits: exitsAddress,
           prices: pricesAddress,
-          overflows: overflowAddress,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({ skipPreflight: true });
@@ -334,7 +321,6 @@ export function useMatoProgram() {
           // bookkeeping: bookkeeping,
           exits: exitsAddress,
           prices: pricesAddress,
-          overflows: overflowAddress,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({ skipPreflight: true });

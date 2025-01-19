@@ -14,14 +14,10 @@ export default function MatoLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
-        <ClusterProvider>
-          <SolanaProvider>
-            <UiLayout links={links}>{children}</UiLayout>
-          </SolanaProvider>
-        </ClusterProvider>
-      </body>
-    </html>
+    <ClusterProvider>
+      <SolanaProvider>
+        <UiLayout links={links}>{children}</UiLayout>
+      </SolanaProvider>
+    </ClusterProvider>
   );
 }

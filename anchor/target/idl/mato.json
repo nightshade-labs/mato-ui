@@ -1,5 +1,5 @@
 {
-  "address": "9BiMFA2PjRTUQ3aDy3Yr8EetY8Hx6iUccbakxWeC4LHR",
+  "address": "C1T92ZWXrzEpBfu8hdwrEyfcD1Ndbdn7YRTszxkkZKzx",
   "metadata": {
     "name": "mato",
     "version": "0.1.0",
@@ -32,10 +32,6 @@
               {
                 "kind": "account",
                 "path": "prices"
-              },
-              {
-                "kind": "account",
-                "path": "overflows"
               }
             ]
           }
@@ -62,10 +58,6 @@
         },
         {
           "name": "prices",
-          "writable": true
-        },
-        {
-          "name": "overflows",
           "writable": true
         },
         {
@@ -164,10 +156,6 @@
               {
                 "kind": "account",
                 "path": "prices"
-              },
-              {
-                "kind": "account",
-                "path": "overflows"
               }
             ]
           }
@@ -251,10 +239,6 @@
         },
         {
           "name": "prices",
-          "writable": true
-        },
-        {
-          "name": "overflows",
           "writable": true
         },
         {
@@ -360,10 +344,6 @@
               {
                 "kind": "account",
                 "path": "prices"
-              },
-              {
-                "kind": "account",
-                "path": "overflows"
               }
             ]
           }
@@ -450,10 +430,6 @@
           "writable": true
         },
         {
-          "name": "overflows",
-          "writable": true
-        },
-        {
           "name": "token_program"
         },
         {
@@ -523,10 +499,6 @@
               {
                 "kind": "account",
                 "path": "prices"
-              },
-              {
-                "kind": "account",
-                "path": "overflows"
               }
             ]
           }
@@ -593,10 +565,6 @@
         },
         {
           "name": "prices",
-          "writable": true
-        },
-        {
-          "name": "overflows",
           "writable": true
         },
         {
@@ -682,10 +650,6 @@
               {
                 "kind": "account",
                 "path": "prices"
-              },
-              {
-                "kind": "account",
-                "path": "overflows"
               }
             ]
           }
@@ -755,10 +719,6 @@
           "writable": true
         },
         {
-          "name": "overflows",
-          "writable": true
-        },
-        {
           "name": "token_program"
         },
         {
@@ -803,10 +763,6 @@
           "writable": true
         },
         {
-          "name": "overflows",
-          "writable": true
-        },
-        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
@@ -841,10 +797,6 @@
               {
                 "kind": "account",
                 "path": "prices"
-              },
-              {
-                "kind": "account",
-                "path": "overflows"
               }
             ]
           }
@@ -887,10 +839,6 @@
         },
         {
           "name": "prices",
-          "writable": true
-        },
-        {
-          "name": "overflows",
           "writable": true
         },
         {
@@ -939,10 +887,6 @@
               {
                 "kind": "account",
                 "path": "prices"
-              },
-              {
-                "kind": "account",
-                "path": "overflows"
               }
             ]
           }
@@ -968,9 +912,6 @@
         },
         {
           "name": "prices"
-        },
-        {
-          "name": "overflows"
         },
         {
           "name": "token_program"
@@ -1007,10 +948,6 @@
               {
                 "kind": "account",
                 "path": "prices"
-              },
-              {
-                "kind": "account",
-                "path": "overflows"
               }
             ]
           }
@@ -1037,10 +974,6 @@
         },
         {
           "name": "prices",
-          "writable": true
-        },
-        {
-          "name": "overflows",
           "writable": true
         },
         {
@@ -1075,10 +1008,6 @@
               {
                 "kind": "account",
                 "path": "prices"
-              },
-              {
-                "kind": "account",
-                "path": "overflows"
               }
             ]
           }
@@ -1105,10 +1034,6 @@
         },
         {
           "name": "prices",
-          "writable": true
-        },
-        {
-          "name": "overflows",
           "writable": true
         },
         {
@@ -1179,10 +1104,6 @@
               {
                 "kind": "account",
                 "path": "prices"
-              },
-              {
-                "kind": "account",
-                "path": "overflows"
               }
             ]
           }
@@ -1250,10 +1171,6 @@
         },
         {
           "name": "prices",
-          "writable": true
-        },
-        {
-          "name": "overflows",
           "writable": true
         },
         {
@@ -1326,10 +1243,6 @@
               {
                 "kind": "account",
                 "path": "prices"
-              },
-              {
-                "kind": "account",
-                "path": "overflows"
               }
             ]
           }
@@ -1400,10 +1313,6 @@
           "writable": true
         },
         {
-          "name": "overflows",
-          "writable": true
-        },
-        {
           "name": "token_program"
         },
         {
@@ -1430,10 +1339,6 @@
     {
       "name": "Market",
       "discriminator": [219, 190, 213, 55, 0, 227, 198, 154]
-    },
-    {
-      "name": "Overflows",
-      "discriminator": [221, 30, 107, 150, 183, 77, 216, 42]
     },
     {
       "name": "PositionA",
@@ -1488,11 +1393,11 @@
         "fields": [
           {
             "name": "a_per_b",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "b_per_a",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "no_trade_slots",
@@ -1500,14 +1405,6 @@
           },
           {
             "name": "last_slot",
-            "type": "u64"
-          },
-          {
-            "name": "overflows_a_per_b",
-            "type": "u64"
-          },
-          {
-            "name": "overflows_b_per_a",
             "type": "u64"
           },
           {
@@ -1529,13 +1426,13 @@
           {
             "name": "token_a",
             "type": {
-              "array": ["u64", 420000]
+              "array": ["u128", 250000]
             }
           },
           {
             "name": "token_b",
             "type": {
-              "array": ["u64", 420000]
+              "array": ["u128", 250000]
             }
           },
           {
@@ -1556,11 +1453,11 @@
         "fields": [
           {
             "name": "token_a_volume",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "token_b_volume",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "end_slot_interval",
@@ -1579,30 +1476,6 @@
           {
             "name": "bump",
             "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "Overflows",
-      "serialization": "bytemuck",
-      "repr": {
-        "kind": "c"
-      },
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "a_per_b",
-            "type": {
-              "array": ["u64", 420000]
-            }
-          },
-          {
-            "name": "b_per_a",
-            "type": {
-              "array": ["u64", 420000]
-            }
           }
         ]
       }
@@ -1634,7 +1507,7 @@
           },
           {
             "name": "bookkeeping",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "no_trade_slots",
@@ -1642,10 +1515,6 @@
           },
           {
             "name": "total_no_trades",
-            "type": "u64"
-          },
-          {
-            "name": "overflows",
             "type": "u64"
           },
           {
@@ -1682,7 +1551,7 @@
           },
           {
             "name": "bookkeeping",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "no_trade_slots",
@@ -1690,10 +1559,6 @@
           },
           {
             "name": "total_no_trades",
-            "type": "u64"
-          },
-          {
-            "name": "overflows",
             "type": "u64"
           },
           {
@@ -1715,19 +1580,19 @@
           {
             "name": "a_per_b",
             "type": {
-              "array": ["u64", 420000]
+              "array": ["u128", 250000]
             }
           },
           {
             "name": "b_per_a",
             "type": {
-              "array": ["u64", 420000]
+              "array": ["u128", 250000]
             }
           },
           {
             "name": "no_trade_slots",
             "type": {
-              "array": ["u64", 420000]
+              "array": ["u64", 250000]
             }
           }
         ]
