@@ -87,7 +87,7 @@ export function UiLayout({
         </Suspense>
         <Toaster />
       </div>
-      <footer className="text-center p-4 bg-red-100 w-full">
+      {/* <footer className="text-center p-4 bg-red-100 w-full">
         <aside>
           <Link
             className="text-xl mr-8"
@@ -100,7 +100,7 @@ export function UiLayout({
             </div>
           </Link>
         </aside>
-      </footer>
+      </footer> */}
     </div>
   );
 }

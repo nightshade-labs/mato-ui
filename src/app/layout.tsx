@@ -1,18 +1,15 @@
+import { Footer } from "@/components/landing/footer";
 import "./globals.css";
-import { ClusterProvider } from "@/components/cluster/cluster-data-access";
-import { SolanaProvider } from "@/components/solana/solana-provider";
-import { UiLayout } from "@/components/ui/ui-layout";
 import { ReactQueryProvider } from "./react-query-provider";
+import { ThemeProvider } from "@/components/ui/theme-provider";
+import { Inter } from "next/font/google";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: "Mato",
   description: "A sandwich-resistant DEX",
 };
-
-const links: { label: string; path: string }[] = [
-  { label: "Positions", path: "/positions" },
-  { label: "Account", path: "/account" },
-];
 
 export default function RootLayout({
   children,
@@ -21,13 +18,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body className={inter.className}>
         <ReactQueryProvider>
-          <ClusterProvider>
-            <SolanaProvider>
-              <UiLayout links={links}>{children}</UiLayout>
-            </SolanaProvider>
-          </ClusterProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Footer />
+          </ThemeProvider>
         </ReactQueryProvider>
       </body>
     </html>
