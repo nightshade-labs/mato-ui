@@ -44,7 +44,7 @@ export function createMint(umi: Umi) {
     name: "Mato USDC",
     symbol: "matoUSDC",
     updateAuthority: umi.payer,
-    uri: "https://cdn.jsdelivr.net/gh/nightshade-labs/mato-ui/scripts/tokenConfig/tUSDC.json",
+    uri: "https://cdn.jsdelivr.net/gh/nightshade-labs/mato-ui/scripts/tokenConfig/matoUSDC.json",
     sellerFeeBasisPoints: percentAmount(0),
     decimals: some(6),
   }).sendAndConfirm(umi);
@@ -54,7 +54,7 @@ export function createMint(umi: Umi) {
     name: "Mato SOL",
     symbol: "matoSOL",
     updateAuthority: umi.payer,
-    uri: "https://cdn.jsdelivr.net/gh/nightshade-labs/mato-ui/scripts/tokenConfig/tSOL.json",
+    uri: "https://cdn.jsdelivr.net/gh/nightshade-labs/mato-ui/scripts/tokenConfig/matoSOL.json",
     sellerFeeBasisPoints: percentAmount(0),
     decimals: some(9),
   }).sendAndConfirm(umi);
