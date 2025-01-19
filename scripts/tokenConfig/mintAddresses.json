@@ -1,4 +1,4 @@
 {
-  "sol": "https://explorer.solana.com/address/3gBEWKo5LzJchbYHPNj7RvpWgnVB82NRxTDwufb3LLpG?cluster=devnet",
-  "usdc": "https://explorer.solana.com/address/eZPu9HgerixxXzetscuTzY5wFMjxDMMMtcNftzeRPr3?cluster=devnet"
+  "tsol": "https://explorer.solana.com/address/3gBEWKo5LzJchbYHPNj7RvpWgnVB82NRxTDwufb3LLpG?cluster=devnet",
+  "tusdc": "https://explorer.solana.com/address/eZPu9HgerixxXzetscuTzY5wFMjxDMMMtcNftzeRPr3?cluster=devnet"
 }

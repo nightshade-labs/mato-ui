@@ -41,16 +41,20 @@ export function createMint(umi: Umi) {
 
   await createFungible(umi, {
     mint: usdcMint,
-    name: "USDC",
-    uri: "https://cdn.jsdelivr.net/gh/eki-solana/eki/anchor/scripts/tokenConfig/tUSDC.json",
+    name: "Mato USDC",
+    symbol: "matoUSDC",
+    updateAuthority: umi.payer,
+    uri: "https://cdn.jsdelivr.net/gh/nightshade-labs/mato-ui/scripts/tokenConfig/tUSDC.json",
     sellerFeeBasisPoints: percentAmount(0),
     decimals: some(6),
   }).sendAndConfirm(umi);
 
   await createFungible(umi, {
     mint: solMint,
-    name: "SOL",
-    uri: "https://cdn.jsdelivr.net/gh/eki-solana/eki/anchor/scripts/tokenConfig/tSOL.json",
+    name: "Mato SOL",
+    symbol: "matoSOL",
+    updateAuthority: umi.payer,
+    uri: "https://cdn.jsdelivr.net/gh/nightshade-labs/mato-ui/scripts/tokenConfig/tSOL.json",
     sellerFeeBasisPoints: percentAmount(0),
     decimals: some(9),
   }).sendAndConfirm(umi);
@@ -59,7 +63,7 @@ export function createMint(umi: Umi) {
 
   const tokenSolMintLink = getExplorerLink(
     "address",
-    usdcMint.publicKey.toString(),
+    solMint.publicKey.toString(),
     "devnet"
   );
   console.log(`✅ Look at the token mint again: ${tokenSolMintLink}!`);
@@ -70,6 +74,9 @@ export function createMint(umi: Umi) {
     "devnet"
   );
   console.log(`✅ Look at the token mint again: ${tokenUsdcMintLink}!`);
+
+  console.log(`USDC Mint: ${usdcMint}!`);
+  console.log(`SOL Mint: ${solMint}!`);
 })()
   .then(() => console.log("Token minted!"))
   .catch((e) => console.log(e));
