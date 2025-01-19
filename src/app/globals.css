@@ -4,11 +4,12 @@
 
 html,
 body {
+  overscroll-behavior-y: none;
   height: 100%;
 }
 
 .wallet-adapter-button-trigger {
-  background: rgb(211, 56, 180) !important;
+  background: rgb(22, 163, 74) !important;
   border-radius: 8px !important;
   padding-left: 16px !important;
   padding-right: 16px !important;

@@ -4,8 +4,8 @@ import { SolanaProvider } from "@/components/solana/solana-provider";
 import { UiLayout } from "@/components/ui/ui-layout";
 
 const links: { label: string; path: string }[] = [
-  { label: "Positions", path: "/positions" },
-  { label: "Account", path: "/account" },
+  { label: "Swap", path: "/swap" },
+  { label: "Transactions", path: "/positions" },
 ];
 
 export default function MatoLayout({

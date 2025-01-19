@@ -35,14 +35,14 @@ export function UiLayout({
   const pathname = usePathname();
 
   return (
-    <div className="h-full w-full flex flex-col bg-gradient-to-b from-red-200 to-white">
+    <div className="w-full min-h-screen h-full flex flex-col bg-gradient-to-b from-purple-500/10 to-red-500/10">
       <div className="flex items-center p-2 w-full min-h-16 flex-col md:flex-row space-y-2 md:space-y-0">
         <div className="flex-1 flex items-center">
           <Button variant="ghost" asChild>
             <Link className="text-xl mr-8" href="/">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-red-500" />
-                <span className="text-2xl font-bold">Mato</span>
+                {/* <div className="w-8 h-8 rounded-full bg-red-500" /> */}
+                <span className="text-2xl font-bold text-primary">Mato</span>
               </div>
             </Link>
           </Button>
@@ -51,9 +51,7 @@ export function UiLayout({
               {links.map(({ label, path }) => (
                 <NavigationMenuItem
                   key={path}
-                  className={
-                    pathname.startsWith(path) ? "text-accent-foreground" : ""
-                  }
+                  className={pathname.startsWith(path) ? "underline" : ""}
                 >
                   <Link href={path} legacyBehavior passHref>
                     <NavigationMenuLink
@@ -67,9 +65,9 @@ export function UiLayout({
             </NavigationMenuList>
           </NavigationMenu>
         </div>
-        <div className="flex-none space-x-2 flex items-center">
+        <div className="flex-none space-x-2 flex items-center mx-8">
           <WalletButton />
-          <ClusterUiSelect />
+          {/* <ClusterUiSelect /> */}
         </div>
       </div>
       <ClusterChecker>
