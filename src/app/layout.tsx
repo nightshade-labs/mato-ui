@@ -20,15 +20,15 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ReactQueryProvider>
-          <ThemeProvider
+          {/* <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
-          >
-            {children}
-            <Footer />
-          </ThemeProvider>
+          > */}
+          {children}
+          <Footer />
+          {/* </ThemeProvider> */}
         </ReactQueryProvider>
       </body>
     </html>
