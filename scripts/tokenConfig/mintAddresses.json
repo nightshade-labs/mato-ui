@@ -1,4 +1,6 @@
 {
+  "matoSOL": "https://explorer.solana.com/address/ApyFDKqwHGcghiFVQLJ5z6XUcTBjVtasjxjnF22Pvpzm?cluster=devnet",
+  "matoUSDC": "https://explorer.solana.com/address/2oC4Uu9mQn1KU8FYfL8d5ECi4u2ESQKbb3xTb4wmtJnq?cluster=devnet",
   "tsol": "https://explorer.solana.com/address/3gBEWKo5LzJchbYHPNj7RvpWgnVB82NRxTDwufb3LLpG?cluster=devnet",
   "tusdc": "https://explorer.solana.com/address/eZPu9HgerixxXzetscuTzY5wFMjxDMMMtcNftzeRPr3?cluster=devnet"
 }

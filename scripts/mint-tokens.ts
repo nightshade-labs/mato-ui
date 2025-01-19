@@ -9,11 +9,11 @@ process.env.ANCHOR_PROVIDER_URL = clusterApiUrl("devnet");
 // process.env.ANCHOR_PROVIDER_URL = "http://127.0.0.1:8899";
 process.env.ANCHOR_WALLET = idWallet;
 
-const SOL_MINT = new PublicKey("3gBEWKo5LzJchbYHPNj7RvpWgnVB82NRxTDwufb3LLpG");
-const USDC_MINT = new PublicKey("eZPu9HgerixxXzetscuTzY5wFMjxDMMMtcNftzeRPr3");
+const SOL_MINT = new PublicKey("ApyFDKqwHGcghiFVQLJ5z6XUcTBjVtasjxjnF22Pvpzm");
+const USDC_MINT = new PublicKey("2oC4Uu9mQn1KU8FYfL8d5ECi4u2ESQKbb3xTb4wmtJnq");
 
 const destination = new PublicKey(
-  "9aav53TmWKruhV3XTk1Ld83jg6ju2zzMPZrUc4jZ8LG5",
+  "6godj8NEn7ETyjsNvG629eSiEDbBamcd2E7tSjVNneyY"
 );
 
 (async () => {
@@ -25,14 +25,14 @@ const destination = new PublicKey(
     provider.connection,
     payer,
     SOL_MINT,
-    destination,
+    destination
   );
 
   let usdcATA = await getOrCreateAssociatedTokenAccount(
     provider.connection,
     payer,
     USDC_MINT,
-    destination,
+    destination
   );
 
   await mintTo(
@@ -41,7 +41,7 @@ const destination = new PublicKey(
     SOL_MINT,
     solATA.address,
     payer,
-    10 * 10 ** 9,
+    20 * 10 ** 9
   );
 
   await mintTo(
@@ -50,7 +50,7 @@ const destination = new PublicKey(
     USDC_MINT,
     usdcATA.address,
     payer,
-    2_000 * 10 ** 6,
+    10_000 * 10 ** 6
   );
 })()
   .then(() => console.log("Tokens minted!"))
