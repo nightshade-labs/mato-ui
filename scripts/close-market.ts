@@ -10,36 +10,29 @@ process.env.ANCHOR_PROVIDER_URL = clusterApiUrl("devnet");
 process.env.ANCHOR_WALLET = idWallet;
 
 // Need to first run create mint script and insert the mint addresses here
-const exits = new PublicKey("FLSdmeNCLGJQ2DohotpfDRb4TzKkeWJyHm2opbzQqf3m");
-const prices = new PublicKey("GZAzZuZNdhYtpdmbA7truCiu4FZu9tYb3Y7c63WRpvzo");
-const overflows = new PublicKey("3xpjNb7nW36LAn3Zbb4jr7MoUZa7NtPJweg8kVaUx6YS");
+const exits = new PublicKey("4ChXLnj9r3KBuxxv6C2ii9jsmDWJVKyTCRLysPtykHWY");
+const prices = new PublicKey("4y1XPiQex3TD3TqXXN4UMfkGJRiEgJj81JEDZA1aqGxp");
 
 (async () => {
   const provider = anchor.AnchorProvider.env();
   const program = getProgram(provider);
 
   const [market] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from("market"),
-      exits.toBuffer(),
-      prices.toBuffer(),
-      overflows.toBuffer(),
-    ],
-    program.programId,
+    [Buffer.from("market"), exits.toBuffer(), prices.toBuffer()],
+    program.programId
   );
 
   const [bookkeeping] = PublicKey.findProgramAddressSync(
     [Buffer.from("bookkeeping"), market.toBuffer()],
-    program.programId,
+    program.programId
   );
 
   const accounts: Record<string, PublicKey> = {
     tokenProgram: TOKEN_PROGRAM_ID,
-    market: market,
-    bookkeeping: bookkeeping,
+    // market: market,
+    // bookkeeping: bookkeeping,
     exits: exits,
     prices: prices,
-    overflows: overflows,
   };
 
   await program.methods

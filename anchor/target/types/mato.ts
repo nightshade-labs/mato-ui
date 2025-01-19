@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/mato.json`.
  */
 export type Mato = {
-  address: "9BiMFA2PjRTUQ3aDy3Yr8EetY8Hx6iUccbakxWeC4LHR";
+  address: "C1T92ZWXrzEpBfu8hdwrEyfcD1Ndbdn7YRTszxkkZKzx";
   metadata: {
     name: "mato";
     version: "0.1.0";
@@ -39,10 +39,6 @@ export type Mato = {
                 kind: "account";
                 path: "prices";
               },
-              {
-                kind: "account";
-                path: "overflows";
-              },
             ];
           };
         },
@@ -68,10 +64,6 @@ export type Mato = {
         },
         {
           name: "prices";
-          writable: true;
-        },
-        {
-          name: "overflows";
           writable: true;
         },
         {
@@ -229,10 +221,6 @@ export type Mato = {
                 kind: "account";
                 path: "prices";
               },
-              {
-                kind: "account";
-                path: "overflows";
-              },
             ];
           };
         },
@@ -315,10 +303,6 @@ export type Mato = {
         },
         {
           name: "prices";
-          writable: true;
-        },
-        {
-          name: "overflows";
           writable: true;
         },
         {
@@ -483,10 +467,6 @@ export type Mato = {
                 kind: "account";
                 path: "prices";
               },
-              {
-                kind: "account";
-                path: "overflows";
-              },
             ];
           };
         },
@@ -569,10 +549,6 @@ export type Mato = {
         },
         {
           name: "prices";
-          writable: true;
-        },
-        {
-          name: "overflows";
           writable: true;
         },
         {
@@ -675,10 +651,6 @@ export type Mato = {
                 kind: "account";
                 path: "prices";
               },
-              {
-                kind: "account";
-                path: "overflows";
-              },
             ];
           };
         },
@@ -744,10 +716,6 @@ export type Mato = {
         },
         {
           name: "prices";
-          writable: true;
-        },
-        {
-          name: "overflows";
           writable: true;
         },
         {
@@ -863,10 +831,6 @@ export type Mato = {
                 kind: "account";
                 path: "prices";
               },
-              {
-                kind: "account";
-                path: "overflows";
-              },
             ];
           };
         },
@@ -935,10 +899,6 @@ export type Mato = {
           writable: true;
         },
         {
-          name: "overflows";
-          writable: true;
-        },
-        {
           name: "tokenProgram";
         },
         {
@@ -983,10 +943,6 @@ export type Mato = {
           writable: true;
         },
         {
-          name: "overflows";
-          writable: true;
-        },
-        {
           name: "systemProgram";
           address: "11111111111111111111111111111111";
         },
@@ -1021,10 +977,6 @@ export type Mato = {
               {
                 kind: "account";
                 path: "prices";
-              },
-              {
-                kind: "account";
-                path: "overflows";
               },
             ];
           };
@@ -1067,10 +1019,6 @@ export type Mato = {
         },
         {
           name: "prices";
-          writable: true;
-        },
-        {
-          name: "overflows";
           writable: true;
         },
         {
@@ -1120,10 +1068,6 @@ export type Mato = {
                 kind: "account";
                 path: "prices";
               },
-              {
-                kind: "account";
-                path: "overflows";
-              },
             ];
           };
         },
@@ -1148,9 +1092,6 @@ export type Mato = {
         },
         {
           name: "prices";
-        },
-        {
-          name: "overflows";
         },
         {
           name: "tokenProgram";
@@ -1188,10 +1129,6 @@ export type Mato = {
                 kind: "account";
                 path: "prices";
               },
-              {
-                kind: "account";
-                path: "overflows";
-              },
             ];
           };
         },
@@ -1217,10 +1154,6 @@ export type Mato = {
         },
         {
           name: "prices";
-          writable: true;
-        },
-        {
-          name: "overflows";
           writable: true;
         },
         {
@@ -1256,10 +1189,6 @@ export type Mato = {
                 kind: "account";
                 path: "prices";
               },
-              {
-                kind: "account";
-                path: "overflows";
-              },
             ];
           };
         },
@@ -1285,10 +1214,6 @@ export type Mato = {
         },
         {
           name: "prices";
-          writable: true;
-        },
-        {
-          name: "overflows";
           writable: true;
         },
         {
@@ -1389,10 +1314,6 @@ export type Mato = {
                 kind: "account";
                 path: "prices";
               },
-              {
-                kind: "account";
-                path: "overflows";
-              },
             ];
           };
         },
@@ -1459,10 +1380,6 @@ export type Mato = {
         },
         {
           name: "prices";
-          writable: true;
-        },
-        {
-          name: "overflows";
           writable: true;
         },
         {
@@ -1565,10 +1482,6 @@ export type Mato = {
                 kind: "account";
                 path: "prices";
               },
-              {
-                kind: "account";
-                path: "overflows";
-              },
             ];
           };
         },
@@ -1638,10 +1551,6 @@ export type Mato = {
           writable: true;
         },
         {
-          name: "overflows";
-          writable: true;
-        },
-        {
           name: "tokenProgram";
         },
         {
@@ -1668,10 +1577,6 @@ export type Mato = {
     {
       name: "market";
       discriminator: [219, 190, 213, 55, 0, 227, 198, 154];
-    },
-    {
-      name: "overflows";
-      discriminator: [221, 30, 107, 150, 183, 77, 216, 42];
     },
     {
       name: "positionA";
@@ -1726,11 +1631,11 @@ export type Mato = {
         fields: [
           {
             name: "aPerB";
-            type: "u64";
+            type: "u128";
           },
           {
             name: "bPerA";
-            type: "u64";
+            type: "u128";
           },
           {
             name: "noTradeSlots";
@@ -1738,14 +1643,6 @@ export type Mato = {
           },
           {
             name: "lastSlot";
-            type: "u64";
-          },
-          {
-            name: "overflowsAPerB";
-            type: "u64";
-          },
-          {
-            name: "overflowsBPerA";
             type: "u64";
           },
           {
@@ -1767,13 +1664,13 @@ export type Mato = {
           {
             name: "tokenA";
             type: {
-              array: ["u64", 420000];
+              array: ["u128", 250000];
             };
           },
           {
             name: "tokenB";
             type: {
-              array: ["u64", 420000];
+              array: ["u128", 250000];
             };
           },
           {
@@ -1794,11 +1691,11 @@ export type Mato = {
         fields: [
           {
             name: "tokenAVolume";
-            type: "u64";
+            type: "u128";
           },
           {
             name: "tokenBVolume";
-            type: "u64";
+            type: "u128";
           },
           {
             name: "endSlotInterval";
@@ -1817,30 +1714,6 @@ export type Mato = {
           {
             name: "bump";
             type: "u8";
-          },
-        ];
-      };
-    },
-    {
-      name: "overflows";
-      serialization: "bytemuck";
-      repr: {
-        kind: "c";
-      };
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "aPerB";
-            type: {
-              array: ["u64", 420000];
-            };
-          },
-          {
-            name: "bPerA";
-            type: {
-              array: ["u64", 420000];
-            };
           },
         ];
       };
@@ -1872,7 +1745,7 @@ export type Mato = {
           },
           {
             name: "bookkeeping";
-            type: "u64";
+            type: "u128";
           },
           {
             name: "noTradeSlots";
@@ -1880,10 +1753,6 @@ export type Mato = {
           },
           {
             name: "totalNoTrades";
-            type: "u64";
-          },
-          {
-            name: "overflows";
             type: "u64";
           },
           {
@@ -1920,7 +1789,7 @@ export type Mato = {
           },
           {
             name: "bookkeeping";
-            type: "u64";
+            type: "u128";
           },
           {
             name: "noTradeSlots";
@@ -1928,10 +1797,6 @@ export type Mato = {
           },
           {
             name: "totalNoTrades";
-            type: "u64";
-          },
-          {
-            name: "overflows";
             type: "u64";
           },
           {
@@ -1953,19 +1818,19 @@ export type Mato = {
           {
             name: "aPerB";
             type: {
-              array: ["u64", 420000];
+              array: ["u128", 250000];
             };
           },
           {
             name: "bPerA";
             type: {
-              array: ["u64", 420000];
+              array: ["u128", 250000];
             };
           },
           {
             name: "noTradeSlots";
             type: {
-              array: ["u64", 420000];
+              array: ["u64", 250000];
             };
           },
         ];
