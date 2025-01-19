@@ -38,7 +38,7 @@ const prices = new PublicKey("4y1XPiQex3TD3TqXXN4UMfkGJRiEgJj81JEDZA1aqGxp");
 
   let currentSlot = await provider.connection.getSlot();
   let bookkeepingAccount = await program.account.bookkeeping.fetch(bookkeeping);
-  let slot = bookkeepingAccount.lastSlot.add(new BN(5000));
+  let slot = bookkeepingAccount.lastSlot.add(new BN(500));
 
   while (slot.toNumber() < currentSlot) {
     console.log(`Current slot: ${currentSlot}`);
@@ -57,7 +57,7 @@ const prices = new PublicKey("4y1XPiQex3TD3TqXXN4UMfkGJRiEgJj81JEDZA1aqGxp");
       .rpc({ skipPreflight: true });
 
     bookkeepingAccount = await program.account.bookkeeping.fetch(bookkeeping);
-    slot = bookkeepingAccount.lastSlot.add(new BN(5000));
+    slot = bookkeepingAccount.lastSlot.add(new BN(500));
   }
 })()
   .then(() => console.log("Books updated!"))
