@@ -55,6 +55,7 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { durationStringToSlots } from "./chart-ui";
+import { BN } from "bn.js";
 
 export function MatoProgram() {
   const { getProgramAccount } = useMatoProgram();
@@ -83,7 +84,7 @@ export function MatoProgram() {
 const OrderDialogFormSchema = z.object({
   amount: z.preprocess(
     (a) => parseFloat(z.string().parse(a)),
-    z.number().gt(0, "Must be greater than zero"),
+    z.number().gt(0, "Must be greater than zero")
   ),
   time: z.string({
     required_error: "Please set a time horizon.",
@@ -185,7 +186,7 @@ export function OrderDialog({
 const SwapFormSchema = z.object({
   amount: z.preprocess(
     (a) => parseFloat(z.string().parse(a)),
-    z.number().gt(0, "Must be greater than zero"),
+    z.number().gt(0, "Must be greater than zero")
   ),
   duration: z.string({
     required_error: "Please set a duration",
@@ -238,8 +239,10 @@ export function SwapInterface({}: {}) {
   // console.log("treasury A", tresurayA);
   // console.log("treasury B", treasuryB);
 
-  let tradingVolumeA = getMarket.data?.tokenAVolume.toNumber() || 0;
-  let tradingVolumeB = getMarket.data?.tokenBVolume.toNumber() || 0;
+  let tradingVolumeA =
+    getMarket.data?.tokenAVolume.div(new BN(1000000)).toNumber() || 0;
+  let tradingVolumeB =
+    getMarket.data?.tokenBVolume.div(new BN(1000000)).toNumber() || 0;
   let isTrading = tradingVolumeA * tradingVolumeB !== 0;
 
   let marketPrice = isTrading
