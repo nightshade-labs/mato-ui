@@ -80,7 +80,6 @@ export function PositionCard({
             <p>
               {(
                 (swappedTokens.toNumber() * decimals) /
-                1000 /
                 BOOKKEEPING_PRECISION
               ).toFixed(2)}{" "}
               {buying}

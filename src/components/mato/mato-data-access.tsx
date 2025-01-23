@@ -66,7 +66,7 @@ export function useMatoProgram() {
   const getCurrentSlot = useQuery({
     queryKey: ["get-current-slot", { cluster }],
     queryFn: () => connection.getSlot(),
-    refetchInterval: 200,
+    refetchInterval: 400,
   });
 
   const getProgramAccount = useQuery({
