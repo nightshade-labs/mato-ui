@@ -1,5 +1,6 @@
 "use client";
 
+import { VOLUME_PRECISION } from "@/lib/constants";
 import { useMatoProgram } from "../mato/mato-data-access";
 import { AppHero } from "../ui/ui-layout";
 import { PositionCard } from "./position-ui";
@@ -41,7 +42,7 @@ export default function PositionsFeature() {
               avgPrice={getBookkeepingAccount.data.bPerA}
               lastSlot={getBookkeepingAccount.data.lastSlot}
               marketPrice={getMarket.data.tokenBVolume
-                .mul(new BN(1000000))
+                .mul(new BN(VOLUME_PRECISION))
                 .div(getMarket.data.tokenAVolume)}
             />
           ))}
@@ -62,7 +63,7 @@ export default function PositionsFeature() {
               avgPrice={getBookkeepingAccount.data.aPerB}
               lastSlot={getBookkeepingAccount.data.lastSlot}
               marketPrice={getMarket.data.tokenAVolume
-                .mul(new BN(1000000))
+                .mul(new BN(VOLUME_PRECISION))
                 .div(getMarket.data.tokenBVolume)}
             />
           ))}

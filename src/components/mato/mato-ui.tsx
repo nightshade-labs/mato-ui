@@ -57,30 +57,6 @@ import {
 import { durationStringToSlots } from "./chart-ui";
 import { BN } from "bn.js";
 
-export function MatoProgram() {
-  const { getProgramAccount } = useMatoProgram();
-
-  if (getProgramAccount.isLoading) {
-    return <LoadingSpinner />;
-  }
-  if (!getProgramAccount.data?.value) {
-    return (
-      <Alert>
-        <MagnifyingGlassIcon className="h-4 w-4" />
-        <AlertTitle>Program account not found!</AlertTitle>
-        <AlertDescription>
-          Make sure you have deployed the program and are on the correct
-          cluster.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-  return (
-    <div className={"space-y-6"}>
-      <pre>{JSON.stringify(getProgramAccount.data.value, null, 2)}</pre>
-    </div>
-  );
-}
 const OrderDialogFormSchema = z.object({
   amount: z.preprocess(
     (a) => parseFloat(z.string().parse(a)),
