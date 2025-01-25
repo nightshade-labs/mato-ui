@@ -164,10 +164,10 @@ const SwapFormSchema = z.object({
     (a) => parseFloat(z.string().parse(a)),
     z.number().gt(0, "Must be greater than zero")
   ),
-  duration: z.string({
-    required_error: "Please set a duration",
-  }),
-  limit: z.string().optional(),
+  // duration: z.string({
+  //   required_error: "Please set a duration",
+  // }),
+  // limit: z.string().optional(),
 });
 
 export function SwapInterface({}: {}) {
@@ -182,16 +182,16 @@ export function SwapInterface({}: {}) {
   });
 
   async function onSubmit(data: z.infer<typeof SwapFormSchema>) {
-    let slotDuration = durationStringToSlots.get(data.duration);
+    // let slotDuration = durationStringToSlots.get(data.duration);
     if (side == "sell") {
       depositTokenA.mutate({
         amount: data.amount * 1000000000,
-        duration: slotDuration || 0,
+        duration: 20,
       });
     } else {
       depositTokenB.mutate({
         amount: data.amount * 1000000,
-        duration: slotDuration || 0,
+        duration: 20,
       });
     }
   }
@@ -226,10 +226,10 @@ export function SwapInterface({}: {}) {
     : "no trades right now";
 
   return (
-    <Card className="w-full lg:w-fit">
+    <Card className="w-full lg:min-w-96 lg:w-fit h-fit">
       <CardHeader>
         <div className="flex flex-col gap-4">
-          <div className="flex gap-4 sm:gap-8 justify-between">
+          {/* <div className="flex gap-4 sm:gap-8 justify-between">
             <TokenSelection
               title="You're trading"
               selectOptions={supportedTradeTokens}
@@ -238,25 +238,25 @@ export function SwapInterface({}: {}) {
               title="Paying with"
               selectOptions={supportedNumeraireTokens}
             />
-          </div>
-          <div className="flex flex-col gap-2 bg-slate-100 p-4 rounded-md">
+          </div> */}
+          {/* <div className="flex flex-col gap-2 bg-slate-100 p-4 rounded-md">
             <div className="text-sm">Market price</div>
             <div className="text-xl font-bold">
               1 tSOL = {marketPrice} tUSDC
             </div>
-          </div>
-          <div className="flex justify-between gap-8">
+          </div> */}
+          <div className="flex justify-between">
             <Button
               variant={side === "buy" ? "default" : "outline"}
               onClick={() => setSide("buy")}
-              className="flex-1"
+              className="flex-1 rounded-l-xl rounded-r-none"
             >
               Buy
             </Button>
             <Button
               variant={side === "sell" ? "default" : "outline"}
               onClick={() => setSide("sell")}
-              className="flex-1"
+              className="flex-1 rounded-r-xl rounded-l-none"
             >
               Sell
             </Button>
@@ -273,7 +273,7 @@ export function SwapInterface({}: {}) {
                 <FormItem>
                   <div className="flex flex-col space-y-1.5">
                     <FormLabel>
-                      Amount {side == "buy" ? "(tUSDC)" : "(tSOL)"}
+                      Quantity {side == "buy" ? "(matoUSDC)" : "(matoSOL)"}
                     </FormLabel>
                     <Input
                       id="amount"
@@ -288,7 +288,7 @@ export function SwapInterface({}: {}) {
                 </FormItem>
               )}
             />
-            <FormField
+            {/* <FormField
               control={form.control}
               name="duration"
               render={({ field }) => (
@@ -408,8 +408,10 @@ export function SwapInterface({}: {}) {
                   <FormMessage />
                 </FormItem>
               )}
-            />
-            <Button type="submit">Submit order</Button>
+            /> */}
+            <Button type="submit">
+              {side == "buy" ? "Buy matoSOL" : "Sell matoSOL"}
+            </Button>
           </form>
         </Form>
       </CardContent>
@@ -456,9 +458,9 @@ type supportedToken = {
 };
 
 let supportedTradeTokens: supportedToken[] = [
-  { name: "tSOL", value: "tSol", imgSrc: "solana-sol-logo.png" },
+  { name: "matoSOL", value: "matoSol", imgSrc: "solana-sol-logo.png" },
 ];
 
 let supportedNumeraireTokens: supportedToken[] = [
-  { name: "tUSDC", value: "tUSDC", imgSrc: "usd-coin-usdc-logo.png" },
+  { name: "matoUSDC", value: "matoUSDC", imgSrc: "usd-coin-usdc-logo.png" },
 ];
