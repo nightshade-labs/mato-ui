@@ -7,7 +7,7 @@ import { useMatoProgram } from "./mato-data-access";
 import { SwapInterface } from "./mato-ui";
 
 export default function MatoFeature() {
-  console.log("MatoFeature, RPC_URL", process.env.RPC_KEY);
+  // console.log("MatoFeature, RPC_URL", process.env.RPC_KEY);
 
   const { getMarket, depositTokenA, depositTokenB } = useMatoProgram();
 

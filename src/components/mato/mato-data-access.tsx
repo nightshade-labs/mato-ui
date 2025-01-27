@@ -5,12 +5,22 @@ import {
   getProgram,
   Mato,
 } from "@project/anchor";
-import { useConnection } from "@solana/wallet-adapter-react";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PublicKey } from "@solana/web3.js";
+import {
+  PublicKey,
+  sendAndConfirmTransaction,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction,
+  TransactionMessage,
+  VersionedTransaction,
+} from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import {
+  createSyncNativeInstruction,
   getAssociatedTokenAddressSync,
+  NATIVE_MINT,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
@@ -28,18 +38,19 @@ export function useMatoProgram() {
   const program = getProgram(provider);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const wallet = useWallet();
 
   const publicKey = provider.publicKey ?? PublicKey.default;
 
   let exitsAddress = new PublicKey(
-    "4ChXLnj9r3KBuxxv6C2ii9jsmDWJVKyTCRLysPtykHWY"
+    "D467xRNpNHvxbG7nRApDSshnvqVDhL4YjBYqz9TsoKF9"
   );
   let pricesAddress = new PublicKey(
-    "4y1XPiQex3TD3TqXXN4UMfkGJRiEgJj81JEDZA1aqGxp"
+    "Dpe9rm2NFSTowGbvrwXccbW7FtGfrQCdu6ogugNW6akK"
   );
 
-  let solMint = new PublicKey("ApyFDKqwHGcghiFVQLJ5z6XUcTBjVtasjxjnF22Pvpzm");
-  let usdcMint = new PublicKey("2oC4Uu9mQn1KU8FYfL8d5ECi4u2ESQKbb3xTb4wmtJnq");
+  let solMint = NATIVE_MINT;
+  let usdcMint = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
   let [marketPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("market"), exitsAddress.toBuffer(), pricesAddress.toBuffer()],
@@ -112,22 +123,53 @@ export function useMatoProgram() {
 
   const depositTokenA = useMutation({
     mutationKey: ["mato", "deposit-token-a", { cluster }],
-    mutationFn: ({ amount, duration }: { amount: number; duration: number }) =>
-      program.methods
-        .depositTokenA(new BN(Date.now()), new BN(amount), new BN(duration))
-        .accounts({
-          depositor: provider.publicKey,
-          // depositorTokenAccount: depositorATA,
-          tokenMintA: solMint,
-          // market: marketPda,
-          // positionA: positionAPda,
-          // treasuryA: treasuryA,
-          // bookkeeping: bookkeeping,
-          exits: exitsAddress,
-          prices: pricesAddress,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .rpc({ skipPreflight: true }),
+    mutationFn: async ({
+      amount,
+      duration,
+    }: {
+      amount: number;
+      duration: number;
+    }) => {
+      let amountDiff: number;
+      try {
+        let tokenAmount = await connection.getTokenAccountBalance(depositorATA);
+        amountDiff = amount - parseInt(tokenAmount.value.amount);
+      } catch (e) {
+        console.log("SOL ATA not found", e);
+        amountDiff = amount;
+      }
+
+      let depositTx = new Transaction();
+      if (amountDiff > 0) {
+        depositTx.add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: depositorATA,
+            lamports: amountDiff,
+          }),
+          createSyncNativeInstruction(depositorATA)
+        );
+      }
+      depositTx.add(
+        await program.methods
+          .depositTokenA(new BN(Date.now()), new BN(amount), new BN(duration))
+          .accounts({
+            depositor: provider.publicKey,
+            // depositorTokenAccount: depositorATA,
+            tokenMintA: solMint,
+            // market: marketPda,
+            // positionA: positionAPda,
+            // treasuryA: treasuryA,
+            // bookkeeping: bookkeeping,
+            exits: exitsAddress,
+            prices: pricesAddress,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .transaction()
+      );
+
+      return wallet.sendTransaction(depositTx, connection);
+    },
     onSuccess: (signature) => {
       transactionToast(signature, CREATE_POSITION);
       queryClient.invalidateQueries({

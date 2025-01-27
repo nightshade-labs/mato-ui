@@ -171,7 +171,7 @@ const SwapFormSchema = z.object({
 });
 
 export function SwapInterface({}: {}) {
-  const { getMarket, depositTokenA, depositTokenB } = useMatoProgram();
+  const { depositTokenA, depositTokenB } = useMatoProgram();
   const { connection } = useConnection();
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [isLimitOrder, setIsLimitOrder] = useState(false);
@@ -196,13 +196,6 @@ export function SwapInterface({}: {}) {
     }
   }
 
-  if (getMarket.isLoading) {
-    return (
-      <div className="w-full flex justify-center">
-        <LoadingSpinner />
-      </div>
-    );
-  }
   // let tresurayA = await connection.getTokenAccountBalance(
   //   getMarket.data?.treasuryA || PublicKey.default
   // );
@@ -214,16 +207,6 @@ export function SwapInterface({}: {}) {
   // console.log("tokenvolume b", getMarket.data?.tokenBVolume.toString());
   // console.log("treasury A", tresurayA);
   // console.log("treasury B", treasuryB);
-
-  let tradingVolumeA =
-    getMarket.data?.tokenAVolume.div(new BN(1000000)).toNumber() || 0;
-  let tradingVolumeB =
-    getMarket.data?.tokenBVolume.div(new BN(1000000)).toNumber() || 0;
-  let isTrading = tradingVolumeA * tradingVolumeB !== 0;
-
-  let marketPrice = isTrading
-    ? ((tradingVolumeB * 1000) / tradingVolumeA).toFixed(2)
-    : "no trades right now";
 
   return (
     <Card className="w-full lg:min-w-96 lg:w-fit h-fit">
@@ -249,14 +232,14 @@ export function SwapInterface({}: {}) {
             <Button
               variant={side === "buy" ? "default" : "outline"}
               onClick={() => setSide("buy")}
-              className="flex-1 rounded-l-xl rounded-r-none"
+              className="flex-1 rounded-l-xl rounded-r-none bg-opacity-20"
             >
               Buy
             </Button>
             <Button
               variant={side === "sell" ? "default" : "outline"}
               onClick={() => setSide("sell")}
-              className="flex-1 rounded-r-xl rounded-l-none"
+              className="flex-1 rounded-r-xl rounded-l-none bg-opacity-20"
             >
               Sell
             </Button>
