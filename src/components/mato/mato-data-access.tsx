@@ -61,16 +61,23 @@ export function useMatoProgram() {
     queryKey: ["get-sol-balance", { cluster }],
     queryFn: async () => {
       let solATA = getAssociatedTokenAddressSync(solMint, publicKey);
-      let wrappedSolBalance = await connection.getTokenAccountBalance(
-        solATA,
-        "finalized"
-      );
+      let wrappedSol;
+      try {
+        let wrappedSolBalance = await connection.getTokenAccountBalance(
+          solATA,
+          "finalized"
+        );
+        wrappedSol =
+          wrappedSolBalance.value.uiAmount ||
+          parseInt(wrappedSolBalance.value.amount) /
+            10 ** wrappedSolBalance.value.decimals;
+      } catch (e) {
+        wrappedSol = 0;
+      }
+
       let solBalance = await connection.getBalance(publicKey, "confirmed");
-      let wrappedSol =
-        wrappedSolBalance.value.uiAmount ||
-        parseInt(wrappedSolBalance.value.amount) /
-          10 ** wrappedSolBalance.value.decimals;
-      return solBalance / 10 ** wrappedSolBalance.value.decimals + wrappedSol;
+
+      return solBalance / 1000000000 + wrappedSol;
     },
     enabled: !!publicKey,
   });
