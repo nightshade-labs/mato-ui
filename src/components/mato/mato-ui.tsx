@@ -262,6 +262,7 @@ export function SwapInterface({}: {}) {
                       id="amount"
                       placeholder="0,0"
                       type="number"
+                      step="any"
                       defaultValue={field.value}
                       onChange={field.onChange}
                       onVolumeChange={field.onChange}
