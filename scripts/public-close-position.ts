@@ -4,6 +4,7 @@ import { getProgram } from "../anchor/src";
 
 import {
   getAssociatedTokenAddressSync,
+  NATIVE_MINT,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { idWallet } from "./helpers";
@@ -13,11 +14,11 @@ process.env.ANCHOR_PROVIDER_URL = clusterApiUrl("devnet");
 process.env.ANCHOR_WALLET = idWallet;
 
 // Need to first run create mint script and insert the mint addresses here
-const exits = new PublicKey("4ChXLnj9r3KBuxxv6C2ii9jsmDWJVKyTCRLysPtykHWY");
-const prices = new PublicKey("4y1XPiQex3TD3TqXXN4UMfkGJRiEgJj81JEDZA1aqGxp");
+const exits = new PublicKey("D467xRNpNHvxbG7nRApDSshnvqVDhL4YjBYqz9TsoKF9");
+const prices = new PublicKey("Dpe9rm2NFSTowGbvrwXccbW7FtGfrQCdu6ogugNW6akK");
 
-let solMint = new PublicKey("ApyFDKqwHGcghiFVQLJ5z6XUcTBjVtasjxjnF22Pvpzm");
-let usdcMint = new PublicKey("2oC4Uu9mQn1KU8FYfL8d5ECi4u2ESQKbb3xTb4wmtJnq");
+let solMint = NATIVE_MINT;
+let usdcMint = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
 (async () => {
   const provider = anchor.AnchorProvider.env();

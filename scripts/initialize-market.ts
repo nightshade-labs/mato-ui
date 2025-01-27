@@ -25,8 +25,8 @@ const PRICES_ACCOUNT_SIZE = 10000008; // check account size in program
 // const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
 // Need to first run create mint script and insert the mint addresses here
-const SOL_MINT = new PublicKey("ApyFDKqwHGcghiFVQLJ5z6XUcTBjVtasjxjnF22Pvpzm");
-const USDC_MINT = new PublicKey("2oC4Uu9mQn1KU8FYfL8d5ECi4u2ESQKbb3xTb4wmtJnq");
+const SOL_MINT = NATIVE_MINT;
+const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"); // official devnet USDC
 
 (async () => {
   const provider = anchor.AnchorProvider.env();

@@ -160,18 +160,20 @@ export function OrderDialog({
 }
 
 const SwapFormSchema = z.object({
-  amount: z.preprocess(
-    (a) => parseFloat(z.string().parse(a)),
-    z.number().gt(0, "Must be greater than zero")
-  ),
-  duration: z.string({
-    required_error: "Please set a duration",
-  }),
-  limit: z.string().optional(),
+  // amount: z.preprocess(
+  //   (a) => parseFloat(z.string().parse(a)),
+  //   z.number().gt(0, "Must be greater than zero")
+  // ),
+  amount: z.number().gt(0, "Must be greater than zero"),
+  // duration: z.string({
+  //   required_error: "Please set a duration",
+  // }),
+  // limit: z.string().optional(),
 });
 
 export function SwapInterface({}: {}) {
-  const { getMarket, depositTokenA, depositTokenB } = useMatoProgram();
+  const { depositTokenA, depositTokenB, getSolBalance, getUSDCBalance } =
+    useMatoProgram();
   const { connection } = useConnection();
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [isLimitOrder, setIsLimitOrder] = useState(false);
@@ -182,27 +184,20 @@ export function SwapInterface({}: {}) {
   });
 
   async function onSubmit(data: z.infer<typeof SwapFormSchema>) {
-    let slotDuration = durationStringToSlots.get(data.duration);
+    // let slotDuration = durationStringToSlots.get(data.duration);
     if (side == "sell") {
       depositTokenA.mutate({
         amount: data.amount * 1000000000,
-        duration: slotDuration || 0,
+        duration: 20,
       });
     } else {
       depositTokenB.mutate({
         amount: data.amount * 1000000,
-        duration: slotDuration || 0,
+        duration: 20,
       });
     }
   }
 
-  if (getMarket.isLoading) {
-    return (
-      <div className="w-full flex justify-center">
-        <LoadingSpinner />
-      </div>
-    );
-  }
   // let tresurayA = await connection.getTokenAccountBalance(
   //   getMarket.data?.treasuryA || PublicKey.default
   // );
@@ -215,21 +210,11 @@ export function SwapInterface({}: {}) {
   // console.log("treasury A", tresurayA);
   // console.log("treasury B", treasuryB);
 
-  let tradingVolumeA =
-    getMarket.data?.tokenAVolume.div(new BN(1000000)).toNumber() || 0;
-  let tradingVolumeB =
-    getMarket.data?.tokenBVolume.div(new BN(1000000)).toNumber() || 0;
-  let isTrading = tradingVolumeA * tradingVolumeB !== 0;
-
-  let marketPrice = isTrading
-    ? ((tradingVolumeB * 1000) / tradingVolumeA).toFixed(2)
-    : "no trades right now";
-
   return (
-    <Card className="w-full lg:w-fit">
+    <Card className="w-full lg:min-w-96 lg:w-fit h-fit">
       <CardHeader>
         <div className="flex flex-col gap-4">
-          <div className="flex gap-4 sm:gap-8 justify-between">
+          {/* <div className="flex gap-4 sm:gap-8 justify-between">
             <TokenSelection
               title="You're trading"
               selectOptions={supportedTradeTokens}
@@ -238,25 +223,25 @@ export function SwapInterface({}: {}) {
               title="Paying with"
               selectOptions={supportedNumeraireTokens}
             />
-          </div>
-          <div className="flex flex-col gap-2 bg-slate-100 p-4 rounded-md">
+          </div> */}
+          {/* <div className="flex flex-col gap-2 bg-slate-100 p-4 rounded-md">
             <div className="text-sm">Market price</div>
             <div className="text-xl font-bold">
               1 tSOL = {marketPrice} tUSDC
             </div>
-          </div>
-          <div className="flex justify-between gap-8">
+          </div> */}
+          <div className="flex justify-between">
             <Button
               variant={side === "buy" ? "default" : "outline"}
               onClick={() => setSide("buy")}
-              className="flex-1"
+              className="flex-1 rounded-l-xl rounded-r-none bg-opacity-20"
             >
               Buy
             </Button>
             <Button
               variant={side === "sell" ? "default" : "outline"}
               onClick={() => setSide("sell")}
-              className="flex-1"
+              className="flex-1 rounded-r-xl rounded-l-none bg-opacity-20"
             >
               Sell
             </Button>
@@ -273,14 +258,72 @@ export function SwapInterface({}: {}) {
                 <FormItem>
                   <div className="flex flex-col space-y-1.5">
                     <FormLabel>
-                      Amount {side == "buy" ? "(tUSDC)" : "(tSOL)"}
+                      Quantity {side == "buy" ? "(USDC)" : "(SOL)"}
                     </FormLabel>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs font-semibold">
+                        Balance:{" "}
+                        {side == "sell"
+                          ? getSolBalance.data && getSolBalance.data.toFixed(6)
+                          : getUSDCBalance.data &&
+                            getUSDCBalance.data.toFixed(6)}
+                      </div>
+
+                      {getSolBalance.data && getUSDCBalance.data && (
+                        <div className="flex gap-1">
+                          <div
+                            className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
+                            onClick={() => {
+                              side == "buy"
+                                ? form.setValue(
+                                    "amount",
+                                    getUSDCBalance.data / 4
+                                  )
+                                : form.setValue(
+                                    "amount",
+                                    getSolBalance.data / 4
+                                  );
+                            }}
+                          >
+                            25%
+                          </div>
+                          <div
+                            className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
+                            onClick={() => {
+                              side == "buy"
+                                ? form.setValue(
+                                    "amount",
+                                    getUSDCBalance.data / 2
+                                  )
+                                : form.setValue(
+                                    "amount",
+                                    getSolBalance.data / 2
+                                  );
+                            }}
+                          >
+                            50%
+                          </div>
+                          <div
+                            className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
+                            onClick={() => {
+                              side == "buy"
+                                ? form.setValue("amount", getUSDCBalance.data)
+                                : form.setValue("amount", getSolBalance.data);
+                            }}
+                          >
+                            Max
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <Input
                       id="amount"
                       placeholder="0,0"
                       type="number"
-                      defaultValue={field.value}
-                      onChange={field.onChange}
+                      step="any"
+                      // defaultValue={field.value}
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.valueAsNumber)}
                       onVolumeChange={field.onChange}
                     />
                   </div>
@@ -288,7 +331,7 @@ export function SwapInterface({}: {}) {
                 </FormItem>
               )}
             />
-            <FormField
+            {/* <FormField
               control={form.control}
               name="duration"
               render={({ field }) => (
@@ -408,8 +451,10 @@ export function SwapInterface({}: {}) {
                   <FormMessage />
                 </FormItem>
               )}
-            />
-            <Button type="submit">Submit order</Button>
+            /> */}
+            <Button type="submit">
+              {side == "buy" ? "Buy SOL" : "Sell SOL"}
+            </Button>
           </form>
         </Form>
       </CardContent>
@@ -456,9 +501,9 @@ type supportedToken = {
 };
 
 let supportedTradeTokens: supportedToken[] = [
-  { name: "tSOL", value: "tSol", imgSrc: "solana-sol-logo.png" },
+  { name: "matoSOL", value: "matoSol", imgSrc: "solana-sol-logo.png" },
 ];
 
 let supportedNumeraireTokens: supportedToken[] = [
-  { name: "tUSDC", value: "tUSDC", imgSrc: "usd-coin-usdc-logo.png" },
+  { name: "matoUSDC", value: "matoUSDC", imgSrc: "usd-coin-usdc-logo.png" },
 ];
