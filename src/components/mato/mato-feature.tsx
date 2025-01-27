@@ -31,14 +31,14 @@ export default function MatoFeature() {
                 <div className="flex gap-0">
                   <Avatar className="w-8 h-8 hidden sm:block bg-black">
                     <AvatarImage src={"solana-sol-logo.png"} />
-                    <AvatarFallback>{"matoSOL"}</AvatarFallback>
+                    <AvatarFallback>{"SOL"}</AvatarFallback>
                   </Avatar>
                   <Avatar className="w-8 h-8 hidden sm:block">
                     <AvatarImage src={"usd-coin-usdc-logo.png"} />
-                    <AvatarFallback>{"matoUSDC"}</AvatarFallback>
+                    <AvatarFallback>{"USDC"}</AvatarFallback>
                   </Avatar>
                 </div>
-                matoSOL / matoUSDC
+                SOL / USDC
               </div>
               <span className="text-2xl">{marketPrice}</span>
             </div>
