@@ -160,10 +160,11 @@ export function OrderDialog({
 }
 
 const SwapFormSchema = z.object({
-  amount: z.preprocess(
-    (a) => parseFloat(z.string().parse(a)),
-    z.number().gt(0, "Must be greater than zero")
-  ),
+  // amount: z.preprocess(
+  //   (a) => parseFloat(z.string().parse(a)),
+  //   z.number().gt(0, "Must be greater than zero")
+  // ),
+  amount: z.number().gt(0, "Must be greater than zero"),
   // duration: z.string({
   //   required_error: "Please set a duration",
   // }),
@@ -171,7 +172,8 @@ const SwapFormSchema = z.object({
 });
 
 export function SwapInterface({}: {}) {
-  const { depositTokenA, depositTokenB } = useMatoProgram();
+  const { depositTokenA, depositTokenB, getSolBalance, getUSDCBalance } =
+    useMatoProgram();
   const { connection } = useConnection();
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [isLimitOrder, setIsLimitOrder] = useState(false);
@@ -256,15 +258,72 @@ export function SwapInterface({}: {}) {
                 <FormItem>
                   <div className="flex flex-col space-y-1.5">
                     <FormLabel>
-                      Quantity {side == "buy" ? "(matoUSDC)" : "(matoSOL)"}
+                      Quantity {side == "buy" ? "(USDC)" : "(SOL)"}
                     </FormLabel>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs font-semibold">
+                        Balance:{" "}
+                        {side == "sell"
+                          ? getSolBalance.data && getSolBalance.data.toFixed(6)
+                          : getUSDCBalance.data &&
+                            getUSDCBalance.data.toFixed(6)}
+                      </div>
+
+                      {getSolBalance.data && getUSDCBalance.data && (
+                        <div className="flex gap-1">
+                          <div
+                            className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
+                            onClick={() => {
+                              side == "buy"
+                                ? form.setValue(
+                                    "amount",
+                                    getUSDCBalance.data / 4
+                                  )
+                                : form.setValue(
+                                    "amount",
+                                    getSolBalance.data / 4
+                                  );
+                            }}
+                          >
+                            25%
+                          </div>
+                          <div
+                            className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
+                            onClick={() => {
+                              side == "buy"
+                                ? form.setValue(
+                                    "amount",
+                                    getUSDCBalance.data / 2
+                                  )
+                                : form.setValue(
+                                    "amount",
+                                    getSolBalance.data / 2
+                                  );
+                            }}
+                          >
+                            50%
+                          </div>
+                          <div
+                            className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
+                            onClick={() => {
+                              side == "buy"
+                                ? form.setValue("amount", getUSDCBalance.data)
+                                : form.setValue("amount", getSolBalance.data);
+                            }}
+                          >
+                            Max
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <Input
                       id="amount"
                       placeholder="0,0"
                       type="number"
                       step="any"
-                      defaultValue={field.value}
-                      onChange={field.onChange}
+                      // defaultValue={field.value}
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.valueAsNumber)}
                       onVolumeChange={field.onChange}
                     />
                   </div>
@@ -394,7 +453,7 @@ export function SwapInterface({}: {}) {
               )}
             /> */}
             <Button type="submit">
-              {side == "buy" ? "Buy matoSOL" : "Sell matoSOL"}
+              {side == "buy" ? "Buy SOL" : "Sell SOL"}
             </Button>
           </form>
         </Form>

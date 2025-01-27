@@ -40,7 +40,7 @@ export function useMatoProgram() {
   const { toast } = useToast();
   const wallet = useWallet();
 
-  const publicKey = provider.publicKey ?? PublicKey.default;
+  const publicKey = provider.publicKey;
 
   let exitsAddress = new PublicKey(
     "D467xRNpNHvxbG7nRApDSshnvqVDhL4YjBYqz9TsoKF9"
@@ -57,7 +57,38 @@ export function useMatoProgram() {
     program.programId
   );
 
-  let depositorATA = getAssociatedTokenAddressSync(solMint, publicKey);
+  const getSolBalance = useQuery({
+    queryKey: ["get-sol-balance", { cluster }],
+    queryFn: async () => {
+      let solATA = getAssociatedTokenAddressSync(solMint, publicKey);
+      let wrappedSolBalance = await connection.getTokenAccountBalance(
+        solATA,
+        "finalized"
+      );
+      let solBalance = await connection.getBalance(publicKey, "confirmed");
+      let wrappedSol =
+        wrappedSolBalance.value.uiAmount ||
+        parseInt(wrappedSolBalance.value.amount) /
+          10 ** wrappedSolBalance.value.decimals;
+      return solBalance / 10 ** wrappedSolBalance.value.decimals + wrappedSol;
+    },
+    enabled: !!publicKey,
+  });
+
+  const getUSDCBalance = useQuery({
+    queryKey: ["get-usdc-balance", { cluster }],
+    queryFn: async () => {
+      let usdcATA = getAssociatedTokenAddressSync(usdcMint, publicKey);
+      return await connection
+        .getTokenAccountBalance(usdcATA, "confirmed")
+        .then(
+          (balance) =>
+            balance.value.uiAmount ||
+            parseInt(balance.value.amount) / 10 ** balance.value.decimals
+        );
+    },
+    enabled: !!publicKey,
+  });
 
   const [treasuryA] = PublicKey.findProgramAddressSync(
     [Buffer.from("treasury_a"), marketPda.toBuffer()],
@@ -130,12 +161,12 @@ export function useMatoProgram() {
       amount: number;
       duration: number;
     }) => {
+      let solATA = getAssociatedTokenAddressSync(solMint, publicKey);
       let amountDiff: number;
       try {
-        let tokenAmount = await connection.getTokenAccountBalance(depositorATA);
+        let tokenAmount = await connection.getTokenAccountBalance(solATA);
         amountDiff = amount - parseInt(tokenAmount.value.amount);
       } catch (e) {
-        console.log("SOL ATA not found", e);
         amountDiff = amount;
       }
 
@@ -144,10 +175,10 @@ export function useMatoProgram() {
         depositTx.add(
           SystemProgram.transfer({
             fromPubkey: publicKey,
-            toPubkey: depositorATA,
+            toPubkey: solATA,
             lamports: amountDiff,
           }),
-          createSyncNativeInstruction(depositorATA)
+          createSyncNativeInstruction(solATA)
         );
       }
       depositTx.add(
@@ -393,5 +424,7 @@ export function useMatoProgram() {
     closePositionB,
     getCurrentSlot,
     getBookkeepingAccount,
+    getSolBalance,
+    getUSDCBalance,
   };
 }
