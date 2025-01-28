@@ -277,11 +277,11 @@ export function SwapInterface({}: {}) {
                               side == "buy"
                                 ? form.setValue(
                                     "amount",
-                                    getUSDCBalance.data / 4
+                                    Number((getUSDCBalance.data / 4).toFixed(6))
                                   )
                                 : form.setValue(
                                     "amount",
-                                    getSolBalance.data / 4
+                                    Number((getSolBalance.data / 4).toFixed(6))
                                   );
                             }}
                           >
@@ -293,11 +293,11 @@ export function SwapInterface({}: {}) {
                               side == "buy"
                                 ? form.setValue(
                                     "amount",
-                                    getUSDCBalance.data / 2
+                                    Number((getUSDCBalance.data / 2).toFixed(6))
                                   )
                                 : form.setValue(
                                     "amount",
-                                    getSolBalance.data / 2
+                                    Number((getSolBalance.data / 2).toFixed(6))
                                   );
                             }}
                           >
@@ -308,7 +308,10 @@ export function SwapInterface({}: {}) {
                             onClick={() => {
                               side == "buy"
                                 ? form.setValue("amount", getUSDCBalance.data)
-                                : form.setValue("amount", getSolBalance.data);
+                                : form.setValue(
+                                    "amount",
+                                    getSolBalance.data - 0.003
+                                  );
                             }}
                           >
                             Max

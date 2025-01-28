@@ -18,6 +18,7 @@ import {
 } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import {
+  createAssociatedTokenAccountInstruction,
   createSyncNativeInstruction,
   getAssociatedTokenAddressSync,
   NATIVE_MINT,
@@ -180,6 +181,12 @@ export function useMatoProgram() {
       let depositTx = new Transaction();
       if (amountDiff > 0) {
         depositTx.add(
+          createAssociatedTokenAccountInstruction(
+            publicKey,
+            solATA,
+            publicKey,
+            NATIVE_MINT
+          ),
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: solATA,
