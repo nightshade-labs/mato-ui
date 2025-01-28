@@ -171,22 +171,24 @@ export function useMatoProgram() {
     }) => {
       let solATA = getAssociatedTokenAddressSync(solMint, publicKey);
       let amountDiff: number;
+      let depositTx = new Transaction();
       try {
         let tokenAmount = await connection.getTokenAccountBalance(solATA);
         amountDiff = amount - parseInt(tokenAmount.value.amount);
       } catch (e) {
         amountDiff = amount;
-      }
-
-      let depositTx = new Transaction();
-      if (amountDiff > 0) {
         depositTx.add(
           createAssociatedTokenAccountInstruction(
             publicKey,
             solATA,
             publicKey,
             NATIVE_MINT
-          ),
+          )
+        );
+      }
+
+      if (amountDiff > 0) {
+        depositTx.add(
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: solATA,
@@ -217,9 +219,7 @@ export function useMatoProgram() {
     },
     onSuccess: (signature) => {
       transactionToast(signature, CREATE_POSITION);
-      queryClient.invalidateQueries({
-        queryKey: ["get-market", { cluster }],
-      });
+      queryClient.invalidateQueries();
     },
     onError: (e) =>
       toast({
@@ -249,9 +249,7 @@ export function useMatoProgram() {
         .rpc({ skipPreflight: true }),
     onSuccess: (signature) => {
       transactionToast(signature, CREATE_POSITION);
-      queryClient.invalidateQueries({
-        queryKey: ["get-market", { cluster }],
-      });
+      queryClient.invalidateQueries();
     },
     onError: (e) =>
       toast({
