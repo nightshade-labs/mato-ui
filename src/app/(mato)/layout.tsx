@@ -5,7 +5,7 @@ import { UiLayout } from "@/components/ui/ui-layout";
 
 const links: { label: string; path: string }[] = [
   { label: "Swap", path: "/swap" },
-  { label: "Transactions", path: "/positions" },
+  { label: "Positions", path: "/positions" },
 ];
 
 export default function MatoLayout({

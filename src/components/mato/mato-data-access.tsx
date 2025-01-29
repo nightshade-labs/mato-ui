@@ -132,6 +132,7 @@ export function useMatoProgram() {
   const getMarket = useQuery({
     queryKey: ["get-market", { cluster }],
     queryFn: () => program.account.market.fetch(marketPda),
+    refetchInterval: 7000,
   });
 
   const getAllPositionA = useQuery({
@@ -219,7 +220,15 @@ export function useMatoProgram() {
     },
     onSuccess: (signature) => {
       transactionToast(signature, CREATE_POSITION);
-      queryClient.invalidateQueries();
+      queryClient.invalidateQueries({
+        queryKey: ["get-market", { cluster }],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["get-usdc-balance", { cluster }],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["get-sol-balance", { cluster }],
+      });
     },
     onError: (e) =>
       toast({
@@ -249,7 +258,15 @@ export function useMatoProgram() {
         .rpc({ skipPreflight: true }),
     onSuccess: (signature) => {
       transactionToast(signature, CREATE_POSITION);
-      queryClient.invalidateQueries();
+      queryClient.invalidateQueries({
+        queryKey: ["get-market", { cluster }],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["get-usdc-balance", { cluster }],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["get-sol-balance", { cluster }],
+      });
     },
     onError: (e) =>
       toast({

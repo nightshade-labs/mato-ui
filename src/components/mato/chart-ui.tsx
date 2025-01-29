@@ -137,6 +137,7 @@ export function MarketChart() {
 export const durationStringToSlots = new Map<string, number>();
 const slotsPerSecond = 2.5;
 
+durationStringToSlots.set("5sec", 5 * slotsPerSecond);
 durationStringToSlots.set("1min", 60 * slotsPerSecond);
 durationStringToSlots.set("5min", 5 * 60 * slotsPerSecond);
 durationStringToSlots.set("1hour", 60 * 60 * slotsPerSecond);
