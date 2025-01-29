@@ -165,9 +165,9 @@ const SwapFormSchema = z.object({
   //   z.number().gt(0, "Must be greater than zero")
   // ),
   amount: z.number().gt(0, "Must be greater than zero"),
-  // duration: z.string({
-  //   required_error: "Please set a duration",
-  // }),
+  duration: z.string({
+    required_error: "Please set a duration",
+  }),
   // limit: z.string().optional(),
 });
 
@@ -184,16 +184,16 @@ export function SwapInterface({}: {}) {
   });
 
   async function onSubmit(data: z.infer<typeof SwapFormSchema>) {
-    // let slotDuration = durationStringToSlots.get(data.duration);
+    let slotDuration = durationStringToSlots.get(data.duration);
     if (side == "sell") {
       depositTokenA.mutate({
         amount: data.amount * 1000000000,
-        duration: 20,
+        duration: slotDuration || 10,
       });
     } else {
       depositTokenB.mutate({
         amount: data.amount * 1000000,
-        duration: 20,
+        duration: slotDuration || 10,
       });
     }
   }
@@ -334,7 +334,7 @@ export function SwapInterface({}: {}) {
                 </FormItem>
               )}
             />
-            {/* <FormField
+            <FormField
               control={form.control}
               name="duration"
               render={({ field }) => (
@@ -342,7 +342,7 @@ export function SwapInterface({}: {}) {
                   <div className="flex justify-between">
                     <div className="flex gap-1 items-center">
                       <FormLabel>Duration</FormLabel>
-                      <TooltipProvider>
+                      {/* <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Info size={12} />
@@ -351,9 +351,9 @@ export function SwapInterface({}: {}) {
                             <p>Instant swap not supported yet.</p>
                           </TooltipContent>
                         </Tooltip>
-                      </TooltipProvider>
+                      </TooltipProvider> */}
                     </div>
-                    <div
+                    {/* <div
                       className="flex gap-1 items-center hover:cursor-pointer"
                       onClick={() => setIsInstantSwap(!isInstantSwap)}
                     >
@@ -361,13 +361,13 @@ export function SwapInterface({}: {}) {
                       <div className="text-sm">
                         {isInstantSwap ? "Instant" : "Stream"}{" "}
                       </div>
-                    </div>
+                    </div> */}
                   </div>
 
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
-                    disabled={isInstantSwap}
+                    // disabled={isInstantSwap}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -375,25 +375,22 @@ export function SwapInterface({}: {}) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="5sec">5 sec</SelectItem>
                       <SelectItem value="1min">1 min</SelectItem>
-                      <SelectItem value="5min">5 min</SelectItem>
                       <SelectItem value="1hour">1 hour</SelectItem>
                       <SelectItem value="1day">1 day</SelectItem>
                       <SelectItem value="1week">1 week</SelectItem>
-                      <SelectItem value="1month">1 month</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    {isInstantSwap
-                      ? "Your order is fulfilled at once"
-                      : "Your order is evenly distributed over this period of time"}
+                    Your order is evenly distributed over this period of time
                   </FormDescription>
 
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
+            {/* <FormField
               control={form.control}
               name="limit"
               render={({ field }) => (

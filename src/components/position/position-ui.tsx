@@ -99,7 +99,7 @@ export function PositionCard({
         {/* <Button variant="outline" onClick={() => withdraw(positionData.id)}>
           Withdraw {buying}
         </Button> */}
-        <Button onClick={() => close(positionData.id)}>Close Position</Button>
+        {/* <Button onClick={() => close(positionData.id)}>Close Position</Button> */}
       </CardFooter>
     </Card>
   );

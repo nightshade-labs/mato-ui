@@ -23,7 +23,7 @@ export default function PositionsFeature() {
 
   return (
     <div>
-      <AppHero title={"Positions"} subtitle={"Manage your positions"}></AppHero>
+      <AppHero title={"Positions"} subtitle={""}></AppHero>
       <div className="flex flex-wrap gap-8 justify-center w-full">
         {getPositionA.data &&
           currentSlot &&
