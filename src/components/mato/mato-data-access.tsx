@@ -216,7 +216,18 @@ export function useMatoProgram() {
           .transaction()
       );
 
-      return wallet.sendTransaction(depositTx, connection);
+      let txSig = await wallet.sendTransaction(depositTx, connection);
+      let blockhash = await provider.connection.getLatestBlockhash();
+
+      await connection.confirmTransaction(
+        {
+          signature: txSig,
+          ...blockhash,
+        },
+        "confirmed"
+      );
+
+      return txSig;
     },
     onSuccess: (signature) => {
       transactionToast(signature, CREATE_POSITION);
