@@ -89,7 +89,7 @@ export function PositionCard({
             value={
               (swappedTokens.toNumber() /
                 swappedEstimate.div(new BN(1000000)).toNumber()) *
-              100
+              100000
             }
             className="h-4 mb-4 -mt-2"
           />
