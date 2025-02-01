@@ -35,7 +35,6 @@ import { Card, CardContent, CardHeader } from "../ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useConnection } from "@solana/wallet-adapter-react";
 
-import { durationStringToSlots } from "./chart-ui";
 import { AccountBalance, AccountTokenBalance } from "../account/account-ui";
 import { USDC_MINT } from "@/lib/constants";
 import {
@@ -44,6 +43,7 @@ import {
 } from "../account/account-data-access";
 import { useAnchorProvider } from "../solana/solana-provider";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { durationStringToSlots } from "@/lib/utils";
 
 const OrderDialogFormSchema = z.object({
   amount: z.preprocess(

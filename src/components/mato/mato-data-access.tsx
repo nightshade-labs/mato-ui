@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  MATO_PROGRAM_ID as programId,
-  getProgram,
-  Mato,
-} from "@project/anchor";
+import { MATO_PROGRAM_ID as programId, getProgram } from "@project/anchor";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
