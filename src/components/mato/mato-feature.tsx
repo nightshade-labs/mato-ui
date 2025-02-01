@@ -9,8 +9,6 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { AccountBalance } from "../account/account-ui";
 
 export default function MatoFeature() {
-  // console.log("MatoFeature, RPC_URL", process.env.RPC_KEY);
-
   const { getMarketAccount, depositTokenA, depositTokenB } = useMatoProgram();
 
   let tradingVolumeA =
