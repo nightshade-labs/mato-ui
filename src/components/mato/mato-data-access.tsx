@@ -27,8 +27,8 @@ import {
   GET_BALANCE,
   GET_BOOKKEEPING_ACCOUNT,
   GET_MARKET_ACCOUNT,
-  GET_POSITION_A,
-  GET_POSITION_B,
+  GET_ALL_POSITION_A,
+  GET_ALL_POSITION_B,
   GET_TOKEN_BALANCE,
   WITHDRAW_TOKEN_A,
   WITHDRAW_TOKEN_B,
@@ -78,7 +78,7 @@ export function useMatoProgram() {
   });
 
   const getAllPositionA = useQuery({
-    queryKey: [GET_POSITION_A, { cluster }],
+    queryKey: [GET_ALL_POSITION_A, { cluster }],
     queryFn: () =>
       program.account.positionA.all([
         {
@@ -91,7 +91,7 @@ export function useMatoProgram() {
   });
 
   const getAllPositionB = useQuery({
-    queryKey: [GET_POSITION_B, { cluster }],
+    queryKey: [GET_ALL_POSITION_B, { cluster }],
     queryFn: () =>
       program.account.positionB.all([
         {
@@ -346,6 +346,9 @@ export function useMatoProgram() {
     onSuccess: (signature) => {
       transactionToast(signature, CLOSE_POSITION);
       queryClient.invalidateQueries({
+        queryKey: [GET_ALL_POSITION_A, { cluster }],
+      });
+      queryClient.invalidateQueries({
         queryKey: [GET_MARKET_ACCOUNT, { cluster }],
       });
       queryClient.invalidateQueries({
@@ -398,6 +401,9 @@ export function useMatoProgram() {
     },
     onSuccess: (signature) => {
       transactionToast(signature, CLOSE_POSITION);
+      queryClient.invalidateQueries({
+        queryKey: [GET_ALL_POSITION_B, { cluster }],
+      });
       queryClient.invalidateQueries({
         queryKey: [GET_MARKET_ACCOUNT, { cluster }],
       });

@@ -5,7 +5,6 @@ import { useMatoProgram } from "../mato/mato-data-access";
 import { AppHero } from "../ui/ui-layout";
 import { PositionCard } from "./position-ui";
 import { BN } from "@coral-xyz/anchor";
-import { useGetSlot } from "../cluster/cluster-data-access";
 
 export default function PositionsFeature() {
   const {
@@ -19,26 +18,21 @@ export default function PositionsFeature() {
     getMarketAccount,
   } = useMatoProgram();
 
-  const getSlot = useGetSlot();
-  let currentSlot = getSlot.data;
-
   return (
     <div>
       <AppHero title={"Positions"} subtitle={""}></AppHero>
       <div className="flex flex-wrap gap-8 justify-center w-full">
         {getAllPositionA.data &&
-          currentSlot &&
           getBookkeepingAccount.data &&
           getMarketAccount.data &&
           getAllPositionA.data.map((data) => (
             <PositionCard
-              key={currentSlot.toString() + data.publicKey.toString()}
+              key={data.publicKey.toString()}
               selling="tSOL"
               buying="tUSDC"
               withdraw={(id: BN) => withdrawTokenB.mutate(id)}
               close={(id: BN) => closePositionA.mutate(id)}
               positionData={data.account}
-              currentSlot={currentSlot}
               decimals={1000000000}
               avgPrice={getBookkeepingAccount.data.bPerA}
               lastSlot={getBookkeepingAccount.data.lastSlot}
@@ -48,18 +42,16 @@ export default function PositionsFeature() {
             />
           ))}
         {getAllPositionB.data &&
-          currentSlot &&
           getBookkeepingAccount.data &&
           getMarketAccount.data &&
           getAllPositionB.data.map((data) => (
             <PositionCard
-              key={currentSlot.toString() + data.publicKey.toString()}
+              key={data.publicKey.toString()}
               selling="tUSDC"
               buying="tSOL"
               withdraw={(id: BN) => withdrawTokenA.mutate(id)}
               close={(id: BN) => closePositionB.mutate(id)}
               positionData={data.account}
-              currentSlot={currentSlot}
               decimals={1000000}
               avgPrice={getBookkeepingAccount.data.aPerB}
               lastSlot={getBookkeepingAccount.data.lastSlot}
