@@ -11,13 +11,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTransactionToast } from "../ui/ui-layout";
 import { AIRDROP } from "@/lib/texts";
 import { useCluster } from "../cluster/cluster-data-access";
+import { GET_BALANCE, GET_TOKEN_BALANCE } from "@/lib/query-keys";
 
 export function useGetBalance({ address }: { address: PublicKey }) {
   const { connection } = useConnection();
   const { cluster } = useCluster();
 
   return useQuery({
-    queryKey: ["get-balance", { cluster, address }],
+    queryKey: [GET_BALANCE, { cluster, address }],
     queryFn: () => connection.getBalance(address),
     enabled: !!address,
   });
@@ -34,7 +35,7 @@ export function useGetTokenBalance({
   const { cluster } = useCluster();
 
   return useQuery({
-    queryKey: ["get-token-balance", { cluster, address, mintAddress }],
+    queryKey: [GET_TOKEN_BALANCE, { cluster, address, mintAddress }],
     queryFn: async () => {
       let ata = getAssociatedTokenAddressSync(mintAddress, address);
       let accountInfo = await connection.getAccountInfo(ata);
@@ -104,7 +105,7 @@ export function useRequestAirdrop({ address }: { address: PublicKey }) {
       return Promise.all([
         client.invalidateQueries({
           queryKey: [
-            "get-balance",
+            GET_BALANCE,
             { endpoint: connection.rpcEndpoint, address },
           ],
         }),

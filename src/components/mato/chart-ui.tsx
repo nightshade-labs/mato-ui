@@ -32,10 +32,10 @@ const chartData = [
 
 export function MarketChart() {
   const { width } = useWindowDimensions();
-  const { getMarket, depositTokenA, depositTokenB } = useMatoProgram();
+  const { getMarketAccount, depositTokenA, depositTokenB } = useMatoProgram();
   const { connection } = useConnection();
 
-  if (getMarket.isLoading) {
+  if (getMarketAccount.isLoading) {
     return (
       <div className="w-full flex justify-center">
         <LoadingSpinner />
@@ -54,8 +54,8 @@ export function MarketChart() {
   // console.log("treasury A", tresurayA);
   // console.log("treasury B", treasuryB);
 
-  let tradingVolumeA = getMarket.data?.tokenAVolume.toNumber() || 0;
-  let tradingVolumeB = getMarket.data?.tokenBVolume.toNumber() || 0;
+  let tradingVolumeA = getMarketAccount.data?.tokenAVolume.toNumber() || 0;
+  let tradingVolumeB = getMarketAccount.data?.tokenBVolume.toNumber() || 0;
   let isTrading = tradingVolumeA * tradingVolumeB !== 0;
 
   let marketPrice = isTrading

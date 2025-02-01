@@ -1,0 +1,12 @@
+export const GET_MARKET_ACCOUNT = "get-market-account";
+export const GET_BALANCE = "get-balance";
+export const GET_TOKEN_BALANCE = "get-token-balance";
+export const GET_BOOKKEEPING_ACCOUNT = "get-bookkeeping-account";
+export const GET_POSITION_A = "get-postion-a";
+export const GET_POSITION_B = "get-postion-b";
+export const DEPOSIT_TOKEN_A = "deposit-token-a";
+export const DEPOSIT_TOKEN_B = "deposit-token-b";
+export const WITHDRAW_TOKEN_A = "withdraw-token-a";
+export const WITHDRAW_TOKEN_B = "withdraw-token-b";
+export const CLOSE_POSITION_A = "close-position-a";
+export const CLOSE_POSITION_B = "close-position-b";

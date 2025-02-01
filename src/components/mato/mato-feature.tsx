@@ -11,12 +11,12 @@ import { AccountBalance } from "../account/account-ui";
 export default function MatoFeature() {
   // console.log("MatoFeature, RPC_URL", process.env.RPC_KEY);
 
-  const { getMarket, depositTokenA, depositTokenB } = useMatoProgram();
+  const { getMarketAccount, depositTokenA, depositTokenB } = useMatoProgram();
 
   let tradingVolumeA =
-    getMarket.data?.tokenAVolume.div(new BN(1000000)).toNumber() || 0;
+    getMarketAccount.data?.tokenAVolume.div(new BN(1000000)).toNumber() || 0;
   let tradingVolumeB =
-    getMarket.data?.tokenBVolume.div(new BN(1000000)).toNumber() || 0;
+    getMarketAccount.data?.tokenBVolume.div(new BN(1000000)).toNumber() || 0;
   let isTrading = tradingVolumeA * tradingVolumeB !== 0;
 
   let marketPrice = isTrading

@@ -23,6 +23,20 @@ import { useTransactionToast } from "../ui/ui-layout";
 import { useToast } from "@/hooks/use-toast";
 import { CLOSE_POSITION, CREATE_POSITION, WITHDRAW_TOKENS } from "@/lib/texts";
 import { EXITS_ADDRESS, PRICES_ADDRESS, USDC_MINT } from "@/lib/constants";
+import {
+  CLOSE_POSITION_A,
+  CLOSE_POSITION_B,
+  DEPOSIT_TOKEN_A,
+  DEPOSIT_TOKEN_B,
+  GET_BALANCE,
+  GET_BOOKKEEPING_ACCOUNT,
+  GET_MARKET_ACCOUNT,
+  GET_POSITION_A,
+  GET_POSITION_B,
+  GET_TOKEN_BALANCE,
+  WITHDRAW_TOKEN_A,
+  WITHDRAW_TOKEN_B,
+} from "@/lib/query-keys";
 
 export function useMatoProgram() {
   const { connection } = useConnection();
@@ -34,6 +48,10 @@ export function useMatoProgram() {
   const { toast } = useToast();
   const wallet = useWallet();
 
+  ////////////////////////////////////////////////////////////////
+  ///////////////////////////// PDAs /////////////////////////////
+  ////////////////////////////////////////////////////////////////
+
   let [marketPda] = PublicKey.findProgramAddressSync(
     [
       Buffer.from("market"),
@@ -43,39 +61,28 @@ export function useMatoProgram() {
     program.programId
   );
 
-  const [treasuryA] = PublicKey.findProgramAddressSync(
-    [Buffer.from("treasury_a"), marketPda.toBuffer()],
-    program.programId
-  );
-
-  const [treasuryB] = PublicKey.findProgramAddressSync(
-    [Buffer.from("treasury_b"), marketPda.toBuffer()],
-    program.programId
-  );
-
   const [bookkeepingPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("bookkeeping"), marketPda.toBuffer()],
     program.programId
   );
 
-  const getProgramAccount = useQuery({
-    queryKey: ["get-program-account", { cluster }],
-    queryFn: () => connection.getParsedAccountInfo(programId),
-  });
+  ////////////////////////////////////////////////////////////////
+  //////////////////////////// Queries ///////////////////////////
+  ////////////////////////////////////////////////////////////////
 
   const getBookkeepingAccount = useQuery({
-    queryKey: ["get-bookkeeping-account", { cluster }],
+    queryKey: [GET_BOOKKEEPING_ACCOUNT, { cluster }],
     queryFn: () => program.account.bookkeeping.fetch(bookkeepingPda),
   });
 
-  const getMarket = useQuery({
-    queryKey: ["get-market", { cluster }],
+  const getMarketAccount = useQuery({
+    queryKey: [GET_MARKET_ACCOUNT, { cluster }],
     queryFn: () => program.account.market.fetch(marketPda),
     refetchInterval: 7000,
   });
 
   const getAllPositionA = useQuery({
-    queryKey: ["get-postion-a", { cluster }],
+    queryKey: [GET_POSITION_A, { cluster }],
     queryFn: () =>
       program.account.positionA.all([
         {
@@ -88,7 +95,7 @@ export function useMatoProgram() {
   });
 
   const getAllPositionB = useQuery({
-    queryKey: ["get-postion-b", { cluster }],
+    queryKey: [GET_POSITION_B, { cluster }],
     queryFn: () =>
       program.account.positionB.all([
         {
@@ -100,8 +107,12 @@ export function useMatoProgram() {
       ]),
   });
 
+  ////////////////////////////////////////////////////////////////
+  /////////////////////////// Mutations //////////////////////////
+  ////////////////////////////////////////////////////////////////
+
   const depositTokenA = useMutation({
-    mutationKey: ["mato", "deposit-token-a", { cluster }],
+    mutationKey: [DEPOSIT_TOKEN_A, { cluster }],
     mutationFn: async ({
       amount,
       duration,
@@ -174,10 +185,10 @@ export function useMatoProgram() {
     onSuccess: (signature) => {
       transactionToast(signature, CREATE_POSITION);
       queryClient.invalidateQueries({
-        queryKey: ["get-market", { cluster }],
+        queryKey: [GET_MARKET_ACCOUNT, { cluster }],
       });
       queryClient.invalidateQueries({
-        queryKey: ["get-balance", { cluster, address: provider.publicKey }],
+        queryKey: [GET_BALANCE, { cluster, address: provider.publicKey }],
       });
     },
     onError: (e) =>
@@ -189,7 +200,7 @@ export function useMatoProgram() {
   });
 
   const depositTokenB = useMutation({
-    mutationKey: ["mato", "deposit-token-b", { cluster }],
+    mutationKey: [DEPOSIT_TOKEN_B, { cluster }],
     mutationFn: ({ amount, duration }: { amount: number; duration: number }) =>
       program.methods
         .depositTokenB(new BN(Date.now()), new BN(amount), new BN(duration))
@@ -209,11 +220,11 @@ export function useMatoProgram() {
     onSuccess: (signature) => {
       transactionToast(signature, CREATE_POSITION);
       queryClient.invalidateQueries({
-        queryKey: ["get-market", { cluster }],
+        queryKey: [GET_MARKET_ACCOUNT, { cluster }],
       });
       queryClient.invalidateQueries({
         queryKey: [
-          "get-token-balance",
+          GET_TOKEN_BALANCE,
           { cluster, address: provider.publicKey, mintAddress: USDC_MINT },
         ],
       });
@@ -227,7 +238,7 @@ export function useMatoProgram() {
   });
 
   const withdrawTokenA = useMutation({
-    mutationKey: ["mato", "withdraw-token-a", { cluster }],
+    mutationKey: [WITHDRAW_TOKEN_A, { cluster }],
     mutationFn: (id: BN) => {
       const [positionBPda] = PublicKey.findProgramAddressSync(
         [
@@ -267,7 +278,7 @@ export function useMatoProgram() {
   });
 
   const withdrawTokenB = useMutation({
-    mutationKey: ["mato", "withdraw-token-b", { cluster }],
+    mutationKey: [WITHDRAW_TOKEN_B, { cluster }],
     mutationFn: (id: BN) => {
       const [positionAPda] = PublicKey.findProgramAddressSync(
         [
@@ -307,7 +318,7 @@ export function useMatoProgram() {
   });
 
   const closePositionA = useMutation({
-    mutationKey: ["mato", "close-position-a", { cluster }],
+    mutationKey: [CLOSE_POSITION_A, { cluster }],
     mutationFn: (id: BN) => {
       const [positionAPda] = PublicKey.findProgramAddressSync(
         [
@@ -339,14 +350,14 @@ export function useMatoProgram() {
     onSuccess: (signature) => {
       transactionToast(signature, CLOSE_POSITION);
       queryClient.invalidateQueries({
-        queryKey: ["get-market", { cluster }],
+        queryKey: [GET_MARKET_ACCOUNT, { cluster }],
       });
       queryClient.invalidateQueries({
-        queryKey: ["get-balance", { cluster, address: provider.publicKey }],
+        queryKey: [GET_BALANCE, { cluster, address: provider.publicKey }],
       });
       queryClient.invalidateQueries({
         queryKey: [
-          "get-token-balance",
+          GET_TOKEN_BALANCE,
           { cluster, address: provider.publicKey, mintAddress: USDC_MINT },
         ],
       });
@@ -360,7 +371,7 @@ export function useMatoProgram() {
   });
 
   const closePositionB = useMutation({
-    mutationKey: ["mato", "close-position-b", { cluster }],
+    mutationKey: [CLOSE_POSITION_B, { cluster }],
     mutationFn: (id: BN) => {
       const [positionBPda] = PublicKey.findProgramAddressSync(
         [
@@ -392,14 +403,14 @@ export function useMatoProgram() {
     onSuccess: (signature) => {
       transactionToast(signature, CLOSE_POSITION);
       queryClient.invalidateQueries({
-        queryKey: ["get-market", { cluster }],
+        queryKey: [GET_MARKET_ACCOUNT, { cluster }],
       });
       queryClient.invalidateQueries({
-        queryKey: ["get-balance", { cluster, address: provider.publicKey }],
+        queryKey: [GET_BALANCE, { cluster, address: provider.publicKey }],
       });
       queryClient.invalidateQueries({
         queryKey: [
-          "get-token-balance",
+          GET_TOKEN_BALANCE,
           { cluster, address: provider.publicKey, mintAddress: USDC_MINT },
         ],
       });
@@ -415,10 +426,9 @@ export function useMatoProgram() {
   return {
     program,
     programId,
-    getProgramAccount,
     depositTokenA,
     depositTokenB,
-    getMarket,
+    getMarketAccount,
     getAllPositionA,
     getAllPositionB,
     withdrawTokenA,
