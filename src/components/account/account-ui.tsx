@@ -20,14 +20,10 @@ export function AccountBalance({
   classname,
   decimals = 6,
 }: {
-  address: PublicKey | null;
+  address: PublicKey;
   classname?: string;
   decimals?: number;
 }) {
-  if (address === null) {
-    return null;
-  }
-
   const getBalanceQuery = useGetBalance({ address });
   const getTokenBalanceQuery = useGetTokenBalance({
     address,
@@ -64,15 +60,11 @@ export function AccountTokenBalance({
   classname,
   decimals = 6,
 }: {
-  address: PublicKey | null;
+  address: PublicKey;
   mintAddress: PublicKey;
   classname?: string;
   decimals?: number;
 }) {
-  if (address === null) {
-    return null;
-  }
-
   const getTokenBalanceQuery = useGetTokenBalance({
     address,
     mintAddress: mintAddress,
