@@ -5,6 +5,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Progress } from "../ui/progress";
 import { BN } from "@coral-xyz/anchor";
 import { BOOKKEEPING_PRECISION, VOLUME_PRECISION } from "@/lib/constants";
+import { useGetSlot } from "../cluster/cluster-data-access";
 
 export function PositionCard({
   selling,
@@ -12,7 +13,6 @@ export function PositionCard({
   withdraw,
   close,
   positionData,
-  currentSlot,
   decimals,
   avgPrice,
   lastSlot,
@@ -32,12 +32,14 @@ export function PositionCard({
     totalNoTrades: BN;
     bump: number;
   };
-  currentSlot: number;
   decimals: number;
   avgPrice: BN;
   lastSlot: BN;
   marketPrice: BN;
 }) {
+  const getSlot = useGetSlot();
+  let currentSlot = getSlot.data || 0;
+
   let amount = positionData.amount;
   let startSlot = positionData.startSlot;
   let endSlot = positionData.endSlot;
@@ -88,8 +90,8 @@ export function PositionCard({
           <Progress
             value={
               (swappedTokens.toNumber() /
-                swappedEstimate.div(new BN(1000000)).toNumber()) *
-              100000
+                swappedEstimate.div(new BN(VOLUME_PRECISION)).toNumber()) *
+              100
             }
             className="h-4 mb-4 -mt-2"
           />
@@ -99,7 +101,7 @@ export function PositionCard({
         {/* <Button variant="outline" onClick={() => withdraw(positionData.id)}>
           Withdraw {buying}
         </Button> */}
-        {/* <Button onClick={() => close(positionData.id)}>Close Position</Button> */}
+        <Button onClick={() => close(positionData.id)}>Close Position</Button>
       </CardFooter>
     </Card>
   );

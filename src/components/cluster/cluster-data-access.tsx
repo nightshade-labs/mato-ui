@@ -1,7 +1,9 @@
 "use client";
 
 import { useToast } from "@/hooks/use-toast";
+import { useConnection } from "@solana/wallet-adapter-react";
 import { clusterApiUrl, Connection } from "@solana/web3.js";
+import { useQuery } from "@tanstack/react-query";
 import { atom, useAtomValue, useSetAtom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 import { createContext, ReactNode, useContext } from "react";
@@ -129,4 +131,15 @@ function getClusterUrlParam(cluster: Cluster): string {
   }
 
   return suffix.length ? `?cluster=${suffix}` : "";
+}
+
+export function useGetSlot() {
+  const { connection } = useConnection();
+  const { cluster } = useCluster();
+
+  return useQuery({
+    queryKey: ["get-slot", { cluster }],
+    queryFn: () => connection.getSlot(),
+    refetchInterval: 400,
+  });
 }

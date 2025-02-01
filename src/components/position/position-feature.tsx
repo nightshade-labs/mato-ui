@@ -8,63 +8,56 @@ import { BN } from "@coral-xyz/anchor";
 
 export default function PositionsFeature() {
   const {
-    getAllPositionA: getPositionA,
-    getAllPositionB: getPositionB,
+    getAllPositionA,
+    getAllPositionB,
     withdrawTokenA,
     withdrawTokenB,
     closePositionA,
     closePositionB,
-    getCurrentSlot,
     getBookkeepingAccount,
-    getMarket,
+    getMarketAccount,
   } = useMatoProgram();
-
-  let currentSlot = getCurrentSlot.data;
 
   return (
     <div>
       <AppHero title={"Positions"} subtitle={""}></AppHero>
       <div className="flex flex-wrap gap-8 justify-center w-full">
-        {getPositionA.data &&
-          currentSlot &&
+        {getAllPositionA.data &&
           getBookkeepingAccount.data &&
-          getMarket.data &&
-          getPositionA.data.map((data) => (
+          getMarketAccount.data &&
+          getAllPositionA.data.map((data) => (
             <PositionCard
-              key={currentSlot.toString() + data.publicKey.toString()}
+              key={data.publicKey.toString()}
               selling="tSOL"
               buying="tUSDC"
               withdraw={(id: BN) => withdrawTokenB.mutate(id)}
               close={(id: BN) => closePositionA.mutate(id)}
               positionData={data.account}
-              currentSlot={currentSlot}
               decimals={1000000000}
               avgPrice={getBookkeepingAccount.data.bPerA}
               lastSlot={getBookkeepingAccount.data.lastSlot}
-              marketPrice={getMarket.data.tokenBVolume
+              marketPrice={getMarketAccount.data.tokenBVolume
                 .mul(new BN(VOLUME_PRECISION))
-                .div(getMarket.data.tokenAVolume)}
+                .div(getMarketAccount.data.tokenAVolume)}
             />
           ))}
-        {getPositionB.data &&
-          currentSlot &&
+        {getAllPositionB.data &&
           getBookkeepingAccount.data &&
-          getMarket.data &&
-          getPositionB.data.map((data) => (
+          getMarketAccount.data &&
+          getAllPositionB.data.map((data) => (
             <PositionCard
-              key={currentSlot.toString() + data.publicKey.toString()}
+              key={data.publicKey.toString()}
               selling="tUSDC"
               buying="tSOL"
               withdraw={(id: BN) => withdrawTokenA.mutate(id)}
               close={(id: BN) => closePositionB.mutate(id)}
               positionData={data.account}
-              currentSlot={currentSlot}
               decimals={1000000}
               avgPrice={getBookkeepingAccount.data.aPerB}
               lastSlot={getBookkeepingAccount.data.lastSlot}
-              marketPrice={getMarket.data.tokenAVolume
+              marketPrice={getMarketAccount.data.tokenAVolume
                 .mul(new BN(VOLUME_PRECISION))
-                .div(getMarket.data.tokenBVolume)}
+                .div(getMarketAccount.data.tokenBVolume)}
             />
           ))}
       </div>
