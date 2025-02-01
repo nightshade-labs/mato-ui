@@ -2,14 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "../ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../ui/dialog";
 import { Input } from "../ui/input";
 import {
   Select,
@@ -30,12 +22,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Card, CardContent, CardHeader } from "../ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { useConnection } from "@solana/wallet-adapter-react";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 import { AccountBalance, AccountTokenBalance } from "../account/account-ui";
-import { USDC_MINT } from "@/lib/constants";
+import { USDC_MINT, VOLUME_PRECISION } from "@/lib/constants";
 import {
   useGetBalance,
   useGetTokenBalance,
@@ -44,127 +34,20 @@ import { useAnchorProvider } from "../solana/solana-provider";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { durationStringToSlots } from "@/lib/utils";
 import { useMatoProgram } from "../mato/mato-data-access";
-
-const OrderDialogFormSchema = z.object({
-  amount: z.preprocess(
-    (a) => parseFloat(z.string().parse(a)),
-    z.number().gt(0, "Must be greater than zero")
-  ),
-  time: z.string({
-    required_error: "Please set a time horizon.",
-  }),
-});
-
-export function OrderDialog({
-  title,
-  amountLabel,
-  handleSubmit,
-}: {
-  title: string;
-  amountLabel: string;
-  handleSubmit: (amount: number, duration: string) => Promise<void>;
-}) {
-  const form = useForm<z.infer<typeof OrderDialogFormSchema>>({
-    resolver: zodResolver(OrderDialogFormSchema),
-  });
-
-  async function onSubmit(data: z.infer<typeof OrderDialogFormSchema>) {
-    await handleSubmit(data.amount, data.time).then(() => setIsOpen(false));
-  }
-
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button>{title}</Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            Stream your order over your desired time horizon.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex flex-col space-y-1.5">
-                    <FormLabel>{amountLabel}</FormLabel>
-                    <Input
-                      id="amount"
-                      placeholder="0,0"
-                      type="number"
-                      defaultValue={field.value}
-                      onChange={field.onChange}
-                      onVolumeChange={field.onChange}
-                    />
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="time"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Time horizon</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="1min">1 min</SelectItem>
-                      <SelectItem value="5min">5 min</SelectItem>
-                      <SelectItem value="1hour">1 hour</SelectItem>
-                      <SelectItem value="1day">1 day</SelectItem>
-                      <SelectItem value="1week">1 week</SelectItem>
-                      <SelectItem value="1month">1 month</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Your order is evenly distributed over this period of time.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit">Submit order</Button>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import BN from "bn.js";
 
 const SwapFormSchema = z.object({
-  // amount: z.preprocess(
-  //   (a) => parseFloat(z.string().parse(a)),
-  //   z.number().gt(0, "Must be greater than zero")
-  // ),
   amount: z.number().gt(0, "Must be greater than zero"),
   duration: z.string({
     required_error: "Please set a duration",
   }),
-  // limit: z.string().optional(),
 });
 
-export function SwapInterface({}: {}) {
+export function SwapInterface() {
   const { depositTokenA, depositTokenB } = useMatoProgram();
 
   const [side, setSide] = useState<"buy" | "sell">("buy");
-  const [isLimitOrder, setIsLimitOrder] = useState(false);
-  const [isInstantSwap, setIsInstantSwap] = useState(false);
   const provider = useAnchorProvider();
 
   const getBalance = useGetBalance({ address: provider.publicKey });
@@ -181,49 +64,21 @@ export function SwapInterface({}: {}) {
     let slotDuration = durationStringToSlots.get(data.duration);
     if (side == "sell") {
       depositTokenA.mutate({
-        amount: data.amount * 1000000000,
+        amount: data.amount * LAMPORTS_PER_SOL,
         duration: slotDuration || 10,
       });
     } else {
       depositTokenB.mutate({
-        amount: data.amount * 1000000,
+        amount: data.amount * 10 ** (getTokenBalance.data?.value.decimals || 6),
         duration: slotDuration || 10,
       });
     }
   }
 
-  // let tresurayA = await connection.getTokenAccountBalance(
-  //   getMarket.data?.treasuryA || PublicKey.default
-  // );
-  // let treasuryB = await connection.getTokenAccountBalance(
-  //   getMarket.data?.treasuryB || PublicKey.default
-  // );
-
-  // console.log("tokenvolume a", getMarket.data?.tokenAVolume.toString());
-  // console.log("tokenvolume b", getMarket.data?.tokenBVolume.toString());
-  // console.log("treasury A", tresurayA);
-  // console.log("treasury B", treasuryB);
-
   return (
     <Card className="w-full lg:min-w-96 lg:w-fit h-fit">
       <CardHeader>
         <div className="flex flex-col gap-4">
-          {/* <div className="flex gap-4 sm:gap-8 justify-between">
-            <TokenSelection
-              title="You're trading"
-              selectOptions={supportedTradeTokens}
-            />
-            <TokenSelection
-              title="Paying with"
-              selectOptions={supportedNumeraireTokens}
-            />
-          </div> */}
-          {/* <div className="flex flex-col gap-2 bg-slate-100 p-4 rounded-md">
-            <div className="text-sm">Market price</div>
-            <div className="text-xl font-bold">
-              1 tSOL = {marketPrice} tUSDC
-            </div>
-          </div> */}
           <div className="flex justify-between">
             <Button
               variant={side === "buy" ? "default" : "outline"}
@@ -375,8 +230,8 @@ export function SwapInterface({}: {}) {
                       id="amount"
                       placeholder="0,0"
                       type="number"
+                      inputMode="decimal"
                       step="any"
-                      // defaultValue={field.value}
                       value={field.value}
                       onChange={(e) => field.onChange(e.target.valueAsNumber)}
                       onVolumeChange={field.onChange}
@@ -391,35 +246,11 @@ export function SwapInterface({}: {}) {
               name="duration"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex justify-between">
-                    <div className="flex gap-1 items-center">
-                      <FormLabel>Duration</FormLabel>
-                      {/* <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info size={12} />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Instant swap not supported yet.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider> */}
-                    </div>
-                    {/* <div
-                      className="flex gap-1 items-center hover:cursor-pointer"
-                      onClick={() => setIsInstantSwap(!isInstantSwap)}
-                    >
-                      <Clock4 size={16} />{" "}
-                      <div className="text-sm">
-                        {isInstantSwap ? "Instant" : "Stream"}{" "}
-                      </div>
-                    </div> */}
-                  </div>
+                  <FormLabel>Duration</FormLabel>
 
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
-                    // disabled={isInstantSwap}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -442,68 +273,6 @@ export function SwapInterface({}: {}) {
                 </FormItem>
               )}
             />
-            {/* <FormField
-              control={form.control}
-              name="limit"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex flex-col space-y-1.5">
-                    <div className="flex justify-between">
-                      <div className="flex gap-1 items-center">
-                        <FormLabel>
-                          {side == "buy" ? "Maximum " : "Minimum "} Price
-                          (tUSDC)
-                        </FormLabel>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info size={12} />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Limit order not supported yet.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <div
-                        className="flex gap-2 items-center hover:cursor-pointer"
-                        onClick={() => setIsLimitOrder(!isLimitOrder)}
-                      >
-                        <div className="text-sm">
-                          {isLimitOrder ? (
-                            <div className="flex gap-1 items-center">
-                              <Lock size={16} /> <div>Limit</div>
-                            </div>
-                          ) : (
-                            <div className="flex gap-1 items-center">
-                              <LockOpen size={16} /> <div>Market</div>
-                            </div>
-                          )}{" "}
-                        </div>
-                      </div>
-                    </div>
-
-                    <Input
-                      id="amount"
-                      placeholder="0,0"
-                      type="number"
-                      disabled={!isLimitOrder}
-                      defaultValue={0}
-                      onChange={field.onChange}
-                      onVolumeChange={field.onChange}
-                    />
-                  </div>
-                  <FormDescription>
-                    {!isLimitOrder
-                      ? "Using market price"
-                      : side == "buy"
-                        ? "Won't execute if price is above this value"
-                        : "Won't execute if price is below this value"}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            /> */}
             <Button type="submit">
               {side == "buy" ? "Buy SOL" : "Sell SOL"}
             </Button>
@@ -514,48 +283,59 @@ export function SwapInterface({}: {}) {
   );
 }
 
-export function TokenSelection({
-  title,
-  selectOptions,
-}: {
-  title: string;
-  selectOptions: supportedToken[];
-}) {
+export function PriceChart() {
+  const { getMarketAccount } = useMatoProgram();
+
+  let tradingVolumeA =
+    getMarketAccount.data?.tokenAVolume
+      .div(new BN(VOLUME_PRECISION))
+      .toNumber() || 0;
+  let tradingVolumeB =
+    getMarketAccount.data?.tokenBVolume
+      .div(new BN(VOLUME_PRECISION))
+      .toNumber() || 0;
+
+  let isTrading = tradingVolumeA * tradingVolumeB !== 0;
+
+  let marketPrice = isTrading
+    ? ((tradingVolumeB * LAMPORTS_PER_SOL) / 1000000 / tradingVolumeA).toFixed(
+        4
+      )
+    : "no trades right now";
+
   return (
-    <div className="flex flex-col w-full gap-2">
-      <div className="font-bold">{title}</div>
-      <Select defaultValue={selectOptions[0].value}>
-        <SelectTrigger className="lg:w-[180px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {selectOptions.map((opt) => (
-            <SelectItem value={opt.value} key={opt.value}>
-              <div className="flex items-center gap-2">
-                <Avatar className="w-4 h-4">
-                  <AvatarImage src={opt.imgSrc} />
-                  <AvatarFallback>{opt.name}</AvatarFallback>
+    <Card className="w-full lg:w-1/2 sm:min-h-96">
+      <CardHeader>
+        <CardTitle>
+          <div className="flex justify-between items-center">
+            <div className="flex gap-4 text-xl items-center">
+              <div className="flex gap-0">
+                <Avatar className="w-8 h-8 hidden sm:block bg-black">
+                  <AvatarImage src={"solana-sol-logo.png"} />
+                  <AvatarFallback>{"SOL"}</AvatarFallback>
                 </Avatar>
-                <div className="font-semibold">{opt.name}</div>
+                <Avatar className="w-8 h-8 hidden sm:block">
+                  <AvatarImage src={"usd-coin-usdc-logo.png"} />
+                  <AvatarFallback>{"USDC"}</AvatarFallback>
+                </Avatar>
               </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+              SOL / USDC
+            </div>
+            <span className="text-2xl">{marketPrice}</span>
+          </div>
+          <div className="mt-4 text-sm">
+            Trading rate per hour (SOL):{" "}
+            {((tradingVolumeA * 2.5 * 60 * 60) / LAMPORTS_PER_SOL).toFixed(2)}
+          </div>
+          <div className="mt-0 text-sm">
+            Trading rate per hour (USDC):{" "}
+            {((tradingVolumeB * 2.5 * 60 * 60) / 1000000).toFixed(2)}
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex mt-20 w-full justify-center">
+        Price Chart coming soon
+      </CardContent>
+    </Card>
   );
 }
-
-type supportedToken = {
-  name: string;
-  value: string;
-  imgSrc: string;
-};
-
-let supportedTradeTokens: supportedToken[] = [
-  { name: "matoSOL", value: "matoSol", imgSrc: "solana-sol-logo.png" },
-];
-
-let supportedNumeraireTokens: supportedToken[] = [
-  { name: "matoUSDC", value: "matoUSDC", imgSrc: "usd-coin-usdc-logo.png" },
-];

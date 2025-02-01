@@ -1,6 +1,5 @@
-import MatoFeature from "@/components/mato/mato-feature";
+import SwapFeature from "@/components/swap/swap-feature";
 
 export default function Page() {
-  // console.log("Page, RPC_URL", process.env.RPC_KEY);
-  return <MatoFeature />;
+  return <SwapFeature />;
 }
