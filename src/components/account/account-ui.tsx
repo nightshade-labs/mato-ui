@@ -3,26 +3,60 @@
 import { useWallet } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { useCluster } from "../cluster/cluster-data-access";
-import { useGetBalance, useRequestAirdrop } from "./account-data-access";
+import {
+  useGetBalance,
+  useGetTokenBalance,
+  useRequestAirdrop,
+} from "./account-data-access";
 
 import { Button } from "../ui/button";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { MagicWandIcon } from "@radix-ui/react-icons";
+import { cn } from "@/lib/utils";
+import { NATIVE_MINT } from "@solana/spl-token";
 
-export function AccountBalance({ address }: { address: PublicKey }) {
-  const query = useGetBalance({ address });
+export function AccountBalance({
+  address,
+  classname,
+  decimals = 6,
+}: {
+  address: PublicKey | null;
+  classname?: string;
+  decimals?: number;
+}) {
+  if (address === null) {
+    return null;
+  }
+
+  const getBalanceQuery = useGetBalance({ address });
+  const getTokenBalanceQuery = useGetTokenBalance({
+    address,
+    mintAddress: NATIVE_MINT,
+  });
+
+  const balance =
+    getBalanceQuery.data !== undefined &&
+    getTokenBalanceQuery.data !== undefined
+      ? getBalanceQuery.data + getTokenBalanceQuery.data
+      : undefined;
 
   return (
-    <div>
-      <h1
-        className="text-5xl font-bold cursor-pointer"
-        onClick={() => query.refetch()}
-      >
-        {query.data ? <BalanceSol balance={query.data} /> : "..."} SOL
-      </h1>
+    <div
+      className={cn("cursor-pointer", classname)}
+      onClick={() => {
+        getBalanceQuery.refetch();
+        getTokenBalanceQuery.refetch();
+      }}
+    >
+      {balance ? (
+        <span>{(balance / LAMPORTS_PER_SOL).toFixed(decimals)}</span>
+      ) : (
+        "..."
+      )}
     </div>
   );
 }
+
 export function AccountChecker() {
   const { publicKey } = useWallet();
   if (!publicKey) {
@@ -67,8 +101,12 @@ export function AccountBalanceCheck({ address }: { address: PublicKey }) {
   return null;
 }
 
-function BalanceSol({ balance }: { balance: number }) {
-  return (
-    <span>{Math.round((balance / LAMPORTS_PER_SOL) * 100000) / 100000}</span>
-  );
+function BalanceSol({
+  balance,
+  decimals,
+}: {
+  balance: number;
+  decimals: number;
+}) {
+  return <span>{(balance / LAMPORTS_PER_SOL).toFixed(decimals)}</span>;
 }

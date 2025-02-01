@@ -238,7 +238,10 @@ export function useMatoProgram() {
         queryKey: ["get-usdc-balance", { cluster }],
       });
       queryClient.invalidateQueries({
-        queryKey: ["get-sol-balance", { cluster }],
+        queryKey: [
+          "get-balance",
+          { endpoint: connection.rpcEndpoint, address: provider.publicKey },
+        ],
       });
     },
     onError: (e) =>

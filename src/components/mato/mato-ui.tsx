@@ -46,7 +46,7 @@ import {
 } from "../ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { AppHero } from "../ui/ui-layout";
-import { useConnection } from "@solana/wallet-adapter-react";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { Clock4, Lock, LockOpen, Info } from "lucide-react";
 import {
   Tooltip,
@@ -56,6 +56,7 @@ import {
 } from "../ui/tooltip";
 import { durationStringToSlots } from "./chart-ui";
 import { BN } from "bn.js";
+import { AccountBalance } from "../account/account-ui";
 
 const OrderDialogFormSchema = z.object({
   amount: z.preprocess(
@@ -178,6 +179,7 @@ export function SwapInterface({}: {}) {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [isLimitOrder, setIsLimitOrder] = useState(false);
   const [isInstantSwap, setIsInstantSwap] = useState(false);
+  const { publicKey } = useWallet();
 
   const form = useForm<z.infer<typeof SwapFormSchema>>({
     resolver: zodResolver(SwapFormSchema),
@@ -261,12 +263,16 @@ export function SwapInterface({}: {}) {
                       Quantity {side == "buy" ? "(USDC)" : "(SOL)"}
                     </FormLabel>
                     <div className="flex justify-between items-center">
-                      <div className="text-xs font-semibold">
+                      <div className="flex gap-2 text-xs font-semibold">
                         Balance:{" "}
-                        {side == "sell"
-                          ? getSolBalance.data && getSolBalance.data.toFixed(6)
-                          : getUSDCBalance.data &&
-                            getUSDCBalance.data.toFixed(6)}
+                        {side == "sell" ? (
+                          <AccountBalance
+                            address={publicKey}
+                            classname="text-xs font-semibold"
+                          />
+                        ) : (
+                          getUSDCBalance.data && getUSDCBalance.data.toFixed(6)
+                        )}
                       </div>
 
                       {getSolBalance.data && getUSDCBalance.data && (

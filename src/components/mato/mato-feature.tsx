@@ -5,6 +5,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { useMatoProgram } from "./mato-data-access";
 import { SwapInterface } from "./mato-ui";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { AccountBalance } from "../account/account-ui";
 
 export default function MatoFeature() {
   // console.log("MatoFeature, RPC_URL", process.env.RPC_KEY);
@@ -20,6 +22,8 @@ export default function MatoFeature() {
   let marketPrice = isTrading
     ? ((tradingVolumeB * 1000) / tradingVolumeA).toFixed(4)
     : "no trades right now";
+
+  const { publicKey } = useWallet();
 
   return (
     <div className="flex flex-col-reverse lg:flex-row gap-8 justify-center py-24">

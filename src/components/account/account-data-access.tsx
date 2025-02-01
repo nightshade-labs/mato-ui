@@ -1,6 +1,10 @@
 "use client";
 
-import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
   Connection,
@@ -15,13 +19,41 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTransactionToast } from "../ui/ui-layout";
 import { AIRDROP, TRANSFER_TOKENS } from "@/lib/texts";
 import { useToast } from "@/hooks/use-toast";
+import { useCluster } from "../cluster/cluster-data-access";
 
 export function useGetBalance({ address }: { address: PublicKey }) {
   const { connection } = useConnection();
+  const { cluster } = useCluster();
 
   return useQuery({
-    queryKey: ["get-balance", { endpoint: connection.rpcEndpoint, address }],
+    queryKey: ["get-balance", { cluster, address }],
     queryFn: () => connection.getBalance(address),
+  });
+}
+
+export function useGetTokenBalance({
+  address,
+  mintAddress,
+}: {
+  address: PublicKey;
+  mintAddress: PublicKey;
+}) {
+  const { connection } = useConnection();
+  const { cluster } = useCluster();
+
+  return useQuery({
+    queryKey: ["get-token-balance", { cluster, address, mintAddress }],
+    queryFn: async () => {
+      let ata = getAssociatedTokenAddressSync(mintAddress, address);
+      let accountInfo = await connection.getAccountInfo(ata);
+      if (accountInfo === null) {
+        return 0;
+      }
+
+      return connection
+        .getTokenAccountBalance(ata, "confirmed")
+        .then((balance) => parseInt(balance.value.amount));
+    },
   });
 }
 
@@ -84,7 +116,7 @@ export function useTransferSol({ address }: { address: PublicKey }) {
         // Send transaction and await for signature
         await connection.confirmTransaction(
           { signature, ...latestBlockhash },
-          "confirmed",
+          "confirmed"
         );
 
         console.log(signature);
@@ -139,7 +171,7 @@ export function useRequestAirdrop({ address }: { address: PublicKey }) {
 
       await connection.confirmTransaction(
         { signature, ...latestBlockhash },
-        "confirmed",
+        "confirmed"
       );
       return signature;
     },
