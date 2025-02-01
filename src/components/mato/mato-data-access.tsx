@@ -7,15 +7,7 @@ import {
 } from "@project/anchor";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  PublicKey,
-  sendAndConfirmTransaction,
-  SystemProgram,
-  Transaction,
-  TransactionInstruction,
-  TransactionMessage,
-  VersionedTransaction,
-} from "@solana/web3.js";
+import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import {
   createAssociatedTokenAccountInstruction,
@@ -30,6 +22,7 @@ import { useAnchorProvider } from "../solana/solana-provider";
 import { useTransactionToast } from "../ui/ui-layout";
 import { useToast } from "@/hooks/use-toast";
 import { CLOSE_POSITION, CREATE_POSITION, WITHDRAW_TOKENS } from "@/lib/texts";
+import { EXITS_ADDRESS, PRICES_ADDRESS, USDC_MINT } from "@/lib/constants";
 
 export function useMatoProgram() {
   const { connection } = useConnection();
@@ -41,62 +34,14 @@ export function useMatoProgram() {
   const { toast } = useToast();
   const wallet = useWallet();
 
-  const publicKey = provider.publicKey;
-
-  let exitsAddress = new PublicKey(
-    "D467xRNpNHvxbG7nRApDSshnvqVDhL4YjBYqz9TsoKF9"
-  );
-  let pricesAddress = new PublicKey(
-    "Dpe9rm2NFSTowGbvrwXccbW7FtGfrQCdu6ogugNW6akK"
-  );
-
-  let solMint = NATIVE_MINT;
-  let usdcMint = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
-
   let [marketPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("market"), exitsAddress.toBuffer(), pricesAddress.toBuffer()],
+    [
+      Buffer.from("market"),
+      EXITS_ADDRESS.toBuffer(),
+      PRICES_ADDRESS.toBuffer(),
+    ],
     program.programId
   );
-
-  const getSolBalance = useQuery({
-    queryKey: ["get-sol-balance", { cluster }],
-    queryFn: async () => {
-      let solATA = getAssociatedTokenAddressSync(solMint, publicKey);
-      let wrappedSol;
-      try {
-        let wrappedSolBalance = await connection.getTokenAccountBalance(
-          solATA,
-          "finalized"
-        );
-        wrappedSol =
-          wrappedSolBalance.value.uiAmount ||
-          parseInt(wrappedSolBalance.value.amount) /
-            10 ** wrappedSolBalance.value.decimals;
-      } catch (e) {
-        wrappedSol = 0;
-      }
-
-      let solBalance = await connection.getBalance(publicKey, "confirmed");
-
-      return solBalance / 1000000000 + wrappedSol;
-    },
-    enabled: !!publicKey,
-  });
-
-  const getUSDCBalance = useQuery({
-    queryKey: ["get-usdc-balance", { cluster }],
-    queryFn: async () => {
-      let usdcATA = getAssociatedTokenAddressSync(usdcMint, publicKey);
-      return await connection
-        .getTokenAccountBalance(usdcATA, "confirmed")
-        .then(
-          (balance) =>
-            balance.value.uiAmount ||
-            parseInt(balance.value.amount) / 10 ** balance.value.decimals
-        );
-    },
-    enabled: !!publicKey,
-  });
 
   const [treasuryA] = PublicKey.findProgramAddressSync(
     [Buffer.from("treasury_a"), marketPda.toBuffer()],
@@ -142,7 +87,7 @@ export function useMatoProgram() {
         {
           memcmp: {
             offset: 8, // discriminator
-            bytes: publicKey.toBase58(),
+            bytes: provider.publicKey.toBase58(),
           },
         },
       ]),
@@ -155,7 +100,7 @@ export function useMatoProgram() {
         {
           memcmp: {
             offset: 8, // discriminator
-            bytes: publicKey.toBase58(),
+            bytes: provider.publicKey.toBase58(),
           },
         },
       ]),
@@ -170,7 +115,10 @@ export function useMatoProgram() {
       amount: number;
       duration: number;
     }) => {
-      let solATA = getAssociatedTokenAddressSync(solMint, publicKey);
+      let solATA = getAssociatedTokenAddressSync(
+        NATIVE_MINT,
+        provider.publicKey
+      );
       let amountDiff: number;
       let depositTx = new Transaction();
       try {
@@ -180,9 +128,9 @@ export function useMatoProgram() {
         amountDiff = amount;
         depositTx.add(
           createAssociatedTokenAccountInstruction(
-            publicKey,
+            provider.publicKey,
             solATA,
-            publicKey,
+            provider.publicKey,
             NATIVE_MINT
           )
         );
@@ -191,7 +139,7 @@ export function useMatoProgram() {
       if (amountDiff > 0) {
         depositTx.add(
           SystemProgram.transfer({
-            fromPubkey: publicKey,
+            fromPubkey: provider.publicKey,
             toPubkey: solATA,
             lamports: amountDiff,
           }),
@@ -204,13 +152,13 @@ export function useMatoProgram() {
           .accounts({
             depositor: provider.publicKey,
             // depositorTokenAccount: depositorATA,
-            tokenMintA: solMint,
+            tokenMintA: NATIVE_MINT,
             // market: marketPda,
             // positionA: positionAPda,
             // treasuryA: treasuryA,
             // bookkeeping: bookkeeping,
-            exits: exitsAddress,
-            prices: pricesAddress,
+            exits: EXITS_ADDRESS,
+            prices: PRICES_ADDRESS,
             tokenProgram: TOKEN_PROGRAM_ID,
           })
           .transaction()
@@ -235,13 +183,7 @@ export function useMatoProgram() {
         queryKey: ["get-market", { cluster }],
       });
       queryClient.invalidateQueries({
-        queryKey: ["get-usdc-balance", { cluster }],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [
-          "get-balance",
-          { endpoint: connection.rpcEndpoint, address: provider.publicKey },
-        ],
+        queryKey: ["get-balance", { cluster, address: provider.publicKey }],
       });
     },
     onError: (e) =>
@@ -260,13 +202,13 @@ export function useMatoProgram() {
         .accounts({
           depositor: provider.publicKey,
           // depositorTokenAccount: depositorATA,
-          tokenMintB: usdcMint,
+          tokenMintB: USDC_MINT,
           // market: marketPda,
           // positionB: positionAPda,
           // treasuryB: treasuryA,
           // bookkeeping: bookkeeping,
-          exits: exitsAddress,
-          prices: pricesAddress,
+          exits: EXITS_ADDRESS,
+          prices: PRICES_ADDRESS,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({ skipPreflight: true }),
@@ -276,10 +218,10 @@ export function useMatoProgram() {
         queryKey: ["get-market", { cluster }],
       });
       queryClient.invalidateQueries({
-        queryKey: ["get-usdc-balance", { cluster }],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["get-sol-balance", { cluster }],
+        queryKey: [
+          "get-token-balance",
+          { cluster, address: provider.publicKey, mintAddress: USDC_MINT },
+        ],
       });
     },
     onError: (e) =>
@@ -297,7 +239,7 @@ export function useMatoProgram() {
         [
           Buffer.from("position_b"),
           marketPda.toBuffer(),
-          publicKey.toBuffer(),
+          provider.publicKey.toBuffer(),
           id.toArrayLike(Buffer, "le", 8),
         ],
         program.programId
@@ -308,13 +250,13 @@ export function useMatoProgram() {
         .accountsPartial({
           withdrawer: provider.publicKey,
           // depositorTokenAccount: depositorATA,
-          tokenMintA: solMint,
+          tokenMintA: NATIVE_MINT,
           // market: marketPda,
           positionB: positionBPda,
           // treasuryB: treasuryA,
           // bookkeeping: bookkeepingPda,
-          exits: exitsAddress,
-          prices: pricesAddress,
+          exits: EXITS_ADDRESS,
+          prices: PRICES_ADDRESS,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({ skipPreflight: true });
@@ -337,7 +279,7 @@ export function useMatoProgram() {
         [
           Buffer.from("position_a"),
           marketPda.toBuffer(),
-          publicKey.toBuffer(),
+          provider.publicKey.toBuffer(),
           id.toArrayLike(Buffer, "le", 8),
         ],
         program.programId
@@ -348,13 +290,13 @@ export function useMatoProgram() {
         .accountsPartial({
           withdrawer: provider.publicKey,
           // depositorTokenAccount: depositorATA,
-          tokenMintB: usdcMint,
+          tokenMintB: USDC_MINT,
           // market: marketPda,
           positionA: positionAPda,
           // treasuryB: treasuryA,
           // bookkeeping: bookkeeping,
-          exits: exitsAddress,
-          prices: pricesAddress,
+          exits: EXITS_ADDRESS,
+          prices: PRICES_ADDRESS,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({ skipPreflight: true });
@@ -377,7 +319,7 @@ export function useMatoProgram() {
         [
           Buffer.from("position_a"),
           marketPda.toBuffer(),
-          publicKey.toBuffer(),
+          provider.publicKey.toBuffer(),
           id.toArrayLike(Buffer, "le", 8),
         ],
         program.programId
@@ -388,20 +330,32 @@ export function useMatoProgram() {
         .accountsPartial({
           signer: provider.publicKey,
           // depositorTokenAccount: depositorATA,
-          tokenMintA: solMint,
-          tokenMintB: usdcMint,
+          tokenMintA: NATIVE_MINT,
+          tokenMintB: USDC_MINT,
           // market: marketPda,
           positionA: positionAPda,
           // treasuryB: treasuryA,
           // bookkeeping: bookkeeping,
-          exits: exitsAddress,
-          prices: pricesAddress,
+          exits: EXITS_ADDRESS,
+          prices: PRICES_ADDRESS,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({ skipPreflight: true });
     },
     onSuccess: (signature) => {
       transactionToast(signature, CLOSE_POSITION);
+      queryClient.invalidateQueries({
+        queryKey: ["get-market", { cluster }],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["get-balance", { cluster, address: provider.publicKey }],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          "get-token-balance",
+          { cluster, address: provider.publicKey, mintAddress: USDC_MINT },
+        ],
+      });
     },
     onError: (e) =>
       toast({
@@ -418,7 +372,7 @@ export function useMatoProgram() {
         [
           Buffer.from("position_b"),
           marketPda.toBuffer(),
-          publicKey.toBuffer(),
+          provider.publicKey.toBuffer(),
           id.toArrayLike(Buffer, "le", 8),
         ],
         program.programId
@@ -429,20 +383,32 @@ export function useMatoProgram() {
         .accountsPartial({
           signer: provider.publicKey,
           // depositorTokenAccount: depositorATA,
-          tokenMintA: solMint,
-          tokenMintB: usdcMint,
+          tokenMintA: NATIVE_MINT,
+          tokenMintB: USDC_MINT,
           // market: marketPda,
           positionB: positionBPda,
           // treasuryB: treasuryA,
           // bookkeeping: bookkeeping,
-          exits: exitsAddress,
-          prices: pricesAddress,
+          exits: EXITS_ADDRESS,
+          prices: PRICES_ADDRESS,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc({ skipPreflight: true });
     },
     onSuccess: (signature) => {
       transactionToast(signature, CLOSE_POSITION);
+      queryClient.invalidateQueries({
+        queryKey: ["get-market", { cluster }],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["get-balance", { cluster, address: provider.publicKey }],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          "get-token-balance",
+          { cluster, address: provider.publicKey, mintAddress: USDC_MINT },
+        ],
+      });
     },
     onError: (e) =>
       toast({
@@ -467,7 +433,5 @@ export function useMatoProgram() {
     closePositionB,
     getCurrentSlot,
     getBookkeepingAccount,
-    getSolBalance,
-    getUSDCBalance,
   };
 }

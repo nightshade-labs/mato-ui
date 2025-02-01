@@ -37,7 +37,8 @@ export function AccountBalance({
   const balance =
     getBalanceQuery.data !== undefined &&
     getTokenBalanceQuery.data !== undefined
-      ? getBalanceQuery.data + getTokenBalanceQuery.data
+      ? getBalanceQuery.data +
+        parseInt(getTokenBalanceQuery.data?.value.amount || "0")
       : undefined;
 
   return (
@@ -50,6 +51,47 @@ export function AccountBalance({
     >
       {balance ? (
         <span>{(balance / LAMPORTS_PER_SOL).toFixed(decimals)}</span>
+      ) : (
+        "..."
+      )}
+    </div>
+  );
+}
+
+export function AccountTokenBalance({
+  address,
+  mintAddress,
+  classname,
+  decimals = 6,
+}: {
+  address: PublicKey | null;
+  mintAddress: PublicKey;
+  classname?: string;
+  decimals?: number;
+}) {
+  if (address === null) {
+    return null;
+  }
+
+  const getTokenBalanceQuery = useGetTokenBalance({
+    address,
+    mintAddress: mintAddress,
+  });
+
+  return (
+    <div
+      className={cn("cursor-pointer", classname)}
+      onClick={() => {
+        getTokenBalanceQuery.refetch();
+      }}
+    >
+      {getTokenBalanceQuery.data ? (
+        <span>
+          {(
+            parseInt(getTokenBalanceQuery.data.value.amount) /
+            10 ** getTokenBalanceQuery.data.value.decimals
+          ).toFixed(decimals)}
+        </span>
       ) : (
         "..."
       )}
@@ -99,14 +141,4 @@ export function AccountBalanceCheck({ address }: { address: PublicKey }) {
     );
   }
   return null;
-}
-
-function BalanceSol({
-  balance,
-  decimals,
-}: {
-  balance: number;
-  decimals: number;
-}) {
-  return <span>{(balance / LAMPORTS_PER_SOL).toFixed(decimals)}</span>;
 }

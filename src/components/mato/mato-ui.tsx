@@ -1,20 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { LoadingSpinner } from "../ui/loading-spinner";
 import {
   Select,
   SelectContent,
@@ -23,7 +19,6 @@ import {
   SelectValue,
 } from "../ui/select";
 import { useMatoProgram } from "./mato-data-access";
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -36,27 +31,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "../ui/card";
+import { Card, CardContent, CardHeader } from "../ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { AppHero } from "../ui/ui-layout";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { Clock4, Lock, LockOpen, Info } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
+import { useConnection } from "@solana/wallet-adapter-react";
+
 import { durationStringToSlots } from "./chart-ui";
-import { BN } from "bn.js";
-import { AccountBalance } from "../account/account-ui";
+import { AccountBalance, AccountTokenBalance } from "../account/account-ui";
+import { USDC_MINT } from "@/lib/constants";
+import {
+  useGetBalance,
+  useGetTokenBalance,
+} from "../account/account-data-access";
+import { useAnchorProvider } from "../solana/solana-provider";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 const OrderDialogFormSchema = z.object({
   amount: z.preprocess(
@@ -173,13 +160,18 @@ const SwapFormSchema = z.object({
 });
 
 export function SwapInterface({}: {}) {
-  const { depositTokenA, depositTokenB, getSolBalance, getUSDCBalance } =
-    useMatoProgram();
-  const { connection } = useConnection();
+  const { depositTokenA, depositTokenB } = useMatoProgram();
+
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [isLimitOrder, setIsLimitOrder] = useState(false);
   const [isInstantSwap, setIsInstantSwap] = useState(false);
-  const { publicKey } = useWallet();
+  const provider = useAnchorProvider();
+
+  const getBalance = useGetBalance({ address: provider.publicKey });
+  const getTokenBalance = useGetTokenBalance({
+    address: provider.publicKey,
+    mintAddress: USDC_MINT,
+  });
 
   const form = useForm<z.infer<typeof SwapFormSchema>>({
     resolver: zodResolver(SwapFormSchema),
@@ -267,63 +259,117 @@ export function SwapInterface({}: {}) {
                         Balance:{" "}
                         {side == "sell" ? (
                           <AccountBalance
-                            address={publicKey}
+                            address={provider.publicKey}
                             classname="text-xs font-semibold"
                           />
                         ) : (
-                          getUSDCBalance.data && getUSDCBalance.data.toFixed(6)
+                          <AccountTokenBalance
+                            address={provider.publicKey}
+                            mintAddress={USDC_MINT}
+                            decimals={4}
+                            classname="text-xs font-semibold"
+                          />
                         )}
                       </div>
 
-                      {getSolBalance.data && getUSDCBalance.data && (
-                        <div className="flex gap-1">
-                          <div
-                            className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
-                            onClick={() => {
-                              side == "buy"
-                                ? form.setValue(
-                                    "amount",
-                                    Number((getUSDCBalance.data / 4).toFixed(6))
-                                  )
-                                : form.setValue(
-                                    "amount",
-                                    Number((getSolBalance.data / 4).toFixed(6))
-                                  );
-                            }}
-                          >
-                            25%
+                      {getBalance.data !== undefined &&
+                        getTokenBalance.data !== undefined &&
+                        getTokenBalance.data !== null && (
+                          <div className="flex gap-1">
+                            <div
+                              className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
+                              onClick={() => {
+                                side == "buy"
+                                  ? form.setValue(
+                                      "amount",
+                                      Number(
+                                        (
+                                          parseInt(
+                                            getTokenBalance.data?.value
+                                              .amount || "0"
+                                          ) /
+                                          10 **
+                                            (getTokenBalance.data?.value
+                                              .decimals || 0) /
+                                          4
+                                        ).toFixed(6)
+                                      )
+                                    )
+                                  : form.setValue(
+                                      "amount",
+                                      Number(
+                                        (
+                                          getBalance.data /
+                                          LAMPORTS_PER_SOL /
+                                          4
+                                        ).toFixed(9)
+                                      )
+                                    );
+                              }}
+                            >
+                              25%
+                            </div>
+                            <div
+                              className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
+                              onClick={() => {
+                                side == "buy"
+                                  ? form.setValue(
+                                      "amount",
+                                      Number(
+                                        (
+                                          parseInt(
+                                            getTokenBalance.data?.value
+                                              .amount || "0"
+                                          ) /
+                                          10 **
+                                            (getTokenBalance.data?.value
+                                              .decimals || 0) /
+                                          2
+                                        ).toFixed(6)
+                                      )
+                                    )
+                                  : form.setValue(
+                                      "amount",
+                                      Number(
+                                        (
+                                          getBalance.data /
+                                          LAMPORTS_PER_SOL /
+                                          2
+                                        ).toFixed(9)
+                                      )
+                                    );
+                              }}
+                            >
+                              50%
+                            </div>
+                            <div
+                              className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
+                              onClick={() => {
+                                side == "buy"
+                                  ? form.setValue(
+                                      "amount",
+                                      Number(
+                                        (
+                                          parseInt(
+                                            getTokenBalance.data?.value
+                                              .amount || "0"
+                                          ) /
+                                          10 **
+                                            (getTokenBalance.data?.value
+                                              .decimals || 0)
+                                        ).toFixed(6)
+                                      )
+                                    )
+                                  : form.setValue(
+                                      "amount",
+                                      getBalance.data / LAMPORTS_PER_SOL - 0.003
+                                    );
+                              }}
+                            >
+                              Max
+                            </div>
                           </div>
-                          <div
-                            className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
-                            onClick={() => {
-                              side == "buy"
-                                ? form.setValue(
-                                    "amount",
-                                    Number((getUSDCBalance.data / 2).toFixed(6))
-                                  )
-                                : form.setValue(
-                                    "amount",
-                                    Number((getSolBalance.data / 2).toFixed(6))
-                                  );
-                            }}
-                          >
-                            50%
-                          </div>
-                          <div
-                            className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
-                            onClick={() => {
-                              side == "buy"
-                                ? form.setValue("amount", getUSDCBalance.data)
-                                : form.setValue(
-                                    "amount",
-                                    getSolBalance.data - 0.003
-                                  );
-                            }}
-                          >
-                            Max
-                          </div>
-                        </div>
-                      )}
+                        )}
                     </div>
                     <Input
                       id="amount"
