@@ -310,11 +310,11 @@ export function PriceChart() {
           <div className="flex justify-between items-center">
             <div className="flex gap-4 text-xl items-center">
               <div className="flex gap-0">
-                <Avatar className="w-8 h-8 hidden sm:block bg-black">
+                <Avatar className="w-6 h-6 sm:w-8 sm:h-8 bg-black">
                   <AvatarImage src={"solana-sol-logo.png"} />
                   <AvatarFallback>{"SOL"}</AvatarFallback>
                 </Avatar>
-                <Avatar className="w-8 h-8 hidden sm:block">
+                <Avatar className="w-6 h-6 sm:w-8 sm:h-8">
                   <AvatarImage src={"usd-coin-usdc-logo.png"} />
                   <AvatarFallback>{"USDC"}</AvatarFallback>
                 </Avatar>

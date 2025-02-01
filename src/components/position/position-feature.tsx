@@ -20,7 +20,6 @@ export default function PositionsFeature() {
   } = useMatoProgram();
 
   const getSlot = useGetSlot();
-
   let currentSlot = getSlot.data;
 
   return (

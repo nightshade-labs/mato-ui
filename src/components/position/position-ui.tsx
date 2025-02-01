@@ -88,8 +88,8 @@ export function PositionCard({
           <Progress
             value={
               (swappedTokens.toNumber() /
-                swappedEstimate.div(new BN(1000000)).toNumber()) *
-              100000
+                swappedEstimate.div(new BN(VOLUME_PRECISION)).toNumber()) *
+              100
             }
             className="h-4 mb-4 -mt-2"
           />
