@@ -58,12 +58,6 @@ export function useMatoProgram() {
     program.programId
   );
 
-  const getCurrentSlot = useQuery({
-    queryKey: ["get-current-slot", { cluster }],
-    queryFn: () => connection.getSlot(),
-    refetchInterval: 400,
-  });
-
   const getProgramAccount = useQuery({
     queryKey: ["get-program-account", { cluster }],
     queryFn: () => connection.getParsedAccountInfo(programId),
@@ -431,7 +425,6 @@ export function useMatoProgram() {
     withdrawTokenB,
     closePositionA,
     closePositionB,
-    getCurrentSlot,
     getBookkeepingAccount,
   };
 }

@@ -5,6 +5,7 @@ import { useMatoProgram } from "../mato/mato-data-access";
 import { AppHero } from "../ui/ui-layout";
 import { PositionCard } from "./position-ui";
 import { BN } from "@coral-xyz/anchor";
+import { useGetSlot } from "../cluster/cluster-data-access";
 
 export default function PositionsFeature() {
   const {
@@ -14,12 +15,13 @@ export default function PositionsFeature() {
     withdrawTokenB,
     closePositionA,
     closePositionB,
-    getCurrentSlot,
     getBookkeepingAccount,
     getMarket,
   } = useMatoProgram();
 
-  let currentSlot = getCurrentSlot.data;
+  const getSlot = useGetSlot();
+
+  let currentSlot = getSlot.data;
 
   return (
     <div>
