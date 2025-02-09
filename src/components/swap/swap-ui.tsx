@@ -324,12 +324,12 @@ export function PriceChart() {
             <span className="text-2xl">{marketPrice}</span>
           </div>
           <div className="mt-4 text-sm">
-            Trading rate per hour (SOL):{" "}
-            {((tradingVolumeA * 2.5 * 60 * 60) / LAMPORTS_PER_SOL).toFixed(2)}
+            Flow (SOL per minute):{" "}
+            {((tradingVolumeA * 2.5 * 60) / LAMPORTS_PER_SOL).toFixed(2)}
           </div>
           <div className="mt-0 text-sm">
-            Trading rate per hour (USDC):{" "}
-            {((tradingVolumeB * 2.5 * 60 * 60) / 1000000).toFixed(2)}
+            Flow (USDC per minute):{" "}
+            {((tradingVolumeB * 2.5 * 60) / 1000000).toFixed(2)}
           </div>
         </CardTitle>
       </CardHeader>

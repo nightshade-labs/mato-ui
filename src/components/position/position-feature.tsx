@@ -28,8 +28,8 @@ export default function PositionsFeature() {
           getAllPositionA.data.map((data) => (
             <PositionCard
               key={data.publicKey.toString()}
-              selling="tSOL"
-              buying="tUSDC"
+              selling="SOL"
+              buying="USDC"
               withdraw={(id: BN) => withdrawTokenB.mutate(id)}
               close={(id: BN) => closePositionA.mutate(id)}
               positionData={data.account}
@@ -47,8 +47,8 @@ export default function PositionsFeature() {
           getAllPositionB.data.map((data) => (
             <PositionCard
               key={data.publicKey.toString()}
-              selling="tUSDC"
-              buying="tSOL"
+              selling="USDC"
+              buying="SOL"
               withdraw={(id: BN) => withdrawTokenA.mutate(id)}
               close={(id: BN) => closePositionB.mutate(id)}
               positionData={data.account}
