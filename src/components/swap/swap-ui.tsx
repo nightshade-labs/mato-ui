@@ -39,9 +39,9 @@ import BN from "bn.js";
 
 const SwapFormSchema = z.object({
   amount: z.number().gt(0, "Must be greater than zero"),
-  duration: z.string({
-    required_error: "Please set a duration",
-  }),
+  // duration: z.string({
+  //   required_error: "Please set a duration",
+  // }),
 });
 
 export function SwapInterface() {
@@ -61,16 +61,16 @@ export function SwapInterface() {
   });
 
   async function onSubmit(data: z.infer<typeof SwapFormSchema>) {
-    let slotDuration = durationStringToSlots.get(data.duration);
+    // let slotDuration = durationStringToSlots.get(data.duration);
     if (side == "sell") {
       depositTokenA.mutate({
         amount: data.amount * LAMPORTS_PER_SOL,
-        duration: slotDuration || 10,
+        duration: 30,
       });
     } else {
       depositTokenB.mutate({
         amount: data.amount * 10 ** (getTokenBalance.data?.value.decimals || 6),
-        duration: slotDuration || 10,
+        duration: 30,
       });
     }
   }
@@ -241,7 +241,7 @@ export function SwapInterface() {
                 </FormItem>
               )}
             />
-            <FormField
+            {/* <FormField
               control={form.control}
               name="duration"
               render={({ field }) => (
@@ -272,7 +272,7 @@ export function SwapInterface() {
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            /> */}
             <Button type="submit">
               {side == "buy" ? "Buy SOL" : "Sell SOL"}
             </Button>
