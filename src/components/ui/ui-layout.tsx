@@ -41,7 +41,6 @@ export function UiLayout({
           <Button variant="ghost" asChild>
             <Link className="text-xl mr-8" href="/">
               <div className="flex items-center gap-2">
-                {/* <div className="w-8 h-8 rounded-full bg-red-500" /> */}
                 <span className="text-2xl font-bold text-primary">Mato</span>
               </div>
             </Link>
