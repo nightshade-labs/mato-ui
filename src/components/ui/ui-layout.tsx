@@ -35,7 +35,7 @@ export function UiLayout({
   const pathname = usePathname();
 
   return (
-    <div className="w-full min-h-screen h-full flex flex-col bg-gradient-to-b from-purple-500/10 to-red-500/10">
+    <div className="w-full min-h-screen flex flex-col bg-gradient-to-b from-purple-500/10 to-red-500/10">
       <div className="flex items-center p-2 w-full min-h-16 flex-col md:flex-row space-y-2 md:space-y-0">
         <div className="flex-1 flex items-center">
           <Button variant="ghost" asChild>
