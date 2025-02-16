@@ -6,10 +6,10 @@ const pool = new Pool({
   host: process.env.PGHOST,
   port: Number(process.env.PGPORT),
   database: process.env.PGDATABASE,
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
-      : false,
+  // ssl:
+  //   process.env.NODE_ENV === "production"
+  //     ? { rejectUnauthorized: false }
+  //     : false,
 });
 
 export async function query<T = any>(q: string, params?: any[]): Promise<T[]> {
