@@ -38,6 +38,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import BN from "bn.js";
 import {
   AreaSeries,
+  CandlestickData,
+  CandlestickSeries,
   ColorType,
   createChart,
   CrosshairMode,
@@ -312,9 +314,9 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
   const { data: latestPrice } = useQuery({
     queryKey: ["price"],
     queryFn: () => fetchLatestPrice(),
-    refetchInterval: 5000, // Poll every 5 seconds
+    refetchInterval: 5000,
     refetchIntervalInBackground: true,
-    staleTime: 4000, // Consider data stale after 4 seconds
+    // staleTime: 4000,
   });
 
   useEffect(() => {
@@ -413,7 +415,7 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex mt-20 w-full justify-center">
+      <CardContent className="flex w-full justify-center">
         <div className="w-full h-full" ref={chartContainerRef} />
       </CardContent>
     </Card>

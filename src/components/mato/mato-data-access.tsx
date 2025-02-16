@@ -74,7 +74,7 @@ export function useMatoProgram() {
   const getMarketAccount = useQuery({
     queryKey: [GET_MARKET_ACCOUNT, { cluster }],
     queryFn: () => program.account.market.fetch(marketPda),
-    refetchInterval: 7000,
+    refetchInterval: 5000,
   });
 
   const getAllPositionA = useQuery({
