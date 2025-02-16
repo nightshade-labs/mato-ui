@@ -293,12 +293,6 @@ export function SwapInterface() {
   );
 }
 
-async function fetchLatestPrice(): Promise<MarketDataRow | null> {
-  const response = await fetch(`/api/price`);
-  if (!response.ok) throw new Error("Failed to fetch price");
-  return response.json();
-}
-
 export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<{
