@@ -311,19 +311,15 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
     lineSeries?: ISeriesApi<"Line">;
   }>({});
 
-  const { data: latestPrice } = useQuery({
-    queryKey: ["price"],
-    queryFn: () => fetchLatestPrice(),
-    refetchInterval: 5000,
-    refetchIntervalInBackground: true,
-    // staleTime: 4000,
-  });
+  const [time, setTime] = useState(Date.now() / 1000);
 
   useEffect(() => {
-    if (latestPrice && chartRef.current.lineSeries) {
-      chartRef.current.lineSeries.update(latestPrice);
-    }
-  }, [latestPrice]);
+    const interval = setInterval(() => {
+      setTime(Date.now() / 1000);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -344,7 +340,19 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
       width: chartContainerRef.current.clientWidth,
       height: 400,
       autoSize: true,
-      timeScale: { minBarSpacing: 0.05 },
+      timeScale: {
+        minBarSpacing: 0.05,
+        timeVisible: true,
+        secondsVisible: false,
+        tickMarkFormatter: (time: number) => {
+          const date = new Date(time * 1000);
+          return date.toLocaleString("en-US", {
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+          });
+        },
+      },
     });
     chart.timeScale().fitContent();
 
@@ -378,11 +386,19 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
       .toNumber() || 0;
 
   let isTrading = tradingVolumeA * tradingVolumeB !== 0;
+  useEffect(() => {
+    if (isTrading && chartRef.current.lineSeries) {
+      chartRef.current.lineSeries.update({
+        time: time as UTCTimestamp,
+        value: (tradingVolumeB * 1000) / tradingVolumeA,
+      });
+    }
+  }, [tradingVolumeA, tradingVolumeB, time]);
 
   let marketPrice = isTrading
     ? ((tradingVolumeB * LAMPORTS_PER_SOL) / 1000000 / tradingVolumeA).toFixed(
-        4
-      )
+        2
+      ) + " USDC"
     : "no trades right now";
 
   return (
@@ -405,14 +421,14 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
             </div>
             <span className="text-2xl">{marketPrice}</span>
           </div>
-          <div className="mt-4 text-sm">
+          {/* <div className="mt-4 text-sm">
             Flow (SOL per minute):{" "}
             {((tradingVolumeA * 2.5 * 60) / LAMPORTS_PER_SOL).toFixed(2)}
           </div>
           <div className="mt-0 text-sm">
             Flow (USDC per minute):{" "}
             {((tradingVolumeB * 2.5 * 60) / 1000000).toFixed(2)}
-          </div>
+          </div> */}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex w-full justify-center">
