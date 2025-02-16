@@ -388,7 +388,7 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
         value: (tradingVolumeB * 1000) / tradingVolumeA,
       });
     }
-  }, [tradingVolumeA, tradingVolumeB, time]);
+  }, [isTrading, tradingVolumeA, tradingVolumeB, time]);
 
   let marketPrice = isTrading
     ? ((tradingVolumeB * LAMPORTS_PER_SOL) / 1000000 / tradingVolumeA).toFixed(
