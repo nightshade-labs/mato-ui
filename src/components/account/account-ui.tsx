@@ -38,13 +38,7 @@ export function AccountBalance({
       : undefined;
 
   return (
-    <div
-      className={cn("cursor-pointer", classname)}
-      onClick={() => {
-        getBalanceQuery.refetch();
-        getTokenBalanceQuery.refetch();
-      }}
-    >
+    <div className={cn(classname)}>
       {balance ? (
         <span>{(balance / LAMPORTS_PER_SOL).toFixed(decimals)}</span>
       ) : (
@@ -71,12 +65,7 @@ export function AccountTokenBalance({
   });
 
   return (
-    <div
-      className={cn("cursor-pointer", classname)}
-      onClick={() => {
-        getTokenBalanceQuery.refetch();
-      }}
-    >
+    <div className={cn(classname)}>
       {getTokenBalanceQuery.data ? (
         <span>
           {(

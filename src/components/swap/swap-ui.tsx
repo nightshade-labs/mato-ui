@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -36,6 +36,16 @@ import { durationStringToSlots } from "@/lib/utils";
 import { useMatoProgram } from "../mato/mato-data-access";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import BN from "bn.js";
+import {
+  ColorType,
+  createChart,
+  IChartApi,
+  ISeriesApi,
+  LineData,
+  LineSeries,
+  UTCTimestamp,
+} from "lightweight-charts";
+import { MarketDataRow } from "./market-data";
 
 const SwapFormSchema = z.object({
   amount: z.number().gt(0, "Must be greater than zero"),
@@ -283,7 +293,82 @@ export function SwapInterface() {
   );
 }
 
-export function PriceChart() {
+async function fetchLatestPrice(): Promise<MarketDataRow | null> {
+  const response = await fetch(`/api/price`);
+  if (!response.ok) throw new Error("Failed to fetch price");
+  return response.json();
+}
+
+export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<{
+    chart?: IChartApi;
+    lineSeries?: ISeriesApi<"Line">;
+  }>({});
+
+  const [time, setTime] = useState(Date.now() / 1000);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTime(Date.now() / 1000);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+
+    const handleResize = () => {
+      if (chartContainerRef.current && chartRef.current.chart) {
+        chartRef.current.chart.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+        });
+      }
+    };
+
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: "white" },
+        textColor: "black",
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: 400,
+      autoSize: true,
+      timeScale: {
+        minBarSpacing: 0.05,
+        timeVisible: true,
+        secondsVisible: false,
+        tickMarkFormatter: (time: number) => {
+          const date = new Date(time * 1000);
+          return date.toLocaleString("en-US", {
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+          });
+        },
+      },
+    });
+    chart.timeScale().fitContent();
+
+    const lineSeries = chart.addSeries(LineSeries, {
+      color: "#E130E6",
+      lineWidth: 2,
+    });
+    lineSeries.setData(data);
+
+    window.addEventListener("resize", handleResize);
+
+    chartRef.current.chart = chart;
+    chartRef.current.lineSeries = lineSeries;
+    return () => {
+      window.removeEventListener("resize", handleResize);
+
+      chart.remove();
+      chartRef.current = {};
+    };
+  }, [data]);
+
   const { getMarketAccount } = useMatoProgram();
 
   let tradingVolumeA =
@@ -296,11 +381,19 @@ export function PriceChart() {
       .toNumber() || 0;
 
   let isTrading = tradingVolumeA * tradingVolumeB !== 0;
+  useEffect(() => {
+    if (isTrading && chartRef.current.lineSeries) {
+      chartRef.current.lineSeries.update({
+        time: time as UTCTimestamp,
+        value: (tradingVolumeB * 1000) / tradingVolumeA,
+      });
+    }
+  }, [isTrading, tradingVolumeA, tradingVolumeB, time]);
 
   let marketPrice = isTrading
     ? ((tradingVolumeB * LAMPORTS_PER_SOL) / 1000000 / tradingVolumeA).toFixed(
-        4
-      )
+        2
+      ) + " USDC"
     : "no trades right now";
 
   return (
@@ -323,18 +416,18 @@ export function PriceChart() {
             </div>
             <span className="text-2xl">{marketPrice}</span>
           </div>
-          <div className="mt-4 text-sm">
+          {/* <div className="mt-4 text-sm">
             Flow (SOL per minute):{" "}
             {((tradingVolumeA * 2.5 * 60) / LAMPORTS_PER_SOL).toFixed(2)}
           </div>
           <div className="mt-0 text-sm">
             Flow (USDC per minute):{" "}
             {((tradingVolumeB * 2.5 * 60) / 1000000).toFixed(2)}
-          </div>
+          </div> */}
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex mt-20 w-full justify-center">
-        Price Chart coming soon
+      <CardContent className="flex w-full justify-center">
+        <div className="w-full h-full" ref={chartContainerRef} />
       </CardContent>
     </Card>
   );
