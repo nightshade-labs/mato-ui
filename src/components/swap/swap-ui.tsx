@@ -42,10 +42,13 @@ import {
   createChart,
   CrosshairMode,
   IChartApi,
+  ISeriesApi,
   LineData,
   LineSeries,
   UTCTimestamp,
 } from "lightweight-charts";
+import { MarketDataRow } from "./market-data";
+import { useQuery } from "@tanstack/react-query";
 
 const SwapFormSchema = z.object({
   amount: z.number().gt(0, "Must be greater than zero"),
@@ -293,15 +296,42 @@ export function SwapInterface() {
   );
 }
 
+async function fetchLatestPrice(): Promise<MarketDataRow | null> {
+  const response = await fetch(`/api/price`);
+  if (!response.ok) throw new Error("Failed to fetch price");
+  return response.json();
+}
+
 export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<{
+    chart?: IChartApi;
+    lineSeries?: ISeriesApi<"Line">;
+  }>({});
+
+  const { data: latestPrice } = useQuery({
+    queryKey: ["price"],
+    queryFn: () => fetchLatestPrice(),
+    refetchInterval: 5000, // Poll every 5 seconds
+    refetchIntervalInBackground: true,
+    staleTime: 4000, // Consider data stale after 4 seconds
+  });
+
+  useEffect(() => {
+    if (latestPrice && chartRef.current.lineSeries) {
+      chartRef.current.lineSeries.update(latestPrice);
+    }
+  }, [latestPrice]);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
     const handleResize = () => {
-      if (!chartContainerRef.current) return;
-      chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+      if (chartContainerRef.current && chartRef.current.chart) {
+        chartRef.current.chart.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+        });
+      }
     };
 
     const chart = createChart(chartContainerRef.current, {
@@ -312,18 +342,25 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
       width: chartContainerRef.current.clientWidth,
       height: 400,
       autoSize: true,
+      timeScale: { minBarSpacing: 0.05 },
     });
     chart.timeScale().fitContent();
 
-    const newSeries = chart.addSeries(LineSeries, {});
-    newSeries.setData(data);
+    const lineSeries = chart.addSeries(LineSeries, {
+      color: "#E130E6",
+      lineWidth: 2,
+    });
+    lineSeries.setData(data);
 
     window.addEventListener("resize", handleResize);
 
+    chartRef.current.chart = chart;
+    chartRef.current.lineSeries = lineSeries;
     return () => {
       window.removeEventListener("resize", handleResize);
 
       chart.remove();
+      chartRef.current = {};
     };
   }, [data]);
 

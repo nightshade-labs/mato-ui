@@ -3,8 +3,8 @@ import { query } from "@/lib/db";
 import { PriceChart } from "./swap-ui";
 import { UTCTimestamp } from "lightweight-charts";
 
-interface MarketDataRow {
-  time: number; // or Date if you'd like to parse on the server
+export interface MarketDataRow {
+  time: UTCTimestamp;
   average_price: number | null;
 }
 
@@ -13,7 +13,7 @@ export default async function MarketDataPage() {
   // Or switch to your continuous aggregate view.
   const rows = await query<MarketDataRow>(`
     SELECT
-      time_bucket('5 minutes', time) AS time,
+      time_bucket('5 seconds', time) AS time,
       AVG(flow_b::double precision / flow_a::double precision) AS average_price
     FROM market_data
     WHERE flow_a > 0 AND flow_b > 0
