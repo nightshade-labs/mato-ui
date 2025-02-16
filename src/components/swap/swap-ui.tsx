@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -36,6 +36,16 @@ import { durationStringToSlots } from "@/lib/utils";
 import { useMatoProgram } from "../mato/mato-data-access";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import BN from "bn.js";
+import {
+  AreaSeries,
+  ColorType,
+  createChart,
+  CrosshairMode,
+  IChartApi,
+  LineData,
+  LineSeries,
+  UTCTimestamp,
+} from "lightweight-charts";
 
 const SwapFormSchema = z.object({
   amount: z.number().gt(0, "Must be greater than zero"),
@@ -283,7 +293,40 @@ export function SwapInterface() {
   );
 }
 
-export function PriceChart() {
+export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+
+    const handleResize = () => {
+      if (!chartContainerRef.current) return;
+      chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+    };
+
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: "white" },
+        textColor: "black",
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: 400,
+      autoSize: true,
+    });
+    chart.timeScale().fitContent();
+
+    const newSeries = chart.addSeries(LineSeries, {});
+    newSeries.setData(data);
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+
+      chart.remove();
+    };
+  }, [data]);
+
   const { getMarketAccount } = useMatoProgram();
 
   let tradingVolumeA =
@@ -334,7 +377,7 @@ export function PriceChart() {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex mt-20 w-full justify-center">
-        Price Chart coming soon
+        <div className="w-full h-full" ref={chartContainerRef} />
       </CardContent>
     </Card>
   );
