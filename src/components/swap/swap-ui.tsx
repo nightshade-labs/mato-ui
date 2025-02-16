@@ -37,12 +37,8 @@ import { useMatoProgram } from "../mato/mato-data-access";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import BN from "bn.js";
 import {
-  AreaSeries,
-  CandlestickData,
-  CandlestickSeries,
   ColorType,
   createChart,
-  CrosshairMode,
   IChartApi,
   ISeriesApi,
   LineData,
@@ -50,7 +46,6 @@ import {
   UTCTimestamp,
 } from "lightweight-charts";
 import { MarketDataRow } from "./market-data";
-import { useQuery } from "@tanstack/react-query";
 
 const SwapFormSchema = z.object({
   amount: z.number().gt(0, "Must be greater than zero"),
