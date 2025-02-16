@@ -25,6 +25,7 @@ export default async function MarketDataPage() {
     WHERE flow_a > 0 AND flow_b > 0 AND time >= NOW() - INTERVAL '7 days'
     GROUP BY 1
     ORDER BY 1
+    LIMIT 100
   `);
 
   const chartData = rows.map((row) => {
