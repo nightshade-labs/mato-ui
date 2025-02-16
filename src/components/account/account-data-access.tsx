@@ -87,7 +87,7 @@ export function useRequestAirdrop({ address }: { address: PublicKey }) {
 
   return useMutation({
     mutationKey: ["airdrop", { endpoint: connection.rpcEndpoint, address }],
-    mutationFn: async (amount: number = 10) => {
+    mutationFn: async (amount: number = 1) => {
       console.log("Airdropping", amount);
       const [latestBlockhash, signature] = await Promise.all([
         connection.getLatestBlockhash(),

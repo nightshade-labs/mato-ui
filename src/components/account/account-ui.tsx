@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { MagicWandIcon } from "@radix-ui/react-icons";
 import { cn } from "@/lib/utils";
 import { NATIVE_MINT } from "@solana/spl-token";
+import Link from "next/link";
 
 export function AccountBalance({
   address,
@@ -108,14 +109,25 @@ export function AccountBalanceCheck({ address }: { address: PublicKey }) {
                 account is not found on this cluster.
               </span>
             </AlertDescription>
-            <Button
+            <div>
+              Get SOL on this{" "}
+              <Link
+                className="font-bold underline"
+                href={"https://faucet.solana.com/"}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Faucet
+              </Link>
+            </div>
+            {/* <Button
               size={"sm"}
               onClick={() =>
                 mutation.mutateAsync(1).catch((err) => console.log(err))
               }
             >
               Request Airdrop
-            </Button>
+            </Button> */}
           </div>
         </div>
       </Alert>
