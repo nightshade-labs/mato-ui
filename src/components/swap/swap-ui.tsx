@@ -39,10 +39,12 @@ import BN from "bn.js";
 import {
   ColorType,
   createChart,
+  CrosshairMode,
   IChartApi,
   ISeriesApi,
   LineData,
   LineSeries,
+  LineStyle,
   UTCTimestamp,
 } from "lightweight-charts";
 import { MarketDataRow } from "./market-data";
@@ -329,8 +331,34 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
       width: chartContainerRef.current.clientWidth,
       height: 400,
       autoSize: true,
+      // rightPriceScale: {
+      //   autoScale: false, // disables auto scaling based on visible content
+      //   scaleMargins: {
+      //     top: 0.1,
+      //     bottom: 0.2,
+      //   },
+      // },
+      crosshair: {
+        // Change mode from default 'magnet' to 'normal'.
+        // Allows the crosshair to move freely without snapping to datapoints
+        mode: CrosshairMode.Normal,
+
+        // Vertical crosshair line (showing Date in Label)
+        vertLine: {
+          width: 4,
+          color: "#C3BCDB77",
+          style: LineStyle.Solid,
+          labelBackgroundColor: "#f7a2c4",
+        },
+
+        // Horizontal crosshair line (showing Price in Label)
+        horzLine: {
+          color: "#f7a2c4",
+          labelBackgroundColor: "#f7a2c4",
+        },
+      },
       timeScale: {
-        minBarSpacing: 0.05,
+        minBarSpacing: 0.01,
         timeVisible: true,
         secondsVisible: false,
         tickMarkFormatter: (time: number) => {
@@ -346,7 +374,7 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
     chart.timeScale().fitContent();
 
     const lineSeries = chart.addSeries(LineSeries, {
-      color: "#E130E6",
+      color: "#a855f7bb",
       lineWidth: 2,
     });
     lineSeries.setData(data);

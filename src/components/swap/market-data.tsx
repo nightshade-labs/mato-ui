@@ -15,14 +15,14 @@ export default async function MarketDataPage() {
   // Or switch to your continuous aggregate view.
   const rows = await query(`
     SELECT
-      time_bucket('60 seconds', time) AS time,
+      time_bucket('5 seconds', time) AS time,
       AVG(flow_b::double precision / flow_a::double precision) as avg,
       FIRST(flow_b::double precision / flow_a::double precision, time) as open,
       MAX(flow_b::double precision / flow_a::double precision) as high,
       MIN(flow_b::double precision / flow_a::double precision) as low,
       LAST(flow_b::double precision / flow_a::double precision, time) as close
     FROM market_data
-    WHERE flow_a > 0 AND flow_b > 0 AND time >= NOW() - INTERVAL '7 days'
+    WHERE flow_a > 0 AND flow_b > 0 AND time >= NOW() - INTERVAL '2 days'
     GROUP BY 1
     ORDER BY 1
   `);
