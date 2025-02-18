@@ -60,6 +60,7 @@ export function SwapInterface() {
   const { depositTokenA, depositTokenB } = useMatoProgram();
 
   const [side, setSide] = useState<"buy" | "sell">("buy");
+  const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const provider = useAnchorProvider();
 
   const getBalance = useGetBalance({ address: provider.publicKey });
@@ -103,7 +104,7 @@ export function SwapInterface() {
               <div className="relative">
                 Buy
                 {side == "buy" && (
-                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-48 h-0.5 bg-gradient-to-r from-purple-500/90 to-red-500/90"></div>
+                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-0.5 bg-gradient-to-r from-purple-500/90 to-red-500/90"></div>
                 )}
               </div>
             </Button>
@@ -118,11 +119,38 @@ export function SwapInterface() {
               <div className="relative">
                 Sell
                 {side == "sell" && (
-                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-48 h-0.5 bg-gradient-to-r from-red-500/90 to-purple-500/90"></div>
+                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-0.5 bg-gradient-to-r from-red-500/90 to-purple-500/90"></div>
                 )}
               </div>
             </Button>
           </div>
+          {/* <div className="flex justify-between gap-2">
+            <div className="flex border rounded-sm">
+              <Button
+                variant={"outline"}
+                onClick={() => setOrderType("market")}
+                className={cn(
+                  orderType == "market" &&
+                    "text-purple-500 hover:text-purple-500",
+                  "flex-1 border-none hover:bg-transparent"
+                )}
+              >
+                Market
+              </Button>
+              <Button
+                variant={"outline"}
+                onClick={() => setOrderType("limit")}
+                className={cn(
+                  orderType == "limit" &&
+                    " text-purple-500 hover:text-purple-500",
+                  "flex-1 border-none hover:bg-transparent"
+                )}
+              >
+                Limit
+              </Button>
+            </div>
+            <Input />
+          </div> */}
         </div>
       </CardHeader>
       <CardContent>
