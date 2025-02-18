@@ -312,7 +312,10 @@ export function SwapPanel() {
                 </FormItem>
               )}
             /> */}
-            <Button type="submit">
+            <Button
+              type="submit"
+              className="px-16 bg-gradient-to-br from-red-500 to-purple-500 hover:brightness-110"
+            >
               {side == "buy" ? "Buy SOL" : "Sell SOL"}
             </Button>
           </form>
