@@ -1,6 +1,6 @@
 import { query } from "@/lib/db";
-import { PriceChart } from "./swap-ui";
 import { UTCTimestamp } from "lightweight-charts";
+import { PriceChart } from "./price-chart";
 
 export interface MarketDataRow {
   time: UTCTimestamp;
