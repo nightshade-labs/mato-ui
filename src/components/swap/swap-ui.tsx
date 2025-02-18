@@ -32,7 +32,7 @@ import {
 } from "../account/account-data-access";
 import { useAnchorProvider } from "../solana/solana-provider";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { durationStringToSlots } from "@/lib/utils";
+import { cn, durationStringToSlots } from "@/lib/utils";
 import { useMatoProgram } from "../mato/mato-data-access";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import BN from "bn.js";
@@ -93,18 +93,34 @@ export function SwapInterface() {
         <div className="flex flex-col gap-4">
           <div className="flex justify-between">
             <Button
-              variant={side === "buy" ? "default" : "outline"}
+              variant={"ghost"}
               onClick={() => setSide("buy")}
-              className="flex-1 rounded-l-xl rounded-r-none bg-opacity-20"
+              className={cn(
+                side == "buy" && "text-purple-500 hover:text-purple-500",
+                "flex-1 rounded-l-xl rounded-r-none bg-opacity-20 hover:bg-transparent"
+              )}
             >
-              Buy
+              <div className="relative">
+                Buy
+                {side == "buy" && (
+                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-48 h-0.5 bg-gradient-to-r from-purple-500/90 to-red-500/90"></div>
+                )}
+              </div>
             </Button>
             <Button
-              variant={side === "sell" ? "default" : "outline"}
+              variant={"ghost"}
               onClick={() => setSide("sell")}
-              className="flex-1 rounded-r-xl rounded-l-none bg-opacity-20"
+              className={cn(
+                side == "sell" && " text-purple-500 hover:text-purple-500",
+                "flex-1 rounded-r-xl rounded-l-none bg-opacity-20 hover:bg-transparent"
+              )}
             >
-              Sell
+              <div className="relative">
+                Sell
+                {side == "sell" && (
+                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-48 h-0.5 bg-gradient-to-r from-red-500/90 to-purple-500/90"></div>
+                )}
+              </div>
             </Button>
           </div>
         </div>
