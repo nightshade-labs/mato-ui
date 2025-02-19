@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import {
   Form,
@@ -29,6 +29,7 @@ import { useMatoProgram } from "../mato/mato-data-access";
 import { BuySellSwitch } from "./swap-ui";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Wallet } from "lucide-react";
+import { PriceImpact } from "./price-impact";
 
 const SwapFormSchema = z.object({
   amount: z.number().gt(0, "Must be greater than zero"),
@@ -52,6 +53,12 @@ export function SwapPanel() {
 
   const form = useForm<z.infer<typeof SwapFormSchema>>({
     resolver: zodResolver(SwapFormSchema),
+  });
+
+  const amount = useWatch({
+    control: form.control,
+    defaultValue: 0,
+    name: "amount", // specify the field name you want to watch
   });
 
   async function onSubmit(data: z.infer<typeof SwapFormSchema>) {
@@ -229,7 +236,12 @@ export function SwapPanel() {
                                     )
                                   : form.setValue(
                                       "amount",
-                                      getBalance.data / LAMPORTS_PER_SOL - 0.003
+                                      Number(
+                                        (
+                                          getBalance.data / LAMPORTS_PER_SOL -
+                                          0.003
+                                        ).toFixed(9)
+                                      )
                                     );
                               }}
                             >
@@ -271,8 +283,14 @@ export function SwapPanel() {
                         inputMode="decimal"
                         step="any"
                         value={field.value}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                        onVolumeChange={field.onChange}
+                        onChange={(e) =>
+                          field.onChange(
+                            isNaN(e.target.valueAsNumber)
+                              ? 0
+                              : e.target.valueAsNumber
+                          )
+                        }
+                        // onVolumeChange={field.onChange}
                       />
                     </div>
                   </div>
@@ -312,6 +330,16 @@ export function SwapPanel() {
                 </FormItem>
               )}
             /> */}
+            <PriceImpact
+              flow={
+                isNaN(amount)
+                  ? 0
+                  : side == "sell"
+                    ? (amount * LAMPORTS_PER_SOL) / 26
+                    : (amount * 1000000) / 26
+              }
+              side={side}
+            />
             <Button
               type="submit"
               className="px-16 bg-gradient-to-br from-red-500 to-purple-500 hover:brightness-110"
