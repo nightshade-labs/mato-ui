@@ -111,7 +111,7 @@ export function SwapPanel() {
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex flex-col space-y-1.5 border rounded-md py-4 px-2 bg-purple-50">
+                  <div className="flex flex-col space-y-1.5 border rounded-md py-4 px-2 bg-purple-50/70">
                     {/* <FormLabel>
                       Quantity {side == "buy" ? "(USDC)" : "(SOL)"}
                     </FormLabel> */}
