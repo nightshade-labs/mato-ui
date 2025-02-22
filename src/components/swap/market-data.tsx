@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { query } from "@/lib/db";
 import { UTCTimestamp } from "lightweight-charts";
 import { PriceChart } from "./price-chart";
