@@ -255,43 +255,45 @@ export function SwapPanel() {
                         <div className="text-sm font-bold text-gray-500 mb-2">
                           {side == "buy" ? "You're paying" : "You're selling"}
                         </div>
-                        <div>
-                          {side == "buy" ? (
-                            <div className="flex gap-2 items-center">
-                              <Avatar className="w-6 h-6 sm:w-8 sm:h-8 bg-black">
-                                <AvatarImage src={"usd-coin-usdc-logo.png"} />
-                                <AvatarFallback>{"USDC"}</AvatarFallback>
-                              </Avatar>{" "}
-                              USDC
-                            </div>
-                          ) : (
-                            <div className="flex gap-2 items-center">
-                              <Avatar className="w-6 h-6 sm:w-8 sm:h-8 bg-black">
-                                <AvatarImage src={"solana-sol-logo.png"} />
-                                <AvatarFallback>{"SOL"}</AvatarFallback>
-                              </Avatar>{" "}
-                              SOL
-                            </div>
-                          )}
+                        <div className="flex items-center gap-4">
+                          <div>
+                            {side == "buy" ? (
+                              <div className="flex gap-2 items-center">
+                                <Avatar className="w-6 h-6 sm:w-8 sm:h-8 bg-black">
+                                  <AvatarImage src={"usd-coin-usdc-logo.png"} />
+                                  <AvatarFallback>{"USDC"}</AvatarFallback>
+                                </Avatar>{" "}
+                                USDC
+                              </div>
+                            ) : (
+                              <div className="flex gap-2 items-center">
+                                <Avatar className="w-6 h-6 sm:w-8 sm:h-8 bg-black">
+                                  <AvatarImage src={"solana-sol-logo.png"} />
+                                  <AvatarFallback>{"SOL"}</AvatarFallback>
+                                </Avatar>{" "}
+                                SOL
+                              </div>
+                            )}
+                          </div>
+                          <Input
+                            className="sm:w-fit h-full text-lg text-gray-600 text-right border-none focus:none shadow-none focus:ring-0 focus-visible:ring-0"
+                            id="amount"
+                            placeholder="0,0"
+                            type="number"
+                            inputMode="decimal"
+                            step="any"
+                            value={field.value}
+                            onChange={(e) =>
+                              field.onChange(
+                                isNaN(e.target.valueAsNumber)
+                                  ? 0
+                                  : e.target.valueAsNumber
+                              )
+                            }
+                            // onVolumeChange={field.onChange}
+                          />
                         </div>
                       </div>
-                      <Input
-                        className="h-full text-lg text-gray-600 text-right border-none focus:none shadow-none focus:ring-0 focus-visible:ring-0"
-                        id="amount"
-                        placeholder="0,0"
-                        type="number"
-                        inputMode="decimal"
-                        step="any"
-                        value={field.value}
-                        onChange={(e) =>
-                          field.onChange(
-                            isNaN(e.target.valueAsNumber)
-                              ? 0
-                              : e.target.valueAsNumber
-                          )
-                        }
-                        // onVolumeChange={field.onChange}
-                      />
                     </div>
                   </div>
                   <FormMessage />
