@@ -13,8 +13,6 @@ export interface MarketDataRow {
 }
 
 export default async function MarketDataPage() {
-  // Example: Using raw table with time_bucket.
-  // Or switch to your continuous aggregate view.
   const rows = await query(`
     SELECT
       time_bucket('5 seconds', time) AS time,

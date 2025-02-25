@@ -276,7 +276,7 @@ export function SwapPanel() {
                         </div>
                       </div>
                       <Input
-                        className="w-fit h-full text-lg text-gray-600 text-right border-none focus:none shadow-none focus:ring-0 focus-visible:ring-0"
+                        className="h-full text-lg text-gray-600 text-right border-none focus:none shadow-none focus:ring-0 focus-visible:ring-0"
                         id="amount"
                         placeholder="0,0"
                         type="number"
