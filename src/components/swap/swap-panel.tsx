@@ -9,6 +9,8 @@ import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import {
   Form,
+  FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -24,25 +26,32 @@ import {
 } from "../account/account-data-access";
 import { useAnchorProvider } from "../solana/solana-provider";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { cn, durationStringToSlots } from "@/lib/utils";
+import { durationStringToSlots } from "@/lib/utils";
 import { useMatoProgram } from "../mato/mato-data-access";
 import { BuySellSwitch } from "./swap-ui";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Wallet } from "lucide-react";
 import { PriceImpact } from "./price-impact";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 const SwapFormSchema = z.object({
   amount: z.number().gt(0, "Must be greater than zero"),
-  // duration: z.string({
-  //   required_error: "Please set a duration",
-  // }),
+  duration: z.string({
+    required_error: "Please set a duration",
+  }),
 });
 
 export function SwapPanel() {
   const { depositTokenA, depositTokenB } = useMatoProgram();
 
   const [side, setSide] = useState<"buy" | "sell">("buy");
-  const [orderType, setOrderType] = useState<"market" | "limit">("market");
+  // const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const provider = useAnchorProvider();
 
   const getBalance = useGetBalance({ address: provider.publicKey });
@@ -62,16 +71,16 @@ export function SwapPanel() {
   });
 
   async function onSubmit(data: z.infer<typeof SwapFormSchema>) {
-    // let slotDuration = durationStringToSlots.get(data.duration);
+    let slotDuration = durationStringToSlots.get(data.duration);
     if (side == "sell") {
       depositTokenA.mutate({
         amount: data.amount * LAMPORTS_PER_SOL,
-        duration: 30,
+        duration: slotDuration || 30,
       });
     } else {
       depositTokenB.mutate({
         amount: data.amount * 10 ** (getTokenBalance.data?.value.decimals || 6),
-        duration: 30,
+        duration: slotDuration || 30,
       });
     }
   }
@@ -300,7 +309,7 @@ export function SwapPanel() {
                 </FormItem>
               )}
             />
-            {/* <FormField
+            <FormField
               control={form.control}
               name="duration"
               render={({ field }) => (
@@ -331,14 +340,16 @@ export function SwapPanel() {
                   <FormMessage />
                 </FormItem>
               )}
-            /> */}
+            />
             <PriceImpact
               flow={
                 isNaN(amount)
                   ? 0
                   : side == "sell"
-                    ? (amount * LAMPORTS_PER_SOL) / 26
-                    : (amount * 1000000) / 26
+                    ? (amount * LAMPORTS_PER_SOL) /
+                      (durationStringToSlots.get(form.watch("duration")) || 5)
+                    : (amount * 1000000) /
+                      (durationStringToSlots.get(form.watch("duration")) || 5)
               }
               side={side}
             />
