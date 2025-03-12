@@ -19,12 +19,18 @@ import { useMatoProgram } from "../mato/mato-data-access";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
-export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
+export interface PriceChartProps {
+  data: Array<LineData<UTCTimestamp>>;
+  onTimeRangeChange?: () => void;
+}
+
+export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<{
     chart?: IChartApi;
     lineSeries?: ISeriesApi<"Line">;
   }>({});
+  const loadingRef = useRef(false);
 
   const [time, setTime] = useState(Date.now() / 1000);
 
@@ -35,6 +41,13 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Effect to update the chart data
+  useEffect(() => {
+    if (chartRef.current.lineSeries) {
+      chartRef.current.lineSeries.setData(data);
+    }
+  }, [data]);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -95,6 +108,23 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
         },
       },
     });
+
+    // Handle loading more data when user scrolls to the left
+    if (onTimeRangeChange) {
+      chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+        if (!range || loadingRef.current) return;
+
+        const logicalFrom = range.from;
+        // Load more data when we're within 10% of the start of the visible range
+        if (logicalFrom < 10) {
+          loadingRef.current = true;
+          Promise.resolve(onTimeRangeChange()).finally(() => {
+            loadingRef.current = false;
+          });
+        }
+      });
+    }
+
     chart.timeScale().fitContent();
 
     const lineSeries = chart.addSeries(LineSeries, {
@@ -113,7 +143,7 @@ export function PriceChart({ data }: { data: Array<LineData<UTCTimestamp>> }) {
       chart.remove();
       chartRef.current = {};
     };
-  }, [data]);
+  }, [onTimeRangeChange]); // Remove data dependency since we handle it in a separate effect
 
   const { getMarketAccount } = useMatoProgram();
 
