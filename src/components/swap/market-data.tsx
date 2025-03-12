@@ -25,7 +25,6 @@ export default function MarketDataPage() {
     initialPageParam: undefined as number | undefined,
     getNextPageParam: (lastPage) => lastPage.oldestTimestamp,
     staleTime: 0, // Consider data immediately stale to ensure real-time updates
-    gcTime: 0, // Don't cache old data
   });
 
   // Combine all pages of data for the chart, ensuring time-based order and no duplicates
