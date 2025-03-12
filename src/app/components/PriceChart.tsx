@@ -27,7 +27,6 @@ export function PriceChart() {
     queryFn: ({ pageParam }) => fetchMarketData(pageParam as number | undefined),
     getNextPageParam: (lastPage: MarketDataPage) => lastPage.oldestTimestamp,
     initialPageParam: undefined as number | undefined,
-    refetchInterval: 5000, // Refetch every 5 seconds
   });
 
   // Initialize chart
