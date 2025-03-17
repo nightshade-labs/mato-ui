@@ -34,7 +34,9 @@ export function createMint(umi: Umi) {
 }
 
 (async () => {
-  const umi = createUmi(clusterApiUrl("devnet")).use(mplTokenMetadata());
+  const umi = createUmi("https://api.testnet.sonic.game").use(
+    mplTokenMetadata()
+  );
 
   const usdcMint = createMint(umi);
   const solMint = createMint(umi);

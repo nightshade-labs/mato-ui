@@ -9,9 +9,9 @@ export function Footer() {
           <Link href="/" className="flex items-center space-x-2">
             <span className="text-lg font-bold">Mato</span>
           </Link>
-          <p className="text-center text-sm leading-loose md:text-left">
+          {/* <p className="text-center text-sm leading-loose md:text-left">
             Built on Solana.
-          </p>
+          </p> */}
         </div>
         <div className="flex items-center space-x-4">
           <Link

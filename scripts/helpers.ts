@@ -5,7 +5,7 @@ import os from "os";
 const DEFAULT_KEY_DIR_NAME = ".local_keys";
 const DEFAULT_PUBLIC_KEY_FILE = "keys.json";
 
-export const idWallet = os.homedir() + "/.config/solana/id.json";
+export const idWallet = os.homedir() + "/.config/solana/sonic.json";
 
 export function loadKeypairFromFile(absPath: string) {
   try {

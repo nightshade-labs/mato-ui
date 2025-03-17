@@ -10,8 +10,8 @@ process.env.ANCHOR_PROVIDER_URL = clusterApiUrl("devnet");
 process.env.ANCHOR_WALLET = idWallet;
 
 // Need to first run create mint script and insert the mint addresses here
-const exits = new PublicKey("D467xRNpNHvxbG7nRApDSshnvqVDhL4YjBYqz9TsoKF9");
-const prices = new PublicKey("Dpe9rm2NFSTowGbvrwXccbW7FtGfrQCdu6ogugNW6akK");
+const exits = new PublicKey("ASgjENhoPdnC5U5cf5oNrzP6HsBXz2wyNpjW2HSe43Uh");
+const prices = new PublicKey("F5UWZGomBEEGFfs44TTyNR2Xi2WLrue8TPoRzMvmWZup");
 
 (async () => {
   const provider = anchor.AnchorProvider.env();
