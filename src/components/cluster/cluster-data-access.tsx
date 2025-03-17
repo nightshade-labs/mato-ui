@@ -29,8 +29,7 @@ export const defaultClusters: Cluster[] = [
   {
     name: "devnet",
     // endpoint: clusterApiUrl("devnet"),
-    endpoint:
-      "https://devnet.helius-rpc.com/?api-key=d6fce321-cba5-4013-8159-901f1f1ffb04",
+    endpoint: "https://api.testnet.sonic.game",
     network: ClusterNetwork.Devnet,
   },
   { name: "local", endpoint: "http://localhost:8899" },
