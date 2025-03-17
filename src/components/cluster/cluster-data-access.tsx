@@ -103,7 +103,7 @@ export function ClusterProvider({ children }: { children: ReactNode }) {
     },
     setCluster: (cluster: Cluster) => setCluster(cluster),
     getExplorerUrl: (path: string) =>
-      `https://explorer.solana.com/${path}${getClusterUrlParam(cluster)}`,
+      `https://explorer.sonic.game/${path}?cluster=testnet.v1`,
   };
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
