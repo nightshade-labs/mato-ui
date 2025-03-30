@@ -54,7 +54,7 @@ export default function LandingPage() {
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
-                  <Link href="/twob-explained">
+                  <Link href="https://thgehr.substack.com/p/twob" target="_blank" rel="noopener noreferrer">
                     Learn About TWOB
                   </Link>
                 </Button>
@@ -64,7 +64,7 @@ export default function LandingPage() {
         </section>
 
         {/* Features Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 px-8 xs:px-16 sm:px-32">
+        <section id="features" className="w-full py-12 md:py-24 lg:py-32 px-8 xs:px-16 sm:px-32">
           <div className="px-4 md:px-6">
             <h2 
               className="text-3xl font-bold tracking-tighter sm:text-5xl text-center mb-12"
@@ -93,7 +93,7 @@ export default function LandingPage() {
                 {
                   icon: <ChartCandlestick className="h-12 w-12 text-pink-500" />,
                   title: "Smart Automation",
-                  description: "Advanced trading automation that responds to market conditions in real-time."
+                  description: "Trades start and stop when crossing limits, empowering traders to act as if they were market makers."
                 }
               ].map((feature, index) => (
                 <div 
@@ -119,7 +119,7 @@ export default function LandingPage() {
         </section>
 
         {/* How It Works Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-indigo-500/5 to-purple-500/5 px-8 xs:px-16 sm:px-32">
+        <section id="how-it-works" className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-indigo-500/5 to-purple-500/5 px-8 xs:px-16 sm:px-32">
           <div className="px-4 md:px-6">
             <h2 
               className="text-3xl font-bold tracking-tighter sm:text-5xl text-center mb-12"
@@ -198,7 +198,7 @@ export default function LandingPage() {
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
-                  <Link href="/twob-explained">
+                  <Link href="https://thgehr.substack.com/p/twob" target="_blank" rel="noopener noreferrer">
                     Learn More About TWOB
                   </Link>
                 </Button>
