@@ -28,8 +28,7 @@ export enum ClusterNetwork {
 export const defaultClusters: Cluster[] = [
   {
     name: "devnet",
-    // endpoint: clusterApiUrl("devnet"),
-    endpoint: "https://api.testnet.sonic.game",
+    endpoint: clusterApiUrl("devnet"),
     network: ClusterNetwork.Devnet,
   },
   { name: "local", endpoint: "http://localhost:8899" },
