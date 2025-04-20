@@ -1,0 +1,361 @@
+TITLE: Complete Motion Component Implementation
+DESCRIPTION: Demonstrates a full example of importing and using the Motion component in a React component, including conditional opacity animation based on visibility state.
+SOURCE: https://github.com/motiondivision/motion/blob/main/packages/framer-motion/README.md#2025-04-11_snippet_2
+
+LANGUAGE: jsx
+CODE:
+```
+import { motion } from "motion/react"
+
+export function Component({ isVisible }) {
+    return <motion.div animate={{ opacity: isVisible ? 1 : 0 }} />
+}
+```
+
+----------------------------------------
+
+TITLE: Importing and Using Motion in React Component
+DESCRIPTION: Complete example showing how to import the motion component from the Motion library and use it to create an opacity animation based on a visibility prop in a React component.
+SOURCE: https://github.com/motiondivision/motion/blob/main/packages/motion/README.md#2025-04-11_snippet_2
+
+LANGUAGE: jsx
+CODE:
+```
+import { motion } from "motion/react"
+
+export function Component({ isVisible }) {
+    return <motion.div animate={{ opacity: isVisible ? 1 : 0 }} />
+}
+```
+
+----------------------------------------
+
+TITLE: Basic React Animation Component with Motion
+DESCRIPTION: Example demonstrating how to create an animated div component in React using Motion's React integration, moving the element 100 pixels horizontally
+SOURCE: https://github.com/motiondivision/motion/blob/main/README.md#2025-04-11_snippet_2
+
+LANGUAGE: jsx
+CODE:
+```
+import { motion } from "motion/react"
+
+function Component() {
+    return <motion.div animate={{ x: 100 }} />
+}
+```
+
+----------------------------------------
+
+TITLE: Basic Motion Component Usage in React
+DESCRIPTION: Demonstrates the basic syntax for using the Motion component to create animations in React. Shows how to animate a div element using the motion component.
+SOURCE: https://github.com/motiondivision/motion/blob/main/packages/framer-motion/README.md#2025-04-11_snippet_0
+
+LANGUAGE: jsx
+CODE:
+```
+<motion.div animate={{ x: 0 }} />
+```
+
+----------------------------------------
+
+TITLE: Basic Motion Component Usage in React
+DESCRIPTION: Demonstrates the fundamental syntax for using the motion component to create animations in React. This simple example shows how to animate a div element.
+SOURCE: https://github.com/motiondivision/motion/blob/main/packages/motion/README.md#2025-04-11_snippet_0
+
+LANGUAGE: jsx
+CODE:
+```
+<motion.div animate={{ x: 0 }} />
+```
+
+----------------------------------------
+
+TITLE: Basic JavaScript Animation with Motion
+DESCRIPTION: Example showing how to import and use the animate function from Motion to create a simple animation moving an element 100 pixels horizontally
+SOURCE: https://github.com/motiondivision/motion/blob/main/README.md#2025-04-11_snippet_1
+
+LANGUAGE: javascript
+CODE:
+```
+import { animate } from "motion"
+
+animate("#box", { x: 100 })
+```
+
+----------------------------------------
+
+TITLE: Adding onDrag event listener
+DESCRIPTION: Adds a new event listener for drag interactions.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_13
+
+LANGUAGE: markdown
+CODE:
+```
+-   `onDrag` event listener
+```
+
+----------------------------------------
+
+TITLE: Adding keyframes animation support
+DESCRIPTION: Adds support for setting animation targets as keyframes.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_11
+
+LANGUAGE: markdown
+CODE:
+```
+-   Animation targets can be set as `keyframes`.
+```
+
+----------------------------------------
+
+TITLE: Adding support for CSS variables
+DESCRIPTION: Adds support for animating CSS variables.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_3
+
+LANGUAGE: markdown
+CODE:
+```
+-   Support for CSS variables.
+```
+
+----------------------------------------
+
+TITLE: Installing Motion Package
+DESCRIPTION: Shows the npm command to install the Motion package in a React project.
+SOURCE: https://github.com/motiondivision/motion/blob/main/packages/framer-motion/README.md#2025-04-11_snippet_1
+
+LANGUAGE: bash
+CODE:
+```
+npm install motion
+```
+
+----------------------------------------
+
+TITLE: Installing Motion Package via NPM
+DESCRIPTION: Command to install the Motion library using NPM package manager. This is required before importing and using Motion components in a React project.
+SOURCE: https://github.com/motiondivision/motion/blob/main/packages/motion/README.md#2025-04-11_snippet_1
+
+LANGUAGE: bash
+CODE:
+```
+npm install motion
+```
+
+----------------------------------------
+
+TITLE: Installing Motion Package
+DESCRIPTION: Command to install the Motion animation library via npm package manager
+SOURCE: https://github.com/motiondivision/motion/blob/main/README.md#2025-04-11_snippet_0
+
+LANGUAGE: bash
+CODE:
+```
+npm install motion
+```
+
+----------------------------------------
+
+TITLE: Adding HTMLMotionProps and SVGMotionProps types
+DESCRIPTION: Adds TypeScript types for HTML and SVG motion component props.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_4
+
+LANGUAGE: markdown
+CODE:
+```
+-   `HTMLMotionProps` and `SVGMotionProps`.
+```
+
+----------------------------------------
+
+TITLE: Adding custom prop for dynamic variants
+DESCRIPTION: Adds a 'custom' prop to support dynamic variants in animations.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_2
+
+LANGUAGE: markdown
+CODE:
+```
+-   `custom` prop for dynamic variants.
+```
+
+----------------------------------------
+
+TITLE: Adding support for custom values
+DESCRIPTION: Adds support for custom value types in animations.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_10
+
+LANGUAGE: markdown
+CODE:
+```
+-   Adding support for custom values.
+```
+
+----------------------------------------
+
+TITLE: Adding shadow to CustomValueTypes
+DESCRIPTION: Adds 'shadow' to the CustomValueTypes object, allowing shadow values to be animated.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_0
+
+LANGUAGE: markdown
+CODE:
+```
+-   `shadow` to `CustomValueTypes`.
+```
+
+----------------------------------------
+
+TITLE: Setting up Motion Development Environment
+DESCRIPTION: Command line instruction for bootstrapping the Motion development environment after repository setup
+SOURCE: https://github.com/motiondivision/motion/blob/main/CONTRIBUTING.md#2025-04-11_snippet_0
+
+LANGUAGE: bash
+CODE:
+```
+make bootstrap
+```
+
+----------------------------------------
+
+TITLE: Adding onPanSessionStart event handler
+DESCRIPTION: Adds a new event handler for the start of pan gestures.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_5
+
+LANGUAGE: markdown
+CODE:
+```
+-   `onPanSessionStart` event handler.
+```
+
+----------------------------------------
+
+TITLE: Adding onDragTransitionEnd event
+DESCRIPTION: Adds a new event that fires when a drag transition ends.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_7
+
+LANGUAGE: markdown
+CODE:
+```
+-   `onDragTransitionEnd`
+```
+
+----------------------------------------
+
+TITLE: Adding dragDirectionLock prop
+DESCRIPTION: Adds a new prop to enable locking drag direction.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_8
+
+LANGUAGE: markdown
+CODE:
+```
+-   Added `dragDirectionLock` prop.
+```
+
+----------------------------------------
+
+TITLE: Adding Point.relativeTo and transform
+DESCRIPTION: Adds new Point.relativeTo method and transform functionality.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_9
+
+LANGUAGE: markdown
+CODE:
+```
+-   `Point.relativeTo`
+-   `transform`
+```
+
+----------------------------------------
+
+TITLE: Adding explicit support for radius value
+DESCRIPTION: Adds explicit support for animating the 'radius' value.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_6
+
+LANGUAGE: markdown
+CODE:
+```
+-   Explicit support for the `radius` value.
+```
+
+----------------------------------------
+
+TITLE: Adding static prop
+DESCRIPTION: Adds a 'static' prop to prevent animation and interaction on a component.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_12
+
+LANGUAGE: markdown
+CODE:
+```
+-   `static` prop. Set `static` on a motion component to prevent animation and interaction.
+```
+
+----------------------------------------
+
+TITLE: Fixing static mode and 'none' value animations
+DESCRIPTION: Fixes issues with propagating 'initial' values in static mode and animating from values read as 'none'.
+SOURCE: https://github.com/motiondivision/motion/blob/main/CHANGELOG.md#2025-04-11_snippet_1
+
+LANGUAGE: markdown
+CODE:
+```
+-   Fixed propagation of `initial` in `static` mode.
+-   Fixing animations from values that are read as "none".
+```
+
+----------------------------------------
+
+TITLE: Running Motion Development Server Command
+DESCRIPTION: Command to start the Motion development server from the root directory, which allows testing and viewing examples.
+SOURCE: https://github.com/motiondivision/motion/blob/main/dev/react-19/README.md#2025-04-11_snippet_0
+
+LANGUAGE: bash
+CODE:
+```
+yarn dev
+```
+
+----------------------------------------
+
+TITLE: Accessing Motion Dev Server URL
+DESCRIPTION: URL endpoint for accessing the Motion development server where example files are listed and test files can be accessed directly using query parameters.
+SOURCE: https://github.com/motiondivision/motion/blob/main/dev/react/README.md#2025-04-11_snippet_0
+
+LANGUAGE: plaintext
+CODE:
+```
+http://localhost:9990
+```
+
+----------------------------------------
+
+TITLE: Running the Motion Vanilla Dev Environment
+DESCRIPTION: Terminal command for starting the Motion Vanilla development environment from the project's root directory. After running this command, files can be accessed via http://localhost:8000/<dir>/<filename>.
+SOURCE: https://github.com/motiondivision/motion/blob/main/dev/html/README.md#2025-04-11_snippet_0
+
+LANGUAGE: bash
+CODE:
+```
+yarn dev
+```
+
+----------------------------------------
+
+TITLE: Accessing Specific Test Files URL Pattern
+DESCRIPTION: URL pattern for accessing specific test files in the Motion development environment by providing the filename as a query parameter.
+SOURCE: https://github.com/motiondivision/motion/blob/main/dev/react-19/README.md#2025-04-11_snippet_2
+
+LANGUAGE: markdown
+CODE:
+```
+?test=<filename>
+```
+
+----------------------------------------
+
+TITLE: Accessing Motion Development Environment URL
+DESCRIPTION: URL to access the Motion development environment where example files are listed. The instructions also mention how to access test files directly via query parameters.
+SOURCE: https://github.com/motiondivision/motion/blob/main/dev/react-19/README.md#2025-04-11_snippet_1
+
+LANGUAGE: markdown
+CODE:
+```
+http://localhost:9990
+```
