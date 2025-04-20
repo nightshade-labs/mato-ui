@@ -4,7 +4,7 @@ export const Logo = ({ className }: { className?: string }) => {
   return (
     <h1
       className={cn(
-        "text-2xl font-medium text-pretty text-green-400",
+        "text-2xl font-semibold text-pretty text-green-500",
         className
       )}
     >

@@ -86,7 +86,7 @@ export default function HeroSection() {
                     asChild
                     size="lg"
                     variant={"outline"}
-                    className="rounded-xl w-40 border-none outline-none bg-primary hover:bg-primary/90 px-5 text-base"
+                    className="rounded-xl w-40 border-none outline-none bghover:bg-primary/90 px-5 text-base"
                   >
                     <Link href="#link">
                       <span className="text-nowrap">Launch App</span>
