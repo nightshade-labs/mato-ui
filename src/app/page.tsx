@@ -11,6 +11,7 @@ function LandingPage() {
       <HeroSection />
       <FeaturesSection />
       <Features />
+
       <FAQsFour />
       <FooterSection />
     </div>

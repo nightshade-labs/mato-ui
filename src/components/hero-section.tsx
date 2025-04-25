@@ -32,9 +32,9 @@ const transitionVariants = {
 
 export default function HeroSection() {
   return (
-    <>
+    <div className="relative">
       <HeroHeader />
-
+      <div className="bg-gradient-to-t to-transparent absolute inset-0 via-transparent from-black to-70% z-10 "></div>
       <main className="overflow-hidden relative h-screen bg-[url('/fractalMaze.webp')] bg-blend-darken">
         <div
           aria-hidden
@@ -86,9 +86,9 @@ export default function HeroSection() {
                     asChild
                     size="lg"
                     variant={"outline"}
-                    className="rounded-xl w-40 border-none outline-none bghover:bg-primary/90 px-5 text-base"
+                    className="rounded-xl w-40 border-none outline-none bg-hover:bg-primary/90 px-5 text-base"
                   >
-                    <Link href="#link">
+                    <Link href="/swap" className="flex items-center gap-2">
                       <span className="text-nowrap">Launch App</span>
                     </Link>
                   </Button>
@@ -98,6 +98,6 @@ export default function HeroSection() {
           </div>
         </section>
       </main>
-    </>
+    </div>
   );
 }

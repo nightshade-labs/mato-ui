@@ -7,7 +7,7 @@ export default function Features() {
     <section className="bg-zinc-50 py-16 md:py-32 dark:bg-transparent">
       <div className="@container mx-auto max-w-5xl px-6">
         <div className="text-center">
-          <h2 className="text-balance text-4xl font-semibold lg:text-5xl">
+          <h2 className="text-balance font-clash text-4xl font-semibold lg:text-5xl">
             Trading on Mato is Simple
           </h2>
           <p className="mt-4">
@@ -16,13 +16,15 @@ export default function Features() {
           </p>
         </div>
         <div className="max-w-full lg:grid-cols-3 mx-auto mt-8 grid grid-cols-1 gap-6 *:text-center md:mt-16">
-          <Card className="group shadow-zinc-950/5">
+          <Card className="group bg-black shadow-zinc-950/5">
             <CardHeader className="pb-3">
               <CardDecorator>
                 <Timer className="size-6" aria-hidden />
               </CardDecorator>
 
-              <h3 className="mt-6 font-medium">Set Your Duration</h3>
+              <h3 className="mt-6 font-medium font-clash ">
+                Set Your Duration
+              </h3>
             </CardHeader>
 
             <CardContent>
@@ -33,13 +35,15 @@ export default function Features() {
             </CardContent>
           </Card>
 
-          <Card className="group shadow-zinc-950/5">
+          <Card className="group bg-black shadow-zinc-950/5">
             <CardHeader className="pb-3">
               <CardDecorator>
                 <ShieldCheck className="size-6" aria-hidden />
               </CardDecorator>
 
-              <h3 className="mt-6 font-medium">Protected Trading</h3>
+              <h3 className="mt-6 font-medium font-clash ">
+                Protected Trading
+              </h3>
             </CardHeader>
 
             <CardContent>
@@ -50,13 +54,13 @@ export default function Features() {
             </CardContent>
           </Card>
 
-          <Card className="group shadow-zinc-950/5">
+          <Card className="group bg-black shadow-zinc-950/5">
             <CardHeader className="pb-3">
               <CardDecorator>
                 <LineChart className="size-6" aria-hidden />
               </CardDecorator>
 
-              <h3 className="mt-6 font-medium">See Your Savings</h3>
+              <h3 className="mt-6 font-medium font-clash ">See Your Savings</h3>
             </CardHeader>
 
             <CardContent>

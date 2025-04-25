@@ -9,6 +9,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import Image from "next/image";
 
 export default function FeaturesSection() {
   return (
@@ -17,11 +18,11 @@ export default function FeaturesSection() {
         <div>
           <div className="p-6 sm:p-12">
             <span className="text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="size-4" />
+              <TrendingUp className="size-4 " />
               Better Trading Prices
             </span>
 
-            <p className="mt-8 text-2xl font-semibold">
+            <p className="mt-8 text-2xl  font-clash font-medium">
               Get better prices with gradual trade execution that minimizes
               market impact.
             </p>
@@ -29,27 +30,34 @@ export default function FeaturesSection() {
 
           <div aria-hidden className="relative">
             <div className="absolute inset-0 z-10 m-auto size-fit">
-              <div className="rounded-(--radius) bg-background z-1 dark:bg-muted relative flex size-fit w-fit items-center gap-2 border px-3 py-1 text-xs font-medium shadow-md shadow-zinc-950/5">
+              {/* <div className="rounded-(--radius) bg-background z-1 dark:bg-muted relative flex size-fit w-fit items-center gap-2 border px-3 py-1 text-xs font-medium shadow-md shadow-zinc-950/5">
                 <span className="text-lg">🇨🇩</span> Last connection from DR
                 Congo
-              </div>
-              <div className="rounded-(--radius) bg-background absolute inset-2 -bottom-2 mx-auto border px-3 py-4 text-xs font-medium shadow-md shadow-zinc-950/5 dark:bg-zinc-900"></div>
+              </div> */}
             </div>
 
             <div className="relative overflow-hidden">
               <div className="bg-radial z-1 to-background absolute inset-0 from-transparent to-75%"></div>
-              <Map />
+              {/* <Map /> */}
+              {/* <video src="/gif.mp4" autoPlay loop muted /> */}
+              <Image
+                src="/a1.jpeg"
+                width={300}
+                className="mx-auto pb-8 hover:scale-105 duration-300"
+                height={400}
+                alt="gif"
+              />
             </div>
           </div>
         </div>
         <div className="overflow-hidden border-t bg-zinc-50 p-6 sm:p-12 md:border-0 md:border-l dark:bg-transparent">
           <div className="relative z-10">
-            <span className="text-muted-foreground flex items-center gap-2">
+            <span className="text-muted-foreground  flex items-center gap-2">
               <Shield className="size-4" />
               Always-On Bot Protection
             </span>
 
-            <p className="my-8 text-2xl font-semibold">
+            <p className="my-8 text-2xl font-clash font-medium">
               Trade with confidence knowing your orders are protected from
               front-running and sandwich attacks.
             </p>
@@ -58,7 +66,7 @@ export default function FeaturesSection() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="flex size-5 rounded-full border">
-                  <Logo className="m-auto size-3" />
+                  {/* <Logo className="m-auto size-3" /> */}
                 </span>
                 <span className="text-muted-foreground text-xs">
                   Sat 22 Feb
@@ -70,7 +78,7 @@ export default function FeaturesSection() {
             </div>
 
             <div>
-              <div className="rounded-(--radius) mb-1 ml-auto w-3/5 bg-blue-600 p-3 text-xs text-white">
+              <div className="rounded-(--radius) mb-1 ml-auto w-3/5 bg-green-800 p-3 text-xs text-white">
                 Molestiae numquam debitis et ullam distinctio provident nobis
                 repudiandae deleniti necessitatibus.
               </div>
@@ -81,18 +89,18 @@ export default function FeaturesSection() {
           </div>
         </div>
         <div className="col-span-full border-y p-12">
-          <p className="text-center text-4xl font-semibold lg:text-7xl">
+          <p className="text-center font-clash text-4xl font-semibold lg:text-7xl">
             Ultra-Low Fees on Solana
           </p>
         </div>
-        <div className="relative col-span-full">
+        <div className="relative hidden sm:block col-span-full">
           <div className="absolute z-10 max-w-lg px-6 pr-12 pt-6 md:px-12 md:pt-12">
             <span className="text-muted-foreground flex items-center gap-2">
               <BarChart className="size-4" />
               Trade Analytics
             </span>
 
-            <p className="my-8 text-2xl font-semibold">
+            <p className="my-8 text-2xl font-clash font-medium">
               See your savings in real-time.{" "}
               <span className="text-muted-foreground">
                 Track how gradual execution improves your trading results.
@@ -134,23 +142,23 @@ const Map = () => {
 };
 
 const chartConfig = {
-  market: {
-    label: "Market Price",
-    color: "#ef4444",
+  desktop: {
+    label: "Market",
+    color: "#1CF6C2",
   },
-  mato: {
-    label: "Mato Execution",
-    color: "#22c55e",
+  mobile: {
+    label: "Mato",
+    color: "#03B27A",
   },
 } satisfies ChartConfig;
 
 const chartData = [
-  { time: "0min", market: 100, mato: 100 },
-  { time: "2min", market: 98, mato: 99.8 },
-  { time: "4min", market: 96, mato: 99.2 },
-  { time: "6min", market: 94, mato: 98.5 },
-  { time: "8min", market: 92, mato: 98 },
-  { time: "10min", market: 90, mato: 97.8 },
+  { month: "May", desktop: 56, mobile: 224 },
+  { month: "June", desktop: 56, mobile: 224 },
+  { month: "January", desktop: 126, mobile: 252 },
+  { month: "February", desktop: 205, mobile: 410 },
+  { month: "March", desktop: 200, mobile: 126 },
+  { month: "April", desktop: 400, mobile: 800 },
 ];
 
 const MonitoringChart = () => {
@@ -198,19 +206,21 @@ const MonitoringChart = () => {
         />
         <Area
           strokeWidth={2}
-          dataKey="market"
-          type="monotone"
+          dataKey="mobile"
+          type="stepBefore"
           fill="url(#fillMobile)"
           fillOpacity={0.1}
           stroke="var(--color-mobile)"
+          stackId="a"
         />
         <Area
           strokeWidth={2}
-          dataKey="mato"
-          type="monotone"
+          dataKey="desktop"
+          type="stepBefore"
           fill="url(#fillDesktop)"
           fillOpacity={0.1}
           stroke="var(--color-desktop)"
+          stackId="a"
         />
       </AreaChart>
     </ChartContainer>
