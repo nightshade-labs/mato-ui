@@ -1,0 +1,88 @@
+Okay, here is a draft landing page copy for Mato, based *entirely* on the information and structure provided in your document.
+
+---
+
+**Headline:** Escape Bad Trades. Experience Fairer Trading on Solana.
+
+**Sub-headline:** Mato is the Solana DEX built for fair, bot-protected trading. Set your price and duration, and let Mato execute your trades gradually for better results.
+
+---
+
+**(Hero Section - Imagine a simple illustration of a trade executing smoothly over time, maybe comparing it to a bumpy instant trade line)**
+
+**[ Call to Action Button: Launch Mato App ]**
+
+---
+
+**Tired of Losing on Current DEXs? We Get It.**
+
+Whether you're trading tokens or managing assets, today's decentralized exchanges come with frustrating pain points:
+
+*   **High Price Impact & Slippage:** Large trades often execute far worse than expected due to low liquidity.
+*   **Front-Running Bots:** Predatory bots exploit your orders, especially during volatile times.
+*   **Confusing Interfaces:** Many platforms are overwhelming with complex charts and settings.
+*   **Transaction Failures:** Trades can fail unexpectedly, wasting time and potential fees.
+
+You deserve a trading experience that's simple, fair, and reliable.
+
+---
+
+**Introducing Mato: Trade Smarter, Not Harder.**
+
+Mato rethinks decentralized trading on Solana with a unique approach focused on *fair* execution and user simplicity.
+
+Instead of forcing an instant swap that can be manipulated or suffer slippage, Mato executes your trade *gradually* over a duration you choose.
+
+---
+
+**(Section highlighting Core Benefits with simple icons)**
+
+**✅ Get Better Prices**
+By executing your trade over time, Mato minimizes the price impact your order has on the market, helping you achieve a fairer average price compared to an immediate, large swap.
+
+**🛡️ Always-On Bot Protection**
+Front-running and sandwich attacks are *automatically* prevented by Mato's design. Trade with confidence, knowing your orders are shielded from malicious bots.
+
+**🚀 Blazing Fast & Ultra-Low Fees**
+Built natively on Solana, Mato leverages the network's speed for near-instant order processing and negligible transaction costs.
+
+**🔒 Trade Within Your Limit**
+Set a Limit Price to ensure your trade only executes at or better than your desired level. If the market doesn't meet your price during the duration, your funds are safely returned – no failed transactions due to price!
+
+**📊 See Your Savings**
+After each successful trade, Mato shows you how the gradual execution helped you save compared to what an immediate market swap might have cost.
+
+---
+
+**Trading on Mato is Simple:**
+
+We've designed the interface to be intuitive for everyone. You only need to set three things:
+
+1.  **Amount:** How much crypto you want to trade.
+    *(Tooltip: "Enter the total amount you wish to trade.")*
+2.  **Duration:** How long you want your order to gradually execute in the market.
+    *(Tooltip: "Set how long your order will gradually execute in the market. Longer durations usually give better prices.")*
+    *(Default Suggestion: "Recommended duration: 10 minutes (balances speed and price efficiency).")*
+3.  **Limit Price:** The minimum price you're willing to accept for your trade.
+    *(Tooltip: "Your trade will only execute at or better than this price.")*
+
+---
+
+**(Section on Transaction Feedback/Visualization - Imagine a small animated progress bar)**
+
+**See Your Order Come to Life**
+
+Watch your trade execute in real-time with a clear progress indicator showing how much time is left and how much of your order has filled.
+
+*   **If your limit price isn't met:** We'll clearly inform you: "Your order is active but outside the current market price. If market prices move within your limit, your trade will automatically execute."
+*   **If no trade happens:** At the end of the duration, we clearly state: "No trades executed—market prices did not reach your limit. Your funds have been returned."
+
+---
+
+**Ready to trade smarter?**
+
+Experience fair prices, guaranteed bot protection, and effortless trading on Solana.
+
+**[ Call to Action Button: Launch Mato App ]**
+
+---
