@@ -13,7 +13,7 @@ import Image from "next/image";
 
 export default function FeaturesSection() {
   return (
-    <section className="px-4 py-16 md:py-32">
+    <section className="px-4 py-16 md:py-32" id="features">
       <div className="mx-auto grid max-w-5xl border md:grid-cols-2">
         <div>
           <div className="p-6 sm:p-12">
@@ -23,7 +23,7 @@ export default function FeaturesSection() {
             </span>
 
             <p className="mt-8 text-2xl  font-clash font-medium">
-              Get better prices with gradual trade execution that minimizes
+              Get better prices with continuous trade execution that minimizes
               market impact.
             </p>
           </div>
@@ -68,16 +68,24 @@ export default function FeaturesSection() {
                 <span className="flex size-5 rounded-full border">
                   {/* <Logo className="m-auto size-3" /> */}
                 </span>
-                <span className="text-muted-foreground text-xs">
+                {/* <span className="text-muted-foreground text-xs">
                   Sat 22 Feb
-                </span>
+                </span> */}
               </div>
-              <div className="rounded-(--radius) bg-background mt-1.5 w-3/5 border p-3 text-xs">
+              {/* <div className="rounded-(--radius) bg-background mt-1.5 w-3/5 border p-3 text-xs">
                 Hey, I'm having trouble with my account.
-              </div>
+              </div> */}
+
+              <Image
+                src="/a2.jpeg"
+                width={300}
+                height={100}
+                className="mx-auto  hover:scale-105 duration-300"
+                alt="Another description"
+              />
             </div>
 
-            <div>
+            {/* <div>
               <div className="rounded-(--radius) mb-1 ml-auto w-3/5 bg-green-800 p-3 text-xs text-white">
                 Molestiae numquam debitis et ullam distinctio provident nobis
                 repudiandae deleniti necessitatibus.
@@ -85,7 +93,7 @@ export default function FeaturesSection() {
               <span className="text-muted-foreground block text-right text-xs">
                 Now
               </span>
-            </div>
+            </div> */}
           </div>
         </div>
         <div className="col-span-full border-y p-12">
@@ -103,7 +111,7 @@ export default function FeaturesSection() {
             <p className="my-8 text-2xl font-clash font-medium">
               See your savings in real-time.{" "}
               <span className="text-muted-foreground">
-                Track how gradual execution improves your trading results.
+                Track how continuous execution improves your trading results.
               </span>
             </p>
           </div>
@@ -199,11 +207,11 @@ const MonitoringChart = () => {
           </linearGradient>
         </defs>
         <CartesianGrid vertical={false} />
-        <ChartTooltip
+        {/* <ChartTooltip
           active
           cursor={false}
           content={<ChartTooltipContent className="dark:bg-muted" />}
-        />
+        /> */}
         <Area
           strokeWidth={2}
           dataKey="mobile"

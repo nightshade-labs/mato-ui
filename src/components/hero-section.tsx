@@ -32,7 +32,7 @@ const transitionVariants = {
 
 export default function HeroSection() {
   return (
-    <div className="relative">
+    <div className="relative" id="hero-section">
       <HeroHeader />
       <div className="bg-gradient-to-t to-transparent absolute inset-0 via-transparent from-black to-70% z-10 "></div>
       <main className="overflow-hidden relative h-screen bg-[url('/fractalMaze.webp')] bg-blend-darken">
@@ -65,7 +65,7 @@ export default function HeroSection() {
               >
                 Mato is the Solana DEX built for fair, bot-protected trading.
                 Set your price and duration, and let Mato execute your trades
-                gradually for better results.
+                continuously for better results.
               </TextEffect>
               <AnimatedGroup
                 variants={{

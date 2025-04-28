@@ -12,7 +12,7 @@ export default function FAQsFour() {
   const faqItems = [
     {
       id: "item-1",
-      question: "How does Mato's gradual execution work?",
+      question: "How does Mato's continuous execution work?",
       answer:
         "Instead of executing your trade all at once, Mato spreads your order over a duration you choose. This minimizes price impact and protects against front-running bots, helping you achieve better average prices compared to immediate swaps.",
     },
@@ -20,7 +20,7 @@ export default function FAQsFour() {
       id: "item-2",
       question: "How do I set up a trade on Mato?",
       answer:
-        "Trading on Mato is simple. You only need to set three things: the amount you want to trade, the duration for gradual execution (we recommend 10 minutes for optimal balance), and your limit price to ensure trades execute at or better than your desired level.",
+        "Trading on Mato is simple. You only need to set three things: the amount you want to trade, the duration for continuous execution (we recommend 10 minutes for optimal balance), and your limit price to ensure trades execute at or better than your desired level.",
     },
     {
       id: "item-3",
@@ -32,7 +32,7 @@ export default function FAQsFour() {
       id: "item-4",
       question: "How does Mato protect against front-running bots?",
       answer:
-        "Front-running and sandwich attacks are automatically prevented by Mato's gradual execution design. Unlike traditional DEXs, our approach shields your orders from malicious bots that typically exploit large, instant swaps.",
+        "Front-running and sandwich attacks are automatically prevented by Mato's continuous execution design. Unlike traditional DEXs, our approach shields your orders from malicious bots that typically exploit large, instant swaps.",
     },
     {
       id: "item-5",
@@ -43,7 +43,7 @@ export default function FAQsFour() {
   ];
 
   return (
-    <section className="py-16 md:py-24">
+    <section className="py-16 md:py-24" id="faqs">
       <div className="mx-auto max-w-5xl px-4 md:px-6">
         <div className="mx-auto max-w-xl text-center">
           <h2 className="text-balance text-3xl font-semibold md:text-4xl lg:text-5xl font-clash">
@@ -79,12 +79,12 @@ export default function FAQsFour() {
             ))}
           </Accordion>
 
-          <p className="text-muted-foreground text-center mt-6 px-8">
+          {/* <p className="text-muted-foreground text-center mt-6 px-8">
             Can't find what you're looking for? Contact our{" "}
             <Link href="#" className="text-primary font-medium hover:underline">
               team
             </Link>
-          </p>
+          </p> */}
         </div>
       </div>
     </section>

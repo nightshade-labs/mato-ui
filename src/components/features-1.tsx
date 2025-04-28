@@ -4,7 +4,10 @@ import { ReactNode } from "react";
 
 export default function Features() {
   return (
-    <section className="bg-zinc-50 py-16 md:py-32 dark:bg-transparent">
+    <section
+      className="bg-zinc-50 py-16 md:py-32 dark:bg-transparent"
+      id="solutions"
+    >
       <div className="@container mx-auto max-w-5xl px-6">
         <div className="text-center">
           <h2 className="text-balance font-clash text-4xl font-semibold lg:text-5xl">
@@ -29,7 +32,7 @@ export default function Features() {
 
             <CardContent>
               <p className="text-sm">
-                Choose how long your order gradually executes in the market.
+                Choose how long your order continuously executes in the market.
                 Longer durations typically result in better prices.
               </p>
             </CardContent>

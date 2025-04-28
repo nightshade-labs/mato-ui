@@ -7,10 +7,10 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
-  { name: "Features", href: "#link" },
-  { name: "Solution", href: "#link" },
-  { name: "Pricing", href: "#link" },
-  { name: "About", href: "#link" },
+  { name: "Features", href: "#features" },
+  { name: "Solutions", href: "#solutions" },
+  { name: "FAQs", href: "#faqs" },
+  { name: "Join Us", href: "#join-us" },
 ];
 
 export const HeroHeader = () => {
@@ -94,26 +94,18 @@ export const HeroHeader = () => {
                   size="sm"
                   className={cn(isScrolled && "lg:hidden")}
                 >
-                  <Link href="#">
-                    <span>Login</span>
+                  <Link href="/swap">
+                    <span>Launch App</span>
                   </Link>
                 </Button>
-                <Button
-                  asChild
-                  size="sm"
-                  className={cn(isScrolled && "lg:hidden")}
-                >
-                  <Link href="#">
-                    <span>Sign Up</span>
-                  </Link>
-                </Button>
+
                 <Button
                   asChild
                   size="sm"
                   className={cn(isScrolled ? "lg:inline-flex" : "hidden")}
                 >
-                  <Link href="#">
-                    <span>Get Started</span>
+                  <Link href="/swap">
+                    <span>Launch App</span>
                   </Link>
                 </Button>
               </div>
