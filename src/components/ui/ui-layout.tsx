@@ -53,7 +53,7 @@ export function UiLayout({
   );
 
   return (
-    <div className="w-full bg-[url(/bg.png)] min-h-screen flex flex-col bg-no-repeat bg-cover overflow-hidden lg:h-screen">
+    <div className="w-full bg-[url(/bg.png)] min-h-screen flex flex-col bg-no-repeat bg-cover overflow-hidden ">
       {/* Desktop Navbar */}
       <div className="hidden md:flex items-center justify-between px-6 py-3 w-full min-h-16 border-b border-[#0A352B] bg-[#102924]">
         <div className="flex items-center gap-8">

@@ -6,6 +6,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useCluster } from "../cluster/cluster-data-access";
 import { fetchMarketData } from "@/app/actions/fetch-market-data";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { ArrowLeftRight } from "lucide-react";
 
 export interface MarketDataRow {
   time: UTCTimestamp;
@@ -42,16 +43,19 @@ export default function MarketDataPage() {
     }, [] as LineData<UTCTimestamp>[]);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="bg-[#0A352B] rounded-lg p-2.5 flex items-center gap-3">
+    <div className="flex flex-col  gap-3">
+      <div className="bg-[#0A352B]  rounded-lg p-2.5 flex items-center gap-3">
         <div className="flex items-center">
-          <div className="flex items-center gap-0 mr-3">
-            <div className="relative">
-              <Avatar className="w-8 h-8 border-2 border-[#1CF6C2]/40 bg-gradient-to-br from-[#1CF6C2] to-[#102924] p-0.5">
-                <AvatarImage src="/solana-sol-logo.png" />
+          <div className="flex items-center w-full gap-0 mr-3">
+            <div className="relative flex">
+              <Avatar className="w-9 h-9 bg-[#1CF6C2] p-0.5">
+                <AvatarImage
+                  src="/solana-sol-logo.png"
+                  className="w-full h-full"
+                />
                 <AvatarFallback>SOL</AvatarFallback>
               </Avatar>
-              <Avatar className="w-8 h-8 border-2 border-[#1CF6C2]/40 bg-gradient-to-br from-[#1CF6C2] to-[#102924] p-0.5 -ml-2">
+              <Avatar className="w-9 h-9  bg-[#1CF6C2] p-0.5 -ml-2">
                 <AvatarImage src="/usd-coin-usdc-logo.png" />
                 <AvatarFallback>USDC</AvatarFallback>
               </Avatar>
@@ -63,22 +67,8 @@ export default function MarketDataPage() {
             <span className="text-xl font-semibold text-[#E9F6F3]">USDC</span>
           </div>
         </div>
-        <button className="ml-2 text-white">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M11.3333 4.66667L4.66667 11.3333M4.66667 4.66667L11.3333 11.3333"
-              stroke="#1CF6C2"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+        <button className="ml-2 text-accent">
+          <ArrowLeftRight className="w-4 h-4" />
         </button>
       </div>
       <div className="bg-[#0A352B] rounded-lg p-2.5 flex-grow">
