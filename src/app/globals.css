@@ -1,4 +1,5 @@
 @import url("https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,6 +8,7 @@ html,
 body {
   overscroll-behavior-y: none;
   height: 100%;
+  font-family: 'Inter', sans-serif;
 }
 
 /* smooth scrolling */
@@ -32,26 +34,37 @@ h1 {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 142.1 76.2% 36.3%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 142.1 76.2% 36.3%;
-    --radius: 0.5rem;
+    /* Mato Brand Colors */
+    --background: 162 39% 7%; /* #091F1A */
+    --foreground: 166 46% 93%; /* #E9F6F3 */
+    --card: 164 43% 11%; /* #102924 */
+    --card-foreground: 166 46% 93%; /* #E9F6F3 */
+    --popover: 164 43% 11%; /* #102924 */
+    --popover-foreground: 166 46% 93%; /* #E9F6F3 */
+
+    --primary: 164 70% 79%; /* #A7EEDD */
+    --primary-foreground: 166 6% 7%; /* #101111 */
+
+    --secondary: 164 80% 31%; /* #109071 */
+    --secondary-foreground: 166 46% 93%; /* #E9F6F3 */
+
+    --muted: 164 37% 43%; /* #6B7976 */
+    --muted-foreground: 166 46% 93%; /* #E9F6F3 */
+
+    --accent: 165 92% 54%; /* #1CF6C2 */
+    --accent-foreground: 166 6% 7%; /* #101111 */
+
+    --destructive: 0 100% 56%; /* #FF2121 */
+    --destructive-foreground: 166 46% 93%; /* #E9F6F3 */
+
+    --help: 220 90% 63%; /* #4D8CF5 */
+    --help-foreground: 166 46% 93%; /* #E9F6F3 */
+
+    --border: 164 80% 31%; /* #109071 */
+    --input: 164 43% 11%; /* #102924 */
+    --ring: 164 70% 79%; /* #A7EEDD */
+    --radius: 0.75rem;
+
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -60,25 +73,35 @@ h1 {
   }
 
   .dark {
-    --background: 20 14.3% 4.1%;
-    --foreground: 0 0% 95%;
-    --card: 24 9.8% 10%;
-    --card-foreground: 0 0% 95%;
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 142.1 70.6% 45.3%;
-    --primary-foreground: 144.9 80.4% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 12 6.5% 15.1%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 85.7% 97.3%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 142.4 71.8% 29.2%;
+    --background: 162 39% 7%; /* #091F1A */
+    --foreground: 166 46% 93%; /* #E9F6F3 */
+    --card: 164 43% 11%; /* #102924 */
+    --card-foreground: 166 46% 93%; /* #E9F6F3 */
+    --popover: 164 43% 11%; /* #102924 */
+    --popover-foreground: 166 46% 93%; /* #E9F6F3 */
+
+    --primary: 164 70% 79%; /* #A7EEDD */
+    --primary-foreground: 166 6% 7%; /* #101111 */
+
+    --secondary: 164 80% 31%; /* #109071 */
+    --secondary-foreground: 166 46% 93%; /* #E9F6F3 */
+
+    --muted: 164 37% 43%; /* #6B7976 */
+    --muted-foreground: 166 46% 93%; /* #E9F6F3 */
+
+    --accent: 165 92% 54%; /* #1CF6C2 */
+    --accent-foreground: 166 6% 7%; /* #101111 */
+
+    --destructive: 0 100% 56%; /* #FF2121 */
+    --destructive-foreground: 166 46% 93%; /* #E9F6F3 */
+
+    --help: 220 90% 63%; /* #4D8CF5 */
+    --help-foreground: 166 46% 93%; /* #E9F6F3 */
+
+    --border: 164 80% 31%; /* #109071 */
+    --input: 164 43% 11%; /* #102924 */
+    --ring: 164 70% 79%; /* #A7EEDD */
+
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
