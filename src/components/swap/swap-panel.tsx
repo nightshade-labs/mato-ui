@@ -143,7 +143,7 @@ const TokenInputBlock = ({
   form,
   fieldName,
 }: TokenInputBlockProps) => (
-  <div className="bg-[#0A352B] rounded-lg p-3 border border-[#1CF6C2]/50">
+  <div className="bg-[#0A352B] mt-2 rounded-lg p-3 border border-[#1CF6C2]/50">
     <div className="flex justify-between items-center mb-3">
       <div className="text-base font-semibold text-[#E9F6F3]">{title}</div>
       <div className="flex gap-1 items-center text-[#109071]">
@@ -204,11 +204,11 @@ const TokenInputBlock = ({
 
 // Switch Arrow component
 const SwitchArrow = () => (
-  <div className="absolute left-1/2 top-1/6 transform -translate-x-1/2 translate-y-4 z-10 rounded-lg">
-    <div className="w-12 h-12 flex items-center justify-center rounded-lg bg-[#102924]">
-      <div className="w-10 h-10 flex items-center justify-center rounded-lg border-[0.5px] border-[#1CF6C2]">
-        <ArrowDown />
-      </div>
+  <div className="absolute left-1/2 top-1/3 transform -translate-x-1/2 translate-y-4 z-10 rounded-lg  bg-bg-80">
+    <div className="w-10 h-10 flex items-center justify-center rounded-lg border-[0.5px] border-border relative">
+      <div className="absolute top-[48%]  -left-1 z-10 transform  w-2 h-2 bg bg-bg-80"></div>
+      <ArrowDown />
+      <div className="absolute top-[48%]  -right-1 z-10 transform  w-2 h-2 bg bg-bg-80"></div>
     </div>
   </div>
 );
