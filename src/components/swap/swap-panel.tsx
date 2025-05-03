@@ -10,13 +10,11 @@ import { z } from "zod";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Card, CardContent, CardHeader } from "../ui/card";
 
 import { AccountBalance, AccountTokenBalance } from "../account/account-ui";
 import { USDC_MINT } from "@/lib/constants";
@@ -30,7 +28,7 @@ import { durationStringToSlots } from "@/lib/utils";
 import { useMatoProgram } from "../mato/mato-data-access";
 import { BuySellSwitch } from "./swap-ui";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Wallet } from "lucide-react";
+import { ArrowDown, Eye, Info, RefreshCw, Wallet } from "lucide-react";
 import { PriceImpact } from "./price-impact";
 import {
   Select,
@@ -39,6 +37,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const SwapFormSchema = z.object({
   amount: z.number().gt(0, "Must be greater than zero"),
@@ -47,11 +52,283 @@ const SwapFormSchema = z.object({
   }),
 });
 
+type TokenData = {
+  symbol: string;
+  image: string;
+};
+
+// Panel control buttons component
+type ControlButtonsProps = {
+  isChartVisible: boolean;
+  toggleChart: () => void;
+  resetForm: () => void;
+};
+
+const ControlButtons = ({
+  isChartVisible,
+  toggleChart,
+  resetForm,
+}: ControlButtonsProps) => {
+  return (
+    <div className="absolute right-0 top-0 -mt-10 flex gap-2">
+      <button
+        onClick={toggleChart}
+        className="flex items-center gap-1 text-xs font-bold border border-[#053A2D] rounded-lg text-[#E9F6F3] py-2 px-3 bg-[#102924]"
+      >
+        <Eye size={16} />
+        {isChartVisible ? "Hide Chart" : "Show Chart"}
+      </button>
+      <button
+        onClick={resetForm}
+        className="flex items-center gap-1 text-xs font-bold border border-[#053A2D] rounded-lg text-[#E9F6F3] py-2 px-3 bg-[#102924]"
+      >
+        <RefreshCw size={16} />
+        Reset Amount
+      </button>
+    </div>
+  );
+};
+
+// Percentage button component
+type PercentageButtonProps = {
+  percent: string;
+  onClick: () => void;
+};
+
+const PercentageButton = ({ percent, onClick }: PercentageButtonProps) => (
+  <button
+    onClick={onClick}
+    className="text-xs font-bold border border-[#109071] rounded text-[#109071] py-1 px-2 hover:bg-[#102924]/20"
+  >
+    {percent}
+  </button>
+);
+
+// Token selector component
+type TokenSelectorProps = {
+  token: TokenData;
+};
+
+const TokenSelector = ({ token }: TokenSelectorProps) => (
+  <div className="flex items-center gap-2 bg-[#102924] py-2 px-3 rounded-lg border border-[#1CF6C2]/50">
+    <Avatar className="w-6 h-6 bg-[#0A352B] border border-[#1CF6C2]/40">
+      <AvatarImage src={token.image} />
+      <AvatarFallback>{token.symbol.substring(0, 1)}</AvatarFallback>
+    </Avatar>
+    <span className="text-white font-medium">{token.symbol}</span>
+  </div>
+);
+
+// Token Input Block component
+type TokenInputBlockProps = {
+  title: string;
+  balance: React.ReactNode;
+  amount: number | string;
+  usdValue: string;
+  token: TokenData;
+  isInput?: boolean;
+  percentageButtons?: React.ReactNode;
+  form?: any;
+  fieldName?: string;
+};
+
+const TokenInputBlock = ({
+  title,
+  balance,
+  amount,
+  usdValue,
+  token,
+  isInput = false,
+  percentageButtons,
+  form,
+  fieldName,
+}: TokenInputBlockProps) => (
+  <div className="bg-[#0A352B] rounded-lg p-3 border border-[#1CF6C2]/50">
+    <div className="flex justify-between items-center mb-3">
+      <div className="text-base font-semibold text-[#E9F6F3]">{title}</div>
+      <div className="flex gap-1 items-center text-[#109071]">
+        <Wallet size={16} className="text-white" />
+        <span className="text-sm">{balance}</span>
+      </div>
+    </div>
+
+    {percentageButtons && (
+      <div className="flex gap-1 mb-3">{percentageButtons}</div>
+    )}
+
+    <div className="flex justify-between items-center">
+      {isInput ? (
+        <div>
+          <FormField
+            control={form.control}
+            name={fieldName || "amount"}
+            render={({ field }) => (
+              <FormItem className="space-y-0">
+                <div className="flex flex-col">
+                  <Input
+                    className="text-3xl text-[#9DA5A3] font-medium bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:outline-none shadow-none"
+                    id={fieldName || "amount"}
+                    placeholder="0"
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    value={field.value || ""}
+                    onChange={(e) =>
+                      field.onChange(
+                        isNaN(e.target.valueAsNumber)
+                          ? 0
+                          : e.target.valueAsNumber
+                      )
+                    }
+                  />
+                  <div className="text-xs text-[#109071] font-medium">
+                    {usdValue}
+                  </div>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          <div className="text-3xl text-[#9DA5A3] font-medium">{amount}</div>
+          <div className="text-xs text-[#109071] font-medium">{usdValue}</div>
+        </div>
+      )}
+
+      <TokenSelector token={token} />
+    </div>
+  </div>
+);
+
+// Switch Arrow component
+const SwitchArrow = () => (
+  <div className="absolute left-1/2 top-1/6 transform -translate-x-1/2 translate-y-4 z-10 rounded-lg">
+    <div className="w-12 h-12 flex items-center justify-center rounded-lg bg-[#102924]">
+      <div className="w-10 h-10 flex items-center justify-center rounded-lg border-[0.5px] border-[#1CF6C2]">
+        <ArrowDown />
+      </div>
+    </div>
+  </div>
+);
+
+// Duration selector component
+type DurationSelectorProps = {
+  form: any;
+};
+
+const DurationSelector = ({ form }: DurationSelectorProps) => (
+  <div className="bg-[#0A352B] rounded-lg p-3">
+    <div className="flex justify-between items-center mb-3">
+      <div className="flex items-center gap-1">
+        <span className="text-base font-semibold text-[#E9F6F3]">Duration</span>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className="text-white">
+                <Info size={12} className="text-[#40A68D]" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-xs">
+                Your order is evenly distributed over this period of time
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    </div>
+
+    <FormField
+      control={form.control}
+      name="duration"
+      render={({ field }) => (
+        <FormItem className="mb-3">
+          <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <FormControl>
+              <SelectTrigger className="bg-[#0A352B] border border-[#1CF6C2]/50 focus:ring-0 text-[#9DA5A3] font-bold">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent className="bg-[#102924] border border-[#1CF6C2]/50 text-white">
+              <SelectItem value="5sec">5 seconds</SelectItem>
+              <SelectItem value="1min">1 minute</SelectItem>
+              <SelectItem value="10min">10 minutes</SelectItem>
+              <SelectItem value="1hour">1 hour</SelectItem>
+              <SelectItem value="1day">1 day</SelectItem>
+              <SelectItem value="1week">1 week</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="text-xs text-[#109071] font-medium mt-1">
+            Recommended duration: 10 minutes
+          </div>
+        </FormItem>
+      )}
+    />
+  </div>
+);
+
+// Price Impact component
+const PriceImpactDisplay = () => (
+  <div className="bg-[#102924] p-3 rounded-lg mb-3">
+    <div className="flex justify-between mb-1">
+      <div className="flex items-center gap-1">
+        <span className="text-sm font-medium text-[#E9F6F3]">Price Impact</span>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className="text-white">
+                <Info size={12} className="text-[#40A68D]" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-xs">
+                The difference between market price and estimated price due to
+                trade size
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      <div className="flex items-center gap-1">
+        <span className="text-sm font-medium text-[#E9F6F3]">[Price]</span>
+        <span className="text-xs font-medium text-[#1CF6C2]">+0.0%</span>
+      </div>
+    </div>
+  </div>
+);
+
+// Protection Status component
+const ProtectionStatus = () => (
+  <div className="flex items-center gap-2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M20 6L9 17L4 12"
+        stroke="#1CF6C2"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+    <span className="text-xs text-[#109071] font-medium">
+      Front-running protection always active
+    </span>
+  </div>
+);
+
+// Main component
 export function SwapPanel() {
   const { depositTokenA, depositTokenB } = useMatoProgram();
+  const [isChartVisible, setIsChartVisible] = useState(true);
 
   const [side, setSide] = useState<"buy" | "sell">("buy");
-  // const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const provider = useAnchorProvider();
 
   const getBalance = useGetBalance({ address: provider.publicKey });
@@ -62,12 +339,15 @@ export function SwapPanel() {
 
   const form = useForm<z.infer<typeof SwapFormSchema>>({
     resolver: zodResolver(SwapFormSchema),
+    defaultValues: {
+      duration: "1min",
+    },
   });
 
   const amount = useWatch({
     control: form.control,
     defaultValue: 0,
-    name: "amount", // specify the field name you want to watch
+    name: "amount",
   });
 
   async function onSubmit(data: z.infer<typeof SwapFormSchema>) {
@@ -85,283 +365,186 @@ export function SwapPanel() {
     }
   }
 
+  const resetForm = () => {
+    form.reset({
+      amount: 0,
+      duration: form.getValues().duration,
+    });
+  };
+
+  const toggleChart = () => {
+    setIsChartVisible(!isChartVisible);
+  };
+
+  // Token data definition based on side
+  const primaryToken: TokenData = {
+    symbol: side === "sell" ? "SOL" : "USDC",
+    image: side === "sell" ? "/solana-sol-logo.png" : "/usd-coin-usdc-logo.png",
+  };
+
+  const secondaryToken: TokenData = {
+    symbol: side === "buy" ? "SOL" : "USDC",
+    image: side === "buy" ? "/solana-sol-logo.png" : "/usd-coin-usdc-logo.png",
+  };
+
+  const estimatedUsd = amount * (side === "sell" ? 98 : 1); // Mock calculation
+
+  // Percentage buttons for primary token
+  const renderPercentageButtons = () =>
+    getBalance.data !== undefined &&
+    getTokenBalance.data !== undefined &&
+    getTokenBalance.data !== null && (
+      <>
+        <PercentageButton
+          percent="25%"
+          onClick={() => {
+            side === "buy"
+              ? form.setValue(
+                  "amount",
+                  Number(
+                    (
+                      parseInt(getTokenBalance.data?.value.amount || "0") /
+                      10 ** (getTokenBalance.data?.value.decimals || 0) /
+                      4
+                    ).toFixed(6)
+                  )
+                )
+              : form.setValue(
+                  "amount",
+                  Number((getBalance.data / LAMPORTS_PER_SOL / 4).toFixed(9))
+                );
+          }}
+        />
+        <PercentageButton
+          percent="50%"
+          onClick={() => {
+            side === "buy"
+              ? form.setValue(
+                  "amount",
+                  Number(
+                    (
+                      parseInt(getTokenBalance.data?.value.amount || "0") /
+                      10 ** (getTokenBalance.data?.value.decimals || 0) /
+                      2
+                    ).toFixed(6)
+                  )
+                )
+              : form.setValue(
+                  "amount",
+                  Number((getBalance.data / LAMPORTS_PER_SOL / 2).toFixed(9))
+                );
+          }}
+        />
+        <PercentageButton
+          percent="Max"
+          onClick={() => {
+            side === "buy"
+              ? form.setValue(
+                  "amount",
+                  Number(
+                    (
+                      parseInt(getTokenBalance.data?.value.amount || "0") /
+                      10 ** (getTokenBalance.data?.value.decimals || 0)
+                    ).toFixed(6)
+                  )
+                )
+              : form.setValue(
+                  "amount",
+                  Number(
+                    (getBalance.data / LAMPORTS_PER_SOL - 0.003).toFixed(9)
+                  )
+                );
+          }}
+        />
+      </>
+    );
+
   return (
-    <Card className="w-full lg:min-w-96 lg:w-fit h-fit">
-      <CardHeader>
-        <div className="flex flex-col gap-4">
+    <div className="relative w-full lg:w-fit">
+      <ControlButtons
+        isChartVisible={isChartVisible}
+        toggleChart={toggleChart}
+        resetForm={resetForm}
+      />
+
+      <div className="w-full lg:min-w-96 bg-[#102924] p-2.5 rounded-lg">
+        <div className="mb-4">
           <BuySellSwitch side={side} setSide={setSide} />
-          {/* <div className="flex justify-between gap-2">
-            <div className="flex border rounded-sm">
-              <Button
-                variant={"outline"}
-                onClick={() => setOrderType("market")}
-                className={cn(
-                  orderType == "market" &&
-                    "text-purple-500 hover:text-purple-500",
-                  "flex-1 border-none hover:bg-transparent"
-                )}
-              >
-                Market
-              </Button>
-              <Button
-                variant={"outline"}
-                onClick={() => setOrderType("limit")}
-                className={cn(
-                  orderType == "limit" &&
-                    " text-purple-500 hover:text-purple-500",
-                  "flex-1 border-none hover:bg-transparent"
-                )}
-              >
-                Limit
-              </Button>
-            </div>
-            <Input />
-          </div> */}
         </div>
-      </CardHeader>
-      <CardContent>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex flex-col space-y-1.5 border rounded-md py-4 px-2 bg-purple-50/70">
-                    {/* <FormLabel>
-                      Quantity {side == "buy" ? "(USDC)" : "(SOL)"}
-                    </FormLabel> */}
-                    <div className="flex justify-between items-center">
-                      <div className="flex gap-2 items-center text-sm font-semibold">
-                        <Wallet size={16} />
-                        {side == "sell" ? (
-                          <div className="flex gap-1 items-center text-xs">
-                            <AccountBalance
-                              address={provider.publicKey}
-                              classname="text-xs font-semibold"
-                            />
-                            SOL
-                          </div>
-                        ) : (
-                          <div className="flex gap-1 items-center text-xs">
-                            <AccountTokenBalance
-                              address={provider.publicKey}
-                              mintAddress={USDC_MINT}
-                              decimals={4}
-                              classname="text-xs font-semibold"
-                            />{" "}
-                            USDC{" "}
-                          </div>
-                        )}
-                      </div>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="relative">
+              {/* Primary Token Input */}
+              <TokenInputBlock
+                title={side === "sell" ? "Sell" : "Buy"}
+                balance={
+                  side === "sell" ? (
+                    <AccountBalance
+                      address={provider.publicKey}
+                      classname="text-sm"
+                    />
+                  ) : (
+                    <AccountTokenBalance
+                      address={provider.publicKey}
+                      mintAddress={USDC_MINT}
+                      decimals={4}
+                      classname="text-sm"
+                    />
+                  )
+                }
+                amount={amount}
+                usdValue={`$${estimatedUsd.toFixed(2)}`}
+                token={primaryToken}
+                isInput={true}
+                percentageButtons={renderPercentageButtons()}
+                form={form}
+                fieldName="amount"
+              />
 
-                      {getBalance.data !== undefined &&
-                        getTokenBalance.data !== undefined &&
-                        getTokenBalance.data !== null && (
-                          <div className="flex gap-1">
-                            <div
-                              className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
-                              onClick={() => {
-                                side == "buy"
-                                  ? form.setValue(
-                                      "amount",
-                                      Number(
-                                        (
-                                          parseInt(
-                                            getTokenBalance.data?.value
-                                              .amount || "0"
-                                          ) /
-                                          10 **
-                                            (getTokenBalance.data?.value
-                                              .decimals || 0) /
-                                          4
-                                        ).toFixed(6)
-                                      )
-                                    )
-                                  : form.setValue(
-                                      "amount",
-                                      Number(
-                                        (
-                                          getBalance.data /
-                                          LAMPORTS_PER_SOL /
-                                          4
-                                        ).toFixed(9)
-                                      )
-                                    );
-                              }}
-                            >
-                              25%
-                            </div>
-                            <div
-                              className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
-                              onClick={() => {
-                                side == "buy"
-                                  ? form.setValue(
-                                      "amount",
-                                      Number(
-                                        (
-                                          parseInt(
-                                            getTokenBalance.data?.value
-                                              .amount || "0"
-                                          ) /
-                                          10 **
-                                            (getTokenBalance.data?.value
-                                              .decimals || 0) /
-                                          2
-                                        ).toFixed(6)
-                                      )
-                                    )
-                                  : form.setValue(
-                                      "amount",
-                                      Number(
-                                        (
-                                          getBalance.data /
-                                          LAMPORTS_PER_SOL /
-                                          2
-                                        ).toFixed(9)
-                                      )
-                                    );
-                              }}
-                            >
-                              50%
-                            </div>
-                            <div
-                              className="text-xs font-bold rounded-md border p-1 hover:cursor-pointer hover:bg-slate-100"
-                              onClick={() => {
-                                side == "buy"
-                                  ? form.setValue(
-                                      "amount",
-                                      Number(
-                                        (
-                                          parseInt(
-                                            getTokenBalance.data?.value
-                                              .amount || "0"
-                                          ) /
-                                          10 **
-                                            (getTokenBalance.data?.value
-                                              .decimals || 0)
-                                        ).toFixed(6)
-                                      )
-                                    )
-                                  : form.setValue(
-                                      "amount",
-                                      Number(
-                                        (
-                                          getBalance.data / LAMPORTS_PER_SOL -
-                                          0.003
-                                        ).toFixed(9)
-                                      )
-                                    );
-                              }}
-                            >
-                              Max
-                            </div>
-                          </div>
-                        )}
-                    </div>
-                    <div className="flex justify-between gap-4 items-end">
-                      <div className="flex flex-col">
-                        <div className="text-sm font-bold text-gray-500 mb-2">
-                          {side == "buy" ? "You're paying" : "You're selling"}
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div>
-                            {side == "buy" ? (
-                              <div className="flex gap-2 items-center">
-                                <Avatar className="w-6 h-6 sm:w-8 sm:h-8 bg-black">
-                                  <AvatarImage src={"usd-coin-usdc-logo.png"} />
-                                  <AvatarFallback>{"USDC"}</AvatarFallback>
-                                </Avatar>{" "}
-                                USDC
-                              </div>
-                            ) : (
-                              <div className="flex gap-2 items-center">
-                                <Avatar className="w-6 h-6 sm:w-8 sm:h-8 bg-black">
-                                  <AvatarImage src={"solana-sol-logo.png"} />
-                                  <AvatarFallback>{"SOL"}</AvatarFallback>
-                                </Avatar>{" "}
-                                SOL
-                              </div>
-                            )}
-                          </div>
-                          <Input
-                            className="sm:w-fit h-full text-lg text-gray-600 text-right border-none focus:none shadow-none focus:ring-0 focus-visible:ring-0"
-                            id="amount"
-                            placeholder="0,0"
-                            type="number"
-                            inputMode="decimal"
-                            step="any"
-                            value={field.value}
-                            onChange={(e) =>
-                              field.onChange(
-                                isNaN(e.target.valueAsNumber)
-                                  ? 0
-                                  : e.target.valueAsNumber
-                              )
-                            }
-                            // onVolumeChange={field.onChange}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="duration"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Duration</FormLabel>
+              <SwitchArrow />
 
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="5sec">5 sec</SelectItem>
-                      <SelectItem value="1min">1 min</SelectItem>
-                      <SelectItem value="1hour">1 hour</SelectItem>
-                      <SelectItem value="1day">1 day</SelectItem>
-                      <SelectItem value="1week">1 week</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Your order is evenly distributed over this period of time
-                  </FormDescription>
+              {/* Secondary Token Display */}
+              <TokenInputBlock
+                title={side === "buy" ? "Buy" : "Sell"}
+                balance="0"
+                amount="0"
+                usdValue="$0.00"
+                token={secondaryToken}
+                isInput={false}
+              />
+            </div>
 
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <PriceImpact
-              flow={
-                isNaN(amount)
-                  ? 0
-                  : side == "sell"
-                    ? (amount * LAMPORTS_PER_SOL) /
-                      (durationStringToSlots.get(form.watch("duration")) || 5)
-                    : (amount * 1000000) /
-                      (durationStringToSlots.get(form.watch("duration")) || 5)
-              }
-              side={side}
-            />
+            {/* Duration and Price Impact Section */}
+            <div className="bg-[#0A352B] rounded-lg p-3">
+              <DurationSelector form={form} />
+
+              {/* Price Impact Section */}
+              <PriceImpactDisplay />
+
+              {/* Protection Status */}
+              <ProtectionStatus />
+            </div>
+
+            {/* Submit Button */}
             <Button
               type="submit"
-              className="px-16 bg-gradient-to-br from-red-500 to-purple-500 hover:brightness-110"
+              className={cn(
+                "w-full py-3 font-bold text-base",
+                provider.publicKey
+                  ? "bg-[#1CF6C2] text-[#091F1A] hover:brightness-110"
+                  : "bg-[#1CF6C2] text-[#091F1A] hover:brightness-110"
+              )}
             >
-              {side == "buy" ? "Buy SOL" : "Sell SOL"}
+              {provider.publicKey
+                ? side === "buy"
+                  ? "Buy SOL"
+                  : "Sell SOL"
+                : "Connect Wallet"}
             </Button>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
