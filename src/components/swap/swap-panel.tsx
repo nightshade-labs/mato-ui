@@ -26,10 +26,8 @@ import { useAnchorProvider } from "../solana/solana-provider";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { durationStringToSlots } from "@/lib/utils";
 import { useMatoProgram } from "../mato/mato-data-access";
-import { BuySellSwitch } from "./swap-ui";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { ArrowDown, Eye, Info, RefreshCw, Wallet } from "lucide-react";
-import { PriceImpact } from "./price-impact";
 import {
   Select,
   SelectContent,
@@ -230,11 +228,11 @@ const TokenInputBlock = ({
 
 // Switch Arrow component
 const SwitchArrow = () => (
-  <div className="absolute left-1/2 top-[37%] transform -translate-x-1/2 translate-y-4 z-10 rounded-lg  bg-bg-80">
-    <div className="w-10 h-10 flex items-center justify-center rounded-lg border-[0.5px] border-border relative">
-      <div className="absolute top-[48%]  -left-1 z-10 transform  w-2 h-2 bg bg-bg-80"></div>
-      <ArrowDown />
-      <div className="absolute top-[48%]  -right-1 z-10 transform  w-2 h-2 bg bg-bg-80"></div>
+  <div className="absolute left-1/2 top-[37%] transform -translate-x-1/2 translate-y-4 z-10 rounded-lg bg-[#102924]">
+    <div className="w-10 h-10 flex items-center justify-center rounded-lg border-[0.5px] border-[#1CF6C2] relative">
+      <div className="absolute top-[48%] -left-1 z-10 transform w-2 h-2 bg-[#102924]"></div>
+      <ArrowDown className="text-[#E9F6F3]" />
+      <div className="absolute top-[48%] -right-1 z-10 transform w-2 h-2 bg-[#102924]"></div>
     </div>
   </div>
 );
@@ -353,8 +351,6 @@ const ProtectionStatus = () => (
 export function SwapPanel() {
   const { depositTokenA, depositTokenB } = useMatoProgram();
   const [isChartVisible, setIsChartVisible] = useState(true);
-
-  const [side, setSide] = useState<"buy" | "sell">("buy");
   const provider = useAnchorProvider();
 
   const getBalance = useGetBalance({ address: provider.publicKey });
@@ -366,7 +362,8 @@ export function SwapPanel() {
   const form = useForm<z.infer<typeof SwapFormSchema>>({
     resolver: zodResolver(SwapFormSchema),
     defaultValues: {
-      duration: "1min",
+      duration: "10min",
+      amount: 0,
     },
   });
 
@@ -378,17 +375,11 @@ export function SwapPanel() {
 
   async function onSubmit(data: z.infer<typeof SwapFormSchema>) {
     let slotDuration = durationStringToSlots.get(data.duration);
-    if (side == "sell") {
-      depositTokenA.mutate({
-        amount: data.amount * LAMPORTS_PER_SOL,
-        duration: slotDuration || 30,
-      });
-    } else {
-      depositTokenB.mutate({
-        amount: data.amount * 10 ** (getTokenBalance.data?.value.decimals || 6),
-        duration: slotDuration || 30,
-      });
-    }
+    // Handle both token types in a single transaction based on the input/output
+    depositTokenA.mutate({
+      amount: data.amount * LAMPORTS_PER_SOL,
+      duration: slotDuration || 30,
+    });
   }
 
   const resetForm = () => {
@@ -402,84 +393,48 @@ export function SwapPanel() {
     setIsChartVisible(!isChartVisible);
   };
 
-  // Token data definition based on side
-  const primaryToken: TokenData = {
-    symbol: side === "sell" ? "SOL" : "USDC",
-    image: side === "sell" ? "/solana-sol-logo.png" : "/usd-coin-usdc-logo.png",
+  // Token data definitions
+  const solToken: TokenData = {
+    symbol: "SOL",
+    image: "/solana-sol-logo.png",
   };
 
-  const secondaryToken: TokenData = {
-    symbol: side === "buy" ? "SOL" : "USDC",
-    image: side === "buy" ? "/solana-sol-logo.png" : "/usd-coin-usdc-logo.png",
+  const usdcToken: TokenData = {
+    symbol: "USDC",
+    image: "/usd-coin-usdc-logo.png",
   };
 
-  const estimatedUsd = amount * (side === "sell" ? 98 : 1); // Mock calculation
+  const estimatedUsd = amount * 98; // Mock calculation
 
-  // Percentage buttons for primary token
-  const renderPercentageButtons = () =>
-    getBalance.data !== undefined &&
-    getTokenBalance.data !== undefined &&
-    getTokenBalance.data !== null && (
+  // Percentage buttons for SOL token
+  const renderSolPercentageButtons = () =>
+    getBalance.data !== undefined && (
       <div className="flex gap-1 items-center">
         <PercentageButton
           percent="25%"
           onClick={() => {
-            side === "buy"
-              ? form.setValue(
-                  "amount",
-                  Number(
-                    (
-                      parseInt(getTokenBalance.data?.value.amount || "0") /
-                      10 ** (getTokenBalance.data?.value.decimals || 0) /
-                      4
-                    ).toFixed(6)
-                  )
-                )
-              : form.setValue(
-                  "amount",
-                  Number((getBalance.data / LAMPORTS_PER_SOL / 4).toFixed(9))
-                );
+            form.setValue(
+              "amount",
+              Number((getBalance.data / LAMPORTS_PER_SOL / 4).toFixed(9))
+            );
           }}
         />
         <PercentageButton
           percent="50%"
           onClick={() => {
-            side === "buy"
-              ? form.setValue(
-                  "amount",
-                  Number(
-                    (
-                      parseInt(getTokenBalance.data?.value.amount || "0") /
-                      10 ** (getTokenBalance.data?.value.decimals || 0) /
-                      2
-                    ).toFixed(6)
-                  )
-                )
-              : form.setValue(
-                  "amount",
-                  Number((getBalance.data / LAMPORTS_PER_SOL / 2).toFixed(9))
-                );
+            form.setValue(
+              "amount",
+              Number((getBalance.data / LAMPORTS_PER_SOL / 2).toFixed(9))
+            );
           }}
         />
         <PercentageButton
           percent="Max"
           onClick={() => {
-            side === "buy"
-              ? form.setValue(
-                  "amount",
-                  Number(
-                    (
-                      parseInt(getTokenBalance.data?.value.amount || "0") /
-                      10 ** (getTokenBalance.data?.value.decimals || 0)
-                    ).toFixed(6)
-                  )
-                )
-              : form.setValue(
-                  "amount",
-                  Number(
-                    (getBalance.data / LAMPORTS_PER_SOL - 0.003).toFixed(9)
-                  )
-                );
+            form.setValue(
+              "amount",
+              Number((getBalance.data / LAMPORTS_PER_SOL - 0.003).toFixed(9))
+            );
           }}
         />
       </div>
@@ -494,49 +449,43 @@ export function SwapPanel() {
       />
 
       <div className="w-full lg:min-w-96 bg-[#102924] p-2.5 rounded-lg">
-        <div className="mb-4">
-          <BuySellSwitch side={side} setSide={setSide} />
-        </div>
-
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="relative">
-              {/* Primary Token Input */}
+              {/* Sell Section */}
               <TokenInputBlock
-                title={side === "sell" ? "Sell" : "Buy"}
+                title="Sell"
                 balance={
-                  side === "sell" ? (
-                    <AccountBalance
-                      address={provider.publicKey}
-                      classname="text-sm"
-                    />
-                  ) : (
-                    <AccountTokenBalance
-                      address={provider.publicKey}
-                      mintAddress={USDC_MINT}
-                      decimals={4}
-                      classname="text-sm"
-                    />
-                  )
+                  <AccountBalance
+                    address={provider.publicKey}
+                    classname="text-sm"
+                  />
                 }
                 amount={amount}
                 usdValue={`$${estimatedUsd.toFixed(2)}`}
-                token={primaryToken}
+                token={solToken}
                 isInput={true}
-                percentageButtons={renderPercentageButtons()}
+                percentageButtons={renderSolPercentageButtons()}
                 form={form}
                 fieldName="amount"
               />
 
               <SwitchArrow />
 
-              {/* Secondary Token Display */}
+              {/* Buy Section */}
               <TokenInputBlock
-                title={side === "buy" ? "Buy" : "Sell"}
-                balance="0"
-                amount="0"
-                usdValue="$0.00"
-                token={secondaryToken}
+                title="Buy"
+                balance={
+                  <AccountTokenBalance
+                    address={provider.publicKey}
+                    mintAddress={USDC_MINT}
+                    decimals={4}
+                    classname="text-sm"
+                  />
+                }
+                amount={(amount * 98).toFixed(2)} // Mock conversion calculation
+                usdValue={`$${(amount * 98).toFixed(2)}`}
+                token={usdcToken}
                 isInput={false}
               />
             </div>
@@ -546,7 +495,38 @@ export function SwapPanel() {
               <DurationSelector form={form} />
 
               {/* Price Impact Section */}
-              <PriceImpactDisplay />
+              <div className="bg-[#102924] p-3 rounded-lg mb-3">
+                <div className="flex justify-between items-center mb-1">
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm font-medium text-[#E9F6F3]">
+                      Price Impact
+                    </span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="text-white">
+                            <Info size={12} className="text-[#40A68D]" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">
+                            The difference between market price and estimated
+                            price due to trade size
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm font-medium text-[#E9F6F3]">
+                      146.06 USDC
+                    </span>
+                    <span className="text-xs font-medium text-[#1CF6C2]">
+                      +3.98%
+                    </span>
+                  </div>
+                </div>
+              </div>
 
               {/* Protection Status */}
               <ProtectionStatus />
@@ -562,11 +542,7 @@ export function SwapPanel() {
                   : "bg-[#1CF6C2] text-[#091F1A] hover:brightness-110"
               )}
             >
-              {provider.publicKey
-                ? side === "buy"
-                  ? "Buy SOL"
-                  : "Sell SOL"
-                : "Connect Wallet"}
+              {provider.publicKey ? "Swap" : "Connect Wallet"}
             </Button>
           </form>
         </Form>
