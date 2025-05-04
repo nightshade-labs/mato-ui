@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
@@ -45,6 +45,9 @@ export type TokenData = {
 export function SwapPanel() {
   const { depositTokenA, depositTokenB } = useMatoProgram();
   const [isChartVisible, setIsChartVisible] = useState(true);
+  const [inputError, setInputError] = useState(false);
+  const [outputError, setOutputError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const provider = useAnchorProvider();
 
   const getBalance = useGetBalance({ address: provider.publicKey });
@@ -67,7 +70,37 @@ export function SwapPanel() {
     name: "amount",
   });
 
+  // Validate amount against balance
+  useEffect(() => {
+    if (!getBalance.data) return;
+
+    const maxAmount = getBalance.data / LAMPORTS_PER_SOL - 0.003;
+
+    if (amount < 0) {
+      setInputError(true);
+      setErrorMessage("Amount must be greater than zero");
+    } else if (amount > maxAmount) {
+      setInputError(true);
+      setErrorMessage("Insufficient balance");
+    } else {
+      setInputError(false);
+      setErrorMessage("");
+    }
+
+    // Example output validation - can be replaced with actual logic
+    // This is a placeholder for liquidity checks or other output-related errors
+    if (amount * 98 > 10000) {
+      setOutputError(true);
+    } else {
+      setOutputError(false);
+    }
+  }, [amount, getBalance.data]);
+
   async function onSubmit(data: z.infer<typeof SwapFormSchema>) {
+    if (inputError || outputError) {
+      return;
+    }
+
     let slotDuration = durationStringToSlots.get(data.duration);
     // Handle both token types in a single transaction based on the input/output
     depositTokenA.mutate({
@@ -81,6 +114,9 @@ export function SwapPanel() {
       amount: 0,
       duration: form.getValues().duration,
     });
+    setInputError(false);
+    setOutputError(false);
+    setErrorMessage("");
   };
 
   const toggleChart = () => {
@@ -106,6 +142,7 @@ export function SwapPanel() {
       <div className="flex gap-1 items-center">
         <PercentageButton
           percent="25%"
+          error={inputError}
           onClick={() => {
             form.setValue(
               "amount",
@@ -114,6 +151,7 @@ export function SwapPanel() {
           }}
         />
         <PercentageButton
+          error={inputError}
           percent="50%"
           onClick={() => {
             form.setValue(
@@ -123,6 +161,7 @@ export function SwapPanel() {
           }}
         />
         <PercentageButton
+          error={inputError}
           percent="Max"
           onClick={() => {
             form.setValue(
@@ -162,9 +201,11 @@ export function SwapPanel() {
                 percentageButtons={renderSolPercentageButtons()}
                 form={form}
                 fieldName="amount"
+                error={inputError}
+                errorMessage={errorMessage}
               />
 
-              <SwitchArrow />
+              <SwitchArrow error={inputError} />
 
               {/* Buy Section */}
               <TokenInputBlock
@@ -181,6 +222,8 @@ export function SwapPanel() {
                 usdValue={`$${(amount * 98).toFixed(2)}`}
                 token={usdcToken}
                 isInput={false}
+                error={outputError}
+                errorMessage={outputError ? "Insufficient liquidity" : ""}
               />
             </div>
 
@@ -198,14 +241,21 @@ export function SwapPanel() {
             {/* Submit Button */}
             <Button
               type="submit"
+              disabled={inputError || outputError}
               className={cn(
                 "w-full py-3 font-bold text-base",
                 provider.publicKey
-                  ? "bg-[#1CF6C2] text-[#091F1A] hover:brightness-110"
+                  ? inputError || outputError
+                    ? "bg-red-500/50 text-white cursor-not-allowed"
+                    : "bg-[#1CF6C2] text-[#091F1A] hover:brightness-110"
                   : "bg-[#1CF6C2] text-[#091F1A] hover:brightness-110"
               )}
             >
-              {provider.publicKey ? "Swap" : "Connect Wallet"}
+              {provider.publicKey
+                ? inputError || outputError
+                  ? "Error"
+                  : "Swap"
+                : "Connect Wallet"}
             </Button>
           </form>
         </Form>
