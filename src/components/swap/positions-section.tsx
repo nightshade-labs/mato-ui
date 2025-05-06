@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useGetSlot } from "../cluster/cluster-data-access";
 import Image from "next/image";
+import Link from "next/link";
+import { SquareArrowOutUpRightIcon } from "lucide-react";
 
 const PositionCard = ({
   selling,
@@ -178,14 +180,15 @@ export default function PositionsSection() {
             Current Positions
           </h3>
         </div>
-
-        <Button
-          variant="outline"
-          onClick={() => setShowAllPositions((prev) => !prev)}
-          className="text-[#E9F6F3] text-xs font-bold border-[#053A2D] bg-[#102924] rounded-lg h-8 px-3"
-        >
-          All Positions
-        </Button>
+        <Link href="/positions">
+          <Button
+            variant="outline"
+            className="text-[#E9F6F3] text-xs font-bold border-[#053A2D] bg-[#102924] rounded-lg h-8 px-3"
+          >
+            All Positions
+            <SquareArrowOutUpRightIcon size={16} />
+          </Button>
+        </Link>
       </div>
 
       <div className="bg-[#102924] p-2.5 rounded-lg flex flex-wrap gap-3">
