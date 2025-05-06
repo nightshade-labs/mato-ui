@@ -6,7 +6,7 @@ import PositionsSection from "./positions-section";
 import { useState } from "react";
 
 export default function MatoFeature() {
-  const [chartIsVisible, setChartIsVisible] = useState(false);
+  const [chartIsVisible, setChartIsVisible] = useState(true);
   return (
     <div className="flex flex-col gap-5 justify-center pt-20 py-10 lg:px-4 max-w-7xl mx-auto">
       <div className="flex flex-col-reverse lg:flex-row gap-5 justify-center w-full">
