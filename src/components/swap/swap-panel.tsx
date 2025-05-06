@@ -88,19 +88,38 @@ export function SwapPanel() {
 
   // Validate amount against balance
   useEffect(() => {
-    if (!getBalance.data) return;
+    if (swapSide === "buy") {
+      // For buy side, validate against USDC balance
+      if (!getTokenBalance.data) return;
 
-    const maxAmount = getBalance.data / LAMPORTS_PER_SOL - 0.003;
+      const maxAmount = getTokenBalance.data?.value?.uiAmount || 0;
 
-    if (amount < 0) {
-      setInputError(true);
-      setErrorMessage("Amount must be greater than zero");
-    } else if (amount > maxAmount) {
-      setInputError(true);
-      setErrorMessage("Insufficient balance");
+      if (amount < 0) {
+        setInputError(true);
+        setErrorMessage("Amount must be greater than zero");
+      } else if (amount > maxAmount) {
+        setInputError(true);
+        setErrorMessage("Insufficient USDC balance");
+      } else {
+        setInputError(false);
+        setErrorMessage("");
+      }
     } else {
-      setInputError(false);
-      setErrorMessage("");
+      // For sell side, validate against SOL balance
+      if (!getBalance.data) return;
+
+      const maxAmount = getBalance.data / LAMPORTS_PER_SOL - 0.003;
+
+      if (amount < 0) {
+        setInputError(true);
+        setErrorMessage("Amount must be greater than zero");
+      } else if (amount > maxAmount) {
+        setInputError(true);
+        setErrorMessage("Insufficient SOL balance");
+      } else {
+        setInputError(false);
+        setErrorMessage("");
+      }
     }
 
     // Example output validation - can be replaced with actual logic
@@ -110,7 +129,7 @@ export function SwapPanel() {
     } else {
       setOutputError(false);
     }
-  }, [amount, getBalance.data]);
+  }, [amount, getBalance.data, getTokenBalance.data, swapSide]);
 
   // Handle form collection but not submission
   function onSubmit(data: z.infer<typeof SwapFormSchema>) {
@@ -281,31 +300,9 @@ export function SwapPanel() {
                     className="space-y-4"
                   >
                     <div className="relative">
-                      {/* Buy Side - Sol Input */}
+                      {/* Buy Side - USDC Input */}
                       <TokenInputBlock
                         title="Pay"
-                        balance={
-                          <AccountBalance
-                            address={provider.publicKey}
-                            classname="text-sm"
-                          />
-                        }
-                        amount={amount}
-                        usdValue={`$${estimatedUsd.toFixed(2)}`}
-                        token={solToken}
-                        isInput={true}
-                        percentageButtons={renderSolPercentageButtons()}
-                        form={buyForm}
-                        fieldName="amount"
-                        error={inputError}
-                        errorMessage={errorMessage}
-                      />
-
-                      <SwitchArrow error={inputError} />
-
-                      {/* Buy Side - USDC Output */}
-                      <TokenInputBlock
-                        title="Receive"
                         balance={
                           <AccountTokenBalance
                             address={provider.publicKey}
@@ -314,9 +311,31 @@ export function SwapPanel() {
                             classname="text-sm"
                           />
                         }
-                        amount={(amount * 98).toFixed(2)} // Mock conversion calculation
-                        usdValue={`$${(amount * 98).toFixed(2)}`}
+                        amount={amount}
+                        usdValue={`$${amount.toFixed(2)}`}
                         token={usdcToken}
+                        isInput={true}
+                        percentageButtons={renderUsdcPercentageButtons()}
+                        form={buyForm}
+                        fieldName="amount"
+                        error={inputError}
+                        errorMessage={errorMessage}
+                      />
+
+                      <SwitchArrow error={inputError} />
+
+                      {/* Buy Side - SOL Output */}
+                      <TokenInputBlock
+                        title="Receive"
+                        balance={
+                          <AccountBalance
+                            address={provider.publicKey}
+                            classname="text-sm"
+                          />
+                        }
+                        amount={(amount / 98).toFixed(9)} // Mock conversion calculation
+                        usdValue={`$${amount.toFixed(2)}`}
+                        token={solToken}
                         isInput={false}
                         error={outputError}
                         errorMessage={
@@ -329,7 +348,7 @@ export function SwapPanel() {
                     <div className="bg-[#0A352B] rounded-lg p-3">
                       <DurationSelector form={buyForm} />
                       <PriceImpactDisplay
-                        price="146.06 USDC"
+                        price="0.01020 SOL"
                         percentage="+3.98%"
                       />
                       <ProtectionStatus />
@@ -375,22 +394,20 @@ export function SwapPanel() {
                     className="space-y-4"
                   >
                     <div className="relative">
-                      {/* Sell Side - USDC Input */}
+                      {/* Sell Side - SOL Input */}
                       <TokenInputBlock
                         title="Pay"
                         balance={
-                          <AccountTokenBalance
+                          <AccountBalance
                             address={provider.publicKey}
-                            mintAddress={USDC_MINT}
-                            decimals={4}
                             classname="text-sm"
                           />
                         }
                         amount={amount}
-                        usdValue={`$${amount.toFixed(2)}`}
-                        token={usdcToken}
+                        usdValue={`$${estimatedUsd.toFixed(2)}`}
+                        token={solToken}
                         isInput={true}
-                        percentageButtons={renderUsdcPercentageButtons()}
+                        percentageButtons={renderSolPercentageButtons()}
                         form={sellForm}
                         fieldName="amount"
                         error={inputError}
@@ -399,18 +416,20 @@ export function SwapPanel() {
 
                       <SwitchArrow error={inputError} />
 
-                      {/* Sell Side - SOL Output */}
+                      {/* Sell Side - USDC Output */}
                       <TokenInputBlock
                         title="Receive"
                         balance={
-                          <AccountBalance
+                          <AccountTokenBalance
                             address={provider.publicKey}
+                            mintAddress={USDC_MINT}
+                            decimals={4}
                             classname="text-sm"
                           />
                         }
-                        amount={(amount / 98).toFixed(9)} // Mock conversion calculation
-                        usdValue={`$${amount.toFixed(2)}`}
-                        token={solToken}
+                        amount={(amount * 98).toFixed(2)} // Mock conversion calculation
+                        usdValue={`$${(amount * 98).toFixed(2)}`}
+                        token={usdcToken}
                         isInput={false}
                         error={outputError}
                         errorMessage={
@@ -423,7 +442,7 @@ export function SwapPanel() {
                     <div className="bg-[#0A352B] rounded-lg p-3">
                       <DurationSelector form={sellForm} />
                       <PriceImpactDisplay
-                        price="0.01020 SOL"
+                        price="146.06 USDC"
                         percentage="-2.45%"
                       />
                       <ProtectionStatus />
