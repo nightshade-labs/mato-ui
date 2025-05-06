@@ -9,6 +9,7 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 type TokenInputBlockProps = {
   title: string;
@@ -37,19 +38,25 @@ export const TokenInputBlock = ({
   error = false,
   errorMessage,
 }: TokenInputBlockProps) => (
-  <div
+  <motion.div
+    layout
+    transition={{
+      layout: { duration: 0.3, ease: "easeOut" },
+    }}
     className={cn(
       "bg-[#0A352B] mt-2 rounded-lg p-3 border",
       error ? "border-destructive bg-[#382424]" : "border-[#1CF6C2]/50"
     )}
   >
-    <div className="flex justify-between items-center mb-3">
-      <div
+    <motion.div layout className="flex justify-between items-center mb-3">
+      <motion.div
+        layout
         className={`text-base font-semibold ${error ? "text-destructive-80" : ""} text-[#E9F6F3]`}
       >
         {title}
-      </div>
-      <div
+      </motion.div>
+      <motion.div
+        layout
         className={`flex gap-1 items-start ${error ? "text-destructive-40" : ""} text-[#109071]`}
       >
         <div className="flex items-center mr-1">
@@ -91,12 +98,17 @@ export const TokenInputBlock = ({
         {percentageButtons && (
           <div className="flex gap-1 mb-3">{percentageButtons}</div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
 
-    <div className="flex justify-between items-center">
+    <motion.div layout className="flex justify-between items-center">
       {isInput ? (
-        <div>
+        <motion.div
+          layout
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+        >
           <FormField
             control={form.control}
             name={fieldName || "amount"}
@@ -122,52 +134,75 @@ export const TokenInputBlock = ({
                       )
                     }
                   />
-                  <div
+                  <motion.div
+                    layout
                     className={cn(
                       "text-xs font-medium",
                       error ? "text-destructive-80" : "text-[#109071]"
                     )}
                   >
                     {usdValue}
-                  </div>
+                  </motion.div>
                 </div>
                 {error && errorMessage ? (
-                  <div className="text-destructive-80 text-xs mt-1">
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-destructive-80 text-xs mt-1"
+                  >
                     {errorMessage}
-                  </div>
+                  </motion.div>
                 ) : (
                   <FormMessage />
                 )}
               </FormItem>
             )}
           />
-        </div>
+        </motion.div>
       ) : (
-        <div className="flex flex-col">
-          <div
+        <motion.div
+          layout
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          className="flex flex-col"
+        >
+          <motion.div
+            layout
             className={cn(
               "text-3xl font-medium",
               error ? "text-destructive-80" : "text-[#9DA5A3]"
             )}
           >
             {amount}
-          </div>
-          <div
+          </motion.div>
+          <motion.div
+            layout
             className={cn(
               "text-xs font-medium",
               error ? "text-destructive-40" : "text-[#109071]"
             )}
           >
             {usdValue}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
 
-      <TokenSelector error={error} token={token} />
-    </div>
+      <motion.div layout>
+        <TokenSelector error={error} token={token} />
+      </motion.div>
+    </motion.div>
 
     {error && errorMessage && !isInput && (
-      <div className="text-destructive-80 text-xs mt-2">{errorMessage}</div>
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: -5 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-destructive-80 text-xs mt-2"
+      >
+        {errorMessage}
+      </motion.div>
     )}
-  </div>
+  </motion.div>
 );

@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Form } from "@/components/ui/form";
+import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
 
 import { AccountBalance, AccountTokenBalance } from "../account/account-ui";
 import { USDC_MINT } from "@/lib/constants";
@@ -28,6 +29,8 @@ import { DurationSelector } from "./duration-selector";
 import { ControlButtons } from "./control-buttons";
 import { PriceImpactDisplay } from "./price-impact-display";
 import { ProtectionStatus } from "./protection-status";
+import { BuySellSwitch } from "./swap-ui";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 
 const SwapFormSchema = z.object({
   amount: z.number().gt(0, "Must be greater than zero"),
@@ -48,6 +51,8 @@ export function SwapPanel() {
   const [inputError, setInputError] = useState(false);
   const [outputError, setOutputError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [swapSide, setSwapSide] = useState<"buy" | "sell">("buy");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const provider = useAnchorProvider();
 
   const getBalance = useGetBalance({ address: provider.publicKey });
@@ -56,7 +61,7 @@ export function SwapPanel() {
     mintAddress: USDC_MINT,
   });
 
-  const form = useForm<z.infer<typeof SwapFormSchema>>({
+  const buyForm = useForm<z.infer<typeof SwapFormSchema>>({
     resolver: zodResolver(SwapFormSchema),
     defaultValues: {
       duration: "10min",
@@ -64,8 +69,19 @@ export function SwapPanel() {
     },
   });
 
+  const sellForm = useForm<z.infer<typeof SwapFormSchema>>({
+    resolver: zodResolver(SwapFormSchema),
+    defaultValues: {
+      duration: "10min",
+      amount: 0,
+    },
+  });
+
+  // Use the active form based on the swap side
+  const activeForm = swapSide === "buy" ? buyForm : sellForm;
+
   const amount = useWatch({
-    control: form.control,
+    control: activeForm.control,
     defaultValue: 0,
     name: "amount",
   });
@@ -96,23 +112,50 @@ export function SwapPanel() {
     }
   }, [amount, getBalance.data]);
 
-  async function onSubmit(data: z.infer<typeof SwapFormSchema>) {
+  // Handle form collection but not submission
+  function onSubmit(data: z.infer<typeof SwapFormSchema>) {
     if (inputError || outputError) {
       return;
     }
+  }
 
-    let slotDuration = durationStringToSlots.get(data.duration);
-    // Handle both token types in a single transaction based on the input/output
-    depositTokenA.mutate({
-      amount: data.amount * LAMPORTS_PER_SOL,
-      duration: slotDuration || 30,
-    });
+  // Actual transaction execution function
+  async function executeTransaction() {
+    if (inputError || outputError || !provider.publicKey) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const data = activeForm.getValues();
+      let slotDuration = durationStringToSlots.get(data.duration);
+
+      if (swapSide === "buy") {
+        // For buy side, use depositTokenB (paying USDC, getting SOL)
+        await depositTokenB.mutateAsync({
+          amount:
+            data.amount * 10 ** (getTokenBalance.data?.value?.decimals || 6),
+          duration: slotDuration || 30,
+        });
+      } else {
+        // For sell side, use depositTokenA (paying SOL, getting USDC)
+        await depositTokenA.mutateAsync({
+          amount: data.amount * LAMPORTS_PER_SOL,
+          duration: slotDuration || 30,
+        });
+      }
+    } catch (error) {
+      console.error("Transaction failed:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const resetForm = () => {
-    form.reset({
+    activeForm.reset({
       amount: 0,
-      duration: form.getValues().duration,
+      duration: activeForm.getValues().duration,
     });
     setInputError(false);
     setOutputError(false);
@@ -144,7 +187,7 @@ export function SwapPanel() {
           percent="25%"
           error={inputError}
           onClick={() => {
-            form.setValue(
+            activeForm.setValue(
               "amount",
               Number((getBalance.data / LAMPORTS_PER_SOL / 4).toFixed(9))
             );
@@ -154,7 +197,7 @@ export function SwapPanel() {
           error={inputError}
           percent="50%"
           onClick={() => {
-            form.setValue(
+            activeForm.setValue(
               "amount",
               Number((getBalance.data / LAMPORTS_PER_SOL / 2).toFixed(9))
             );
@@ -164,9 +207,46 @@ export function SwapPanel() {
           error={inputError}
           percent="Max"
           onClick={() => {
-            form.setValue(
+            activeForm.setValue(
               "amount",
               Number((getBalance.data / LAMPORTS_PER_SOL - 0.003).toFixed(9))
+            );
+          }}
+        />
+      </div>
+    );
+
+  // Percentage buttons for USDC token
+  const renderUsdcPercentageButtons = () =>
+    getTokenBalance.data !== undefined && (
+      <div className="flex gap-1 items-center">
+        <PercentageButton
+          percent="25%"
+          error={inputError}
+          onClick={() => {
+            activeForm.setValue(
+              "amount",
+              Number((getTokenBalance.data?.value?.uiAmount! / 4).toFixed(2))
+            );
+          }}
+        />
+        <PercentageButton
+          error={inputError}
+          percent="50%"
+          onClick={() => {
+            activeForm.setValue(
+              "amount",
+              Number((getTokenBalance.data?.value?.uiAmount! / 2).toFixed(2))
+            );
+          }}
+        />
+        <PercentageButton
+          error={inputError}
+          percent="Max"
+          onClick={() => {
+            activeForm.setValue(
+              "amount",
+              Number((getTokenBalance.data?.value?.uiAmount ?? 0).toFixed(2))
             );
           }}
         />
@@ -182,83 +262,201 @@ export function SwapPanel() {
       />
 
       <div className="w-full lg:min-w-96 bg-[#102924] p-2.5 rounded-lg">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="relative">
-              {/* Sell Section */}
-              <TokenInputBlock
-                title="Sell"
-                balance={
-                  <AccountBalance
-                    address={provider.publicKey}
-                    classname="text-sm"
-                  />
-                }
-                amount={amount}
-                usdValue={`$${estimatedUsd.toFixed(2)}`}
-                token={solToken}
-                isInput={true}
-                percentageButtons={renderSolPercentageButtons()}
-                form={form}
-                fieldName="amount"
-                error={inputError}
-                errorMessage={errorMessage}
-              />
+        <BuySellSwitch side={swapSide} setSide={setSwapSide} />
 
-              <SwitchArrow error={inputError} />
+        <LayoutGroup>
+          <AnimatePresence mode="wait">
+            {swapSide === "buy" ? (
+              <motion.div
+                key="buy"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="mt-4"
+              >
+                <Form {...buyForm}>
+                  <form
+                    onSubmit={buyForm.handleSubmit(onSubmit)}
+                    className="space-y-4"
+                  >
+                    <div className="relative">
+                      {/* Buy Side - Sol Input */}
+                      <TokenInputBlock
+                        title="Pay"
+                        balance={
+                          <AccountBalance
+                            address={provider.publicKey}
+                            classname="text-sm"
+                          />
+                        }
+                        amount={amount}
+                        usdValue={`$${estimatedUsd.toFixed(2)}`}
+                        token={solToken}
+                        isInput={true}
+                        percentageButtons={renderSolPercentageButtons()}
+                        form={buyForm}
+                        fieldName="amount"
+                        error={inputError}
+                        errorMessage={errorMessage}
+                      />
 
-              {/* Buy Section */}
-              <TokenInputBlock
-                title="Buy"
-                balance={
-                  <AccountTokenBalance
-                    address={provider.publicKey}
-                    mintAddress={USDC_MINT}
-                    decimals={4}
-                    classname="text-sm"
-                  />
-                }
-                amount={(amount * 98).toFixed(2)} // Mock conversion calculation
-                usdValue={`$${(amount * 98).toFixed(2)}`}
-                token={usdcToken}
-                isInput={false}
-                error={outputError}
-                errorMessage={outputError ? "Insufficient liquidity" : ""}
-              />
-            </div>
+                      <SwitchArrow error={inputError} />
 
-            {/* Duration and Price Impact Section */}
-            <div className="bg-[#0A352B] rounded-lg p-3">
-              <DurationSelector form={form} />
+                      {/* Buy Side - USDC Output */}
+                      <TokenInputBlock
+                        title="Receive"
+                        balance={
+                          <AccountTokenBalance
+                            address={provider.publicKey}
+                            mintAddress={USDC_MINT}
+                            decimals={4}
+                            classname="text-sm"
+                          />
+                        }
+                        amount={(amount * 98).toFixed(2)} // Mock conversion calculation
+                        usdValue={`$${(amount * 98).toFixed(2)}`}
+                        token={usdcToken}
+                        isInput={false}
+                        error={outputError}
+                        errorMessage={
+                          outputError ? "Insufficient liquidity" : ""
+                        }
+                      />
+                    </div>
 
-              {/* Price Impact Section */}
-              <PriceImpactDisplay price="146.06 USDC" percentage="+3.98%" />
+                    {/* Duration and Price Impact Section */}
+                    <div className="bg-[#0A352B] rounded-lg p-3">
+                      <DurationSelector form={buyForm} />
+                      <PriceImpactDisplay
+                        price="146.06 USDC"
+                        percentage="+3.98%"
+                      />
+                      <ProtectionStatus />
+                    </div>
 
-              {/* Protection Status */}
-              <ProtectionStatus />
-            </div>
+                    {/* Submit Button */}
+                    <Button
+                      type="button"
+                      disabled={inputError || outputError || isSubmitting}
+                      onClick={executeTransaction}
+                      className={cn(
+                        "w-full py-3 font-bold text-base",
+                        provider.publicKey
+                          ? inputError || outputError || isSubmitting
+                            ? "bg-red-500/50 text-white cursor-not-allowed"
+                            : "bg-[#1CF6C2] text-[#091F1A] hover:brightness-110"
+                          : "bg-[#1CF6C2] text-[#091F1A] hover:brightness-110"
+                      )}
+                    >
+                      {provider.publicKey
+                        ? inputError || outputError
+                          ? "Error"
+                          : isSubmitting
+                            ? "Submitting..."
+                            : "Buy"
+                        : "Connect Wallet"}
+                    </Button>
+                  </form>
+                </Form>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="sell"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="mt-4"
+              >
+                <Form {...sellForm}>
+                  <form
+                    onSubmit={sellForm.handleSubmit(onSubmit)}
+                    className="space-y-4"
+                  >
+                    <div className="relative">
+                      {/* Sell Side - USDC Input */}
+                      <TokenInputBlock
+                        title="Pay"
+                        balance={
+                          <AccountTokenBalance
+                            address={provider.publicKey}
+                            mintAddress={USDC_MINT}
+                            decimals={4}
+                            classname="text-sm"
+                          />
+                        }
+                        amount={amount}
+                        usdValue={`$${amount.toFixed(2)}`}
+                        token={usdcToken}
+                        isInput={true}
+                        percentageButtons={renderUsdcPercentageButtons()}
+                        form={sellForm}
+                        fieldName="amount"
+                        error={inputError}
+                        errorMessage={errorMessage}
+                      />
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={inputError || outputError}
-              className={cn(
-                "w-full py-3 font-bold text-base",
-                provider.publicKey
-                  ? inputError || outputError
-                    ? "bg-red-500/50 text-white cursor-not-allowed"
-                    : "bg-[#1CF6C2] text-[#091F1A] hover:brightness-110"
-                  : "bg-[#1CF6C2] text-[#091F1A] hover:brightness-110"
-              )}
-            >
-              {provider.publicKey
-                ? inputError || outputError
-                  ? "Error"
-                  : "Swap"
-                : "Connect Wallet"}
-            </Button>
-          </form>
-        </Form>
+                      <SwitchArrow error={inputError} />
+
+                      {/* Sell Side - SOL Output */}
+                      <TokenInputBlock
+                        title="Receive"
+                        balance={
+                          <AccountBalance
+                            address={provider.publicKey}
+                            classname="text-sm"
+                          />
+                        }
+                        amount={(amount / 98).toFixed(9)} // Mock conversion calculation
+                        usdValue={`$${amount.toFixed(2)}`}
+                        token={solToken}
+                        isInput={false}
+                        error={outputError}
+                        errorMessage={
+                          outputError ? "Insufficient liquidity" : ""
+                        }
+                      />
+                    </div>
+
+                    {/* Duration and Price Impact Section */}
+                    <div className="bg-[#0A352B] rounded-lg p-3">
+                      <DurationSelector form={sellForm} />
+                      <PriceImpactDisplay
+                        price="0.01020 SOL"
+                        percentage="-2.45%"
+                      />
+                      <ProtectionStatus />
+                    </div>
+
+                    {/* Submit Button */}
+                    <Button
+                      type="button"
+                      disabled={inputError || outputError || isSubmitting}
+                      onClick={executeTransaction}
+                      className={cn(
+                        "w-full py-3 font-bold text-base",
+                        provider.publicKey
+                          ? inputError || outputError || isSubmitting
+                            ? "bg-red-500/50 text-white cursor-not-allowed"
+                            : "bg-[#1CF6C2] text-[#091F1A] hover:brightness-110"
+                          : "bg-[#1CF6C2] text-[#091F1A] hover:brightness-110"
+                      )}
+                    >
+                      {provider.publicKey
+                        ? inputError || outputError
+                          ? "Error"
+                          : isSubmitting
+                            ? "Submitting..."
+                            : "Sell"
+                        : "Connect Wallet"}
+                    </Button>
+                  </form>
+                </Form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </LayoutGroup>
       </div>
     </div>
   );
