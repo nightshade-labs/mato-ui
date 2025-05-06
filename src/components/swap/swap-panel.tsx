@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Form } from "@/components/ui/form";
-import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
+import { AnimatePresence, motion, LayoutGroup } from "motion/react";
 
 import { AccountBalance, AccountTokenBalance } from "../account/account-ui";
 import { USDC_MINT } from "@/lib/constants";

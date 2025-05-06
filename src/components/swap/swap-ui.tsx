@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 const SwapTabs = ({
   side,
