@@ -29,12 +29,13 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
     lineSeries?: ISeriesApi<"Line">;
   }>({});
   const loadingRef = useRef(false);
+  const lastTimeRef = useRef<number>(0);
 
-  const [time, setTime] = useState(Date.now() / 1000);
+  const [time, setTime] = useState<number>(Math.floor(Date.now() / 1000));
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTime(Date.now() / 1000);
+      setTime(Math.floor(Date.now() / 1000));
     }, 1000);
 
     return () => clearInterval(interval);
@@ -44,6 +45,13 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
   useEffect(() => {
     if (chartRef.current.lineSeries) {
       chartRef.current.lineSeries.setData(data);
+
+      if (data.length > 0) {
+        const lastDataPoint = data[data.length - 1];
+        if (typeof lastDataPoint.time === "number") {
+          lastTimeRef.current = lastDataPoint.time;
+        }
+      }
     }
   }, [data]);
 
@@ -109,13 +117,11 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
       },
     });
 
-    // Handle loading more data when user scrolls to the left
     if (onTimeRangeChange) {
       chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
         if (!range || loadingRef.current) return;
 
         const logicalFrom = range.from;
-        // Load more data when we're within 10% of the start of the visible range
         if (logicalFrom < 10) {
           loadingRef.current = true;
           Promise.resolve(onTimeRangeChange()).finally(() => {
@@ -145,7 +151,7 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
       chart.remove();
       chartRef.current = {};
     };
-  }, [onTimeRangeChange]); // Remove data dependency since we handle it in a separate effect
+  }, [onTimeRangeChange]);
 
   const { getMarketAccount } = useMatoProgram();
 
@@ -159,12 +165,19 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
       .toNumber() || 0;
 
   let isTrading = tradingVolumeA * tradingVolumeB !== 0;
+
   useEffect(() => {
     if (isTrading && chartRef.current.lineSeries) {
-      chartRef.current.lineSeries.update({
-        time: time as UTCTimestamp,
-        value: (tradingVolumeB * 1000) / tradingVolumeA,
-      });
+      const currentTime = Math.floor(time);
+
+      if (currentTime > lastTimeRef.current) {
+        lastTimeRef.current = currentTime;
+
+        chartRef.current.lineSeries.update({
+          time: currentTime as UTCTimestamp,
+          value: (tradingVolumeB * 1000) / tradingVolumeA,
+        });
+      }
     }
   }, [isTrading, tradingVolumeA, tradingVolumeB, time]);
 

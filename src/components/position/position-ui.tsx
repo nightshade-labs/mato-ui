@@ -70,7 +70,10 @@ export function PositionCard({
           <div className="flex justify-between w-full">
             <p>Selling {selling}</p>
             <p>
-              {(remainingAmount.toNumber() / decimals).toFixed(2)} {selling}
+              {(remainingAmount.toNumber() / decimals).toFixed(
+                selling === "SOL" ? 9 : 2
+              )}{" "}
+              {selling}
             </p>
           </div>
           <Progress
@@ -81,9 +84,9 @@ export function PositionCard({
             <p>Buying {buying}</p>
             <p>
               {(
-                (swappedTokens.toNumber() * decimals) /
-                BOOKKEEPING_PRECISION
-              ).toFixed(2)}{" "}
+                swappedTokens.toNumber() /
+                (buying === "SOL" ? 10 ** 9 : 10 ** 6)
+              ).toFixed(buying === "SOL" ? 9 : 2)}{" "}
               {buying}
             </p>
           </div>
