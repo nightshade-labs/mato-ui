@@ -13,7 +13,7 @@ export interface MarketDataRow {
   value: number;
 }
 
-export default function MarketDataPage() {
+export default function MarketDataPage({ isVisible }: { isVisible: boolean }) {
   const { cluster } = useCluster();
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -41,6 +41,10 @@ export default function MarketDataPage() {
 
       return [...acc, ...newPoints];
     }, [] as LineData<UTCTimestamp>[]);
+
+  if (!isVisible) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col  gap-3">

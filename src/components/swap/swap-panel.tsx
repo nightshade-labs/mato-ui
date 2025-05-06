@@ -45,7 +45,11 @@ export type TokenData = {
 };
 
 // Main component
-export function SwapPanel() {
+export function SwapPanel({
+  setChartIsVisible,
+}: {
+  setChartIsVisible: (isVisible: boolean) => void;
+}) {
   const { depositTokenA, depositTokenB } = useMatoProgram();
   const [isChartVisible, setIsChartVisible] = useState(true);
   const [inputError, setInputError] = useState(false);
@@ -122,12 +126,23 @@ export function SwapPanel() {
       }
     }
 
-    // Example output validation - can be replaced with actual logic
-    // This is a placeholder for liquidity checks or other output-related errors
-    if (amount * 98 > 10000) {
-      setOutputError(true);
+    // Output validation logic for liquidity checks
+    if (swapSide === "buy") {
+      // Example: Check if the SOL output would exceed available liquidity
+      if (amount / 98 > 100) {
+        // Assuming 100 SOL is the max available liquidity
+        setOutputError(true);
+      } else {
+        setOutputError(false);
+      }
     } else {
-      setOutputError(false);
+      // For sell side, check if the USDC output would exceed available liquidity
+      if (amount * 98 > 10000) {
+        // Assuming 10,000 USDC is the max available liquidity
+        setOutputError(true);
+      } else {
+        setOutputError(false);
+      }
     }
   }, [amount, getBalance.data, getTokenBalance.data, swapSide]);
 
@@ -183,6 +198,7 @@ export function SwapPanel() {
 
   const toggleChart = () => {
     setIsChartVisible(!isChartVisible);
+    setChartIsVisible(!isChartVisible);
   };
 
   // Token data definitions
