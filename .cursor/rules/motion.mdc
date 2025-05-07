@@ -1,3 +1,8 @@
+---
+description: When adding animations to the app
+globs: 
+alwaysApply: false
+---
 TITLE: Complete Motion Component Implementation
 DESCRIPTION: Demonstrates a full example of importing and using the Motion component in a React component, including conditional opacity animation based on visibility state.
 SOURCE: https://github.com/motiondivision/motion/blob/main/packages/framer-motion/README.md#2025-04-11_snippet_2

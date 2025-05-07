@@ -44,7 +44,7 @@ export const TokenInputBlock = ({
       layout: { duration: 0.3, ease: "easeOut" },
     }}
     className={cn(
-      "bg-[#0A352B] mt-2 rounded-lg p-3 border",
+      "bg-bg-2-60 rounded-lg p-3 border",
       error ? "border-destructive bg-[#382424]" : "border-[#1CF6C2]/50"
     )}
   >

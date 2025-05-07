@@ -13,14 +13,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+import { PriceImpactDisplay } from "./price-impact-display";
+import { ProtectionStatus } from "./protection-status";
 
 type DurationSelectorProps = {
   form: any;
 };
 
 export const DurationSelector = ({ form }: DurationSelectorProps) => (
-  <div className="bg-[#0A352B] rounded-lg p-3">
-    <div className="flex justify-between items-center mb-3">
+  <div className="bg-bg-2-60 flex flex-col gap-4 rounded-lg p-3">
+    <div className="flex justify-between items-center ">
       <div className="flex items-center gap-1">
         <span className="text-base font-semibold text-[#E9F6F3]">Duration</span>
         <TooltipProvider>
@@ -47,11 +49,11 @@ export const DurationSelector = ({ form }: DurationSelectorProps) => (
         <FormItem className="mb-3">
           <Select onValueChange={field.onChange} defaultValue={field.value}>
             <FormControl>
-              <SelectTrigger className="bg-[#0A352B] border border-[#1CF6C2]/50 focus:ring-0 text-[#9DA5A3] font-bold">
+              <SelectTrigger className="bg-[#0A352B] mb-4 border border-[#1CF6C2]/50 focus:ring-0 text-[#9DA5A3] font-bold">
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
             </FormControl>
-            <SelectContent className="bg-[#102924] border border-[#1CF6C2]/50 text-white">
+            <SelectContent className="bg-[#102924] border  border-[#1CF6C2]/50 text-white">
               <SelectItem value="5sec">5 seconds</SelectItem>
               <SelectItem value="1min">1 minute</SelectItem>
               <SelectItem value="10min">10 minutes</SelectItem>
@@ -60,9 +62,11 @@ export const DurationSelector = ({ form }: DurationSelectorProps) => (
               <SelectItem value="1week">1 week</SelectItem>
             </SelectContent>
           </Select>
-          <div className="text-xs text-[#109071] font-medium mt-1">
+          {/* <div className="text-xs text-[#109071] font-medium mt-1">
             Recommended duration: 10 minutes
-          </div>
+          </div> */}
+          <PriceImpactDisplay price="[Price]" percentage="+0.0%" />
+          <ProtectionStatus />
         </FormItem>
       )}
     />
