@@ -57,6 +57,7 @@ export function SwapPanel({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHardError, setIsHardError] = useState(false);
   const [isSoftError, setIsSoftError] = useState(false);
+  const [visualOrderSwapped, setVisualOrderSwapped] = useState(false); // Added for animation
   const provider = useAnchorProvider();
 
   const getBalance = useGetBalance({ address: provider.publicKey });
@@ -258,12 +259,12 @@ export function SwapPanel({
 
   const estimatedFromUsd =
     fromToken.symbol === "USDC"
-      ? parseFloat(fromAmountString)
-      : parseFloat(fromAmountString) * 98; // Mock calculation
+      ? parseFloat(fromAmountString) || 0
+      : (parseFloat(fromAmountString) || 0) * 98; // Mock calculation
   const estimatedToUsd =
     toToken.symbol === "USDC"
-      ? parseFloat(toAmountString)
-      : parseFloat(toAmountString) * 98; // Mock calculation
+      ? parseFloat(toAmountString) || 0
+      : (parseFloat(toAmountString) || 0) * 98; // Mock calculation
 
   const handleTokenSwitch = () => {
     const currentFromToken = fromToken;
@@ -289,6 +290,7 @@ export function SwapPanel({
     setErrorMessage("");
     setIsHardError(false);
     setIsSoftError(false);
+    setVisualOrderSwapped((prev) => !prev); // Toggle visual order for animation
   };
 
   const renderPercentageButtons = () => {
@@ -403,6 +405,46 @@ export function SwapPanel({
         : "0.00"
       : getTokenBalance.data?.value?.uiAmountString || "0.00";
 
+  const swapAnimationTransition = {
+    type: "spring",
+    stiffness: 350,
+    damping: 35,
+  };
+
+  // Props for the "From" block (top block, active input)
+  const fromBlockProps = {
+    title: "From",
+    token: fromToken,
+    amount: fromAmountString,
+    isInput: true,
+    form: form,
+    fieldName: "amount",
+    usdValue: `$${estimatedFromUsd.toFixed(2)}`,
+    balance: currentBalance,
+    percentageButtons: renderPercentageButtons(),
+    error: inputError,
+    isHardError: isHardError,
+    isSoftError: isSoftError,
+    errorMessage: inputError ? errorMessage : "",
+  };
+
+  // Props for the "To" block (bottom block, display only)
+  const toBlockProps = {
+    title: "To",
+    token: toToken,
+    amount: toAmountString,
+    isInput: false,
+    usdValue: `$${estimatedToUsd.toFixed(2)}`,
+    balance:
+      toToken.symbol === "SOL"
+        ? getBalance.data
+          ? (getBalance.data / LAMPORTS_PER_SOL).toFixed(4)
+          : "0.00"
+        : getTokenBalance.data?.value?.uiAmountString || "0.00",
+    error: outputError,
+    errorMessage: outputError ? errorMessage : "",
+  };
+
   return (
     <div className="relative w-full lg:w-fit">
       <ControlButtons
@@ -434,55 +476,66 @@ export function SwapPanel({
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-3"
               >
-                <div className="flex flex-col relative gap-3">
-                  <TokenInputBlock
-                    title="From"
-                    token={fromToken}
-                    amount={fromAmountString}
-                    isInput={true}
-                    form={form}
-                    fieldName="amount"
-                    usdValue={`$${estimatedFromUsd.toFixed(2)}`}
-                    balance={currentBalance}
-                    percentageButtons={renderPercentageButtons()}
-                    error={inputError}
-                    isHardError={isHardError}
-                    isSoftError={isSoftError}
-                    errorMessage={inputError ? errorMessage : ""}
-                  />
+                <LayoutGroup>
+                  <div className="flex flex-col relative gap-3">
+                    {visualOrderSwapped ? (
+                      <>
+                        <motion.div
+                          key="token-block-B-instance" // Stable React key
+                          layoutId="token-block-B" // Framer Motion layout ID for conceptual block B
+                          layout
+                          transition={swapAnimationTransition}
+                        >
+                          <TokenInputBlock {...fromBlockProps} />
+                        </motion.div>
+                        <motion.div
+                          key="token-block-A-instance" // Stable React key
+                          layoutId="token-block-A" // Framer Motion layout ID for conceptual block A
+                          layout
+                          transition={swapAnimationTransition}
+                        >
+                          <TokenInputBlock {...toBlockProps} />
+                        </motion.div>
+                      </>
+                    ) : (
+                      <>
+                        <motion.div
+                          key="token-block-A-instance" // Stable React key
+                          layoutId="token-block-A" // Framer Motion layout ID for conceptual block A
+                          layout
+                          transition={swapAnimationTransition}
+                        >
+                          <TokenInputBlock {...fromBlockProps} />
+                        </motion.div>
+                        <motion.div
+                          key="token-block-B-instance" // Stable React key
+                          layoutId="token-block-B" // Framer Motion layout ID for conceptual block B
+                          layout
+                          transition={swapAnimationTransition}
+                        >
+                          <TokenInputBlock {...toBlockProps} />
+                        </motion.div>
+                      </>
+                    )}
 
-                  <motion.button
-                    type="button"
-                    onClick={handleTokenSwitch}
-                    animate={{ top: inputError ? "53%" : "50%" }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="focus:outline-none absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 mt-1"
-                  >
-                    <SwitchArrow error={inputError || outputError} />
-                  </motion.button>
+                    <motion.button
+                      type="button"
+                      onClick={handleTokenSwitch}
+                      animate={{ top: inputError ? "53%" : "50%" }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="focus:outline-none absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 mt-1"
+                      aria-label="Switch tokens"
+                    >
+                      <SwitchArrow error={inputError || outputError} />
+                    </motion.button>
 
-                  <TokenInputBlock
-                    title="To"
-                    token={toToken}
-                    amount={toAmountString}
-                    isInput={false}
-                    usdValue={`$${estimatedToUsd.toFixed(2)}`}
-                    balance={
-                      toToken.symbol === "SOL"
-                        ? getBalance.data
-                          ? (getBalance.data / LAMPORTS_PER_SOL).toFixed(4)
-                          : "0.00"
-                        : getTokenBalance.data?.value?.uiAmountString || "0.00"
-                    }
-                    error={outputError}
-                    errorMessage={outputError ? errorMessage : ""}
-                  />
-                  {errorMessage && !inputError && !outputError && (
-                    <p className="text-xs text-red-400 text-center pt-1">
-                      {errorMessage}
-                    </p>
-                  )}
-                </div>
+                    {errorMessage && !inputError && !outputError && (
+                      <p className="text-xs text-red-400 text-center pt-1">
+                        {errorMessage}
+                      </p>
+                    )}
+                  </div>
+                </LayoutGroup>
                 <DurationSelector form={form} />
 
                 <Button
