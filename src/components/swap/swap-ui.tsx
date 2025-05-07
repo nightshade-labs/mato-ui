@@ -1,5 +1,93 @@
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
+import { motion } from "motion/react";
+
+const SwapTabs = ({
+  side,
+  setSide,
+}: {
+  side: "buy" | "sell";
+  setSide: (side: "buy" | "sell") => void;
+}) => {
+  return (
+    <Tabs
+      defaultValue={side}
+      value={side}
+      onValueChange={(value) => setSide(value as "buy" | "sell")}
+      className="w-full"
+    >
+      <TabsList className="flex justify-between bg-[#0A352B] p-1 rounded-xl overflow-hidden w-full h-12 border border-[#102924]/40">
+        <TabsTrigger
+          value="buy"
+          className={cn(
+            "flex-1 rounded-lg bg-opacity-20 font-medium transition-all duration-200 ease-out",
+            "hover:bg-[#102924]/50 data-[state=active]:shadow-none relative",
+            side === "buy"
+              ? "text-[#1CF6C2] data-[state=active]:bg-[#102924]/80"
+              : "text-[#E9F6F3] hover:text-[#1CF6C2]/80"
+          )}
+        >
+          <div className="relative px-2 py-1">
+            <motion.span
+              animate={{
+                scale: side === "buy" ? 1.05 : 1,
+                fontWeight: side === "buy" ? 600 : 400,
+              }}
+              transition={{ duration: 0.2 }}
+            >
+              Buy
+            </motion.span>
+            {side === "buy" && (
+              <motion.div
+                layoutId="swap-tab-indicator"
+                className="absolute -bottom-1 left-0 right-0 h-0.5 mx-auto w-12 bg-gradient-to-r from-[#1CF6C2] to-[#1CF6C2]/60"
+                transition={{
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 30,
+                }}
+              />
+            )}
+          </div>
+        </TabsTrigger>
+        <TabsTrigger
+          value="sell"
+          className={cn(
+            "flex-1 rounded-lg bg-opacity-20 font-medium transition-all duration-200 ease-out",
+            "hover:bg-[#102924]/50 data-[state=active]:shadow-none relative",
+            side === "sell"
+              ? "text-[#1CF6C2] data-[state=active]:bg-[#102924]/80"
+              : "text-[#E9F6F3] hover:text-[#1CF6C2]/80"
+          )}
+        >
+          <div className="relative px-2 py-1">
+            <motion.span
+              animate={{
+                scale: side === "sell" ? 1.05 : 1,
+                fontWeight: side === "sell" ? 600 : 400,
+              }}
+              transition={{ duration: 0.2 }}
+            >
+              Sell
+            </motion.span>
+            {side === "sell" && (
+              <motion.div
+                layoutId="swap-tab-indicator"
+                className="absolute -bottom-1 left-0 right-0 h-0.5 mx-auto w-12 bg-gradient-to-r from-[#1CF6C2]/60 to-[#1CF6C2]"
+                transition={{
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 30,
+                }}
+              />
+            )}
+          </div>
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+};
 
 export function BuySellSwitch({
   side,
@@ -8,42 +96,5 @@ export function BuySellSwitch({
   side: "buy" | "sell";
   setSide: (side: "buy" | "sell") => void;
 }) {
-  return (
-    <div className="flex justify-between">
-      <Button
-        variant={"ghost"}
-        onClick={() => setSide("buy")}
-        className={cn(
-          side == "buy"
-            ? "text-purple-500 hover:text-purple-500"
-            : "hover:text-purple-300",
-          "flex-1 rounded-l-xl rounded-r-none bg-opacity-20 hover:bg-transparent"
-        )}
-      >
-        <div className="relative">
-          Buy
-          {side == "buy" && (
-            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-0.5 bg-gradient-to-r from-purple-500/90 to-red-500/90"></div>
-          )}
-        </div>
-      </Button>
-      <Button
-        variant={"ghost"}
-        onClick={() => setSide("sell")}
-        className={cn(
-          side == "sell"
-            ? " text-purple-500 hover:text-purple-500"
-            : "hover:text-purple-300",
-          "flex-1 rounded-r-xl rounded-l-none bg-opacity-20 hover:bg-transparent"
-        )}
-      >
-        <div className="relative">
-          Sell
-          {side == "sell" && (
-            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-0.5 bg-gradient-to-r from-red-500/90 to-purple-500/90"></div>
-          )}
-        </div>
-      </Button>
-    </div>
-  );
+  return <SwapTabs side={side} setSide={setSide} />;
 }

@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
-import { ReactNode, Suspense } from "react";
+import { ReactNode, Suspense, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "./toast";
-import { BookText } from "lucide-react";
+import { BookText, Menu, X } from "lucide-react";
 import { AccountChecker } from "../account/account-ui";
 import {
   ClusterChecker,
@@ -24,6 +24,7 @@ import {
   NavigationMenuList,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
+import { LogoIcon } from "../logo";
 
 export function UiLayout({
   children,
@@ -33,43 +34,81 @@ export function UiLayout({
   links: { label: string; path: string }[];
 }) {
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Navigation links as shadcn buttons
+  const NavLinks = (
+    <>
+      {links.map(({ label, path }) => (
+        <Button
+          key={path}
+          asChild
+          variant={pathname.startsWith(path) ? "secondary" : "ghost"}
+          className="font-bold px-4 py-2 rounded-lg"
+        >
+          <Link href={path}>{label}</Link>
+        </Button>
+      ))}
+    </>
+  );
 
   return (
-    <div className="w-full min-h-screen flex flex-col bg-gradient-to-b from-purple-500/10 to-red-500/10">
-      <div className="flex items-center p-2 w-full min-h-16 flex-col md:flex-row space-y-2 md:space-y-0">
-        <div className="flex-1 flex items-center">
-          <Button variant="ghost" asChild>
-            <Link className="text-xl mr-8" href="/">
-              <div className="flex items-center gap-2">
-                {/* <div className="w-8 h-8 rounded-full bg-red-500" /> */}
-                <span className="text-2xl font-bold text-primary">Mato</span>
-              </div>
-            </Link>
-          </Button>
-          <NavigationMenu>
-            <NavigationMenuList className="gap-4">
-              {links.map(({ label, path }) => (
-                <NavigationMenuItem
-                  key={path}
-                  className={pathname.startsWith(path) ? "underline" : ""}
-                >
-                  <Link href={path} legacyBehavior passHref>
-                    <NavigationMenuLink
-                      className={navigationMenuTriggerStyle()}
-                    >
-                      {label}
-                    </NavigationMenuLink>
-                  </Link>
-                </NavigationMenuItem>
-              ))}
-            </NavigationMenuList>
-          </NavigationMenu>
+    <div className="w-full bg-[url(/bg.png)] min-h-screen flex flex-col bg-no-repeat bg-cover overflow-hidden ">
+      {/* Desktop Navbar */}
+      <div className="hidden md:flex items-center justify-between px-6 py-3 w-full min-h-16 border-b border-[#0A352B] bg-[#102924]">
+        <div className="flex items-center gap-8">
+          <Link href="/" className="mr-2">
+            <LogoIcon />
+          </Link>
+          <div className="flex gap-2">{NavLinks}</div>
         </div>
-        <div className="flex-none space-x-2 flex items-center mx-8">
+        <div className="flex items-center gap-2">
           <WalletButton />
-          {/* <ClusterUiSelect /> */}
         </div>
       </div>
+      {/* Mobile Navbar */}
+      <div className="flex md:hidden items-center justify-between px-4 py-3 w-full min-h-16 border-b border-[#0A352B] bg-[#102924]">
+        <Link href="/">
+          <LogoIcon />
+        </Link>
+        <div className="flex items-center gap-2">
+          <WalletButton />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-2"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            aria-label="Open menu"
+          >
+            {mobileMenuOpen ? <X /> : <Menu />}
+          </Button>
+        </div>
+      </div>
+      {/* Mobile Drawer */}
+      {mobileMenuOpen && (
+        <div
+          className="md:hidden fixed top-0 left-0 w-full h-full bg-black/60 z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <div
+            className="absolute top-0 right-0 w-2/3 max-w-xs h-full bg-[#102924] shadow-lg flex flex-col gap-4 p-6 border-l border-[#0A352B]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <LogoIcon />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
+              >
+                <X />
+              </Button>
+            </div>
+            <div className="flex flex-col gap-2">{NavLinks}</div>
+          </div>
+        </div>
+      )}
       <ClusterChecker>
         <AccountChecker />
       </ClusterChecker>
@@ -85,20 +124,6 @@ export function UiLayout({
         </Suspense>
         <Toaster />
       </div>
-      {/* <footer className="text-center p-4 bg-red-100 w-full">
-        <aside>
-          <Link
-            className="text-xl mr-8"
-            target="_blank"
-            rel="noopener noreferrer"
-            href="https://eki-solana.github.io/docs/"
-          >
-            <div className="flex gap-2 w-full justify-center items-center">
-              Docs <BookText className="h-4 md:h-6" />
-            </div>
-          </Link>
-        </aside>
-      </footer> */}
     </div>
   );
 }

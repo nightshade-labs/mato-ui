@@ -11,12 +11,10 @@ import {
   LineStyle,
   UTCTimestamp,
 } from "lightweight-charts";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { useEffect, useRef, useState } from "react";
 import { VOLUME_PRECISION } from "@/lib/constants";
 import BN from "bn.js";
 import { useMatoProgram } from "../mato/mato-data-access";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 export interface PriceChartProps {
@@ -31,12 +29,13 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
     lineSeries?: ISeriesApi<"Line">;
   }>({});
   const loadingRef = useRef(false);
+  const lastTimeRef = useRef<number>(0);
 
-  const [time, setTime] = useState(Date.now() / 1000);
+  const [time, setTime] = useState<number>(Math.floor(Date.now() / 1000));
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTime(Date.now() / 1000);
+      setTime(Math.floor(Date.now() / 1000));
     }, 1000);
 
     return () => clearInterval(interval);
@@ -46,6 +45,13 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
   useEffect(() => {
     if (chartRef.current.lineSeries) {
       chartRef.current.lineSeries.setData(data);
+
+      if (data.length > 0) {
+        const lastDataPoint = data[data.length - 1];
+        if (typeof lastDataPoint.time === "number") {
+          lastTimeRef.current = lastDataPoint.time;
+        }
+      }
     }
   }, [data]);
 
@@ -62,42 +68,41 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: "white" },
-        textColor: "black",
+        background: { type: ColorType.Solid, color: "#0A352B" },
+        textColor: "#9DA5A3",
+        fontSize: 12,
       },
       width: chartContainerRef.current.clientWidth,
       height: 400,
       autoSize: true,
-      // rightPriceScale: {
-      //   autoScale: false, // disables auto scaling based on visible content
-      //   scaleMargins: {
-      //     top: 0.1,
-      //     bottom: 0.2,
-      //   },
-      // },
-      crosshair: {
-        // Change mode from default 'magnet' to 'normal'.
-        // Allows the crosshair to move freely without snapping to datapoints
-        mode: CrosshairMode.Normal,
-
-        // Vertical crosshair line (showing Date in Label)
-        vertLine: {
-          width: 4,
-          color: "#C3BCDB77",
-          style: LineStyle.Solid,
-          labelBackgroundColor: "#f7a2c4",
+      grid: {
+        vertLines: {
+          color: "#0F3C32",
+          style: LineStyle.Dotted,
         },
-
-        // Horizontal crosshair line (showing Price in Label)
+        horzLines: {
+          color: "#0F3C32",
+          style: LineStyle.Dotted,
+        },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+          width: 2,
+          color: "rgba(28, 246, 194, 0.4)",
+          style: LineStyle.Solid,
+          labelBackgroundColor: "#1CF6C2",
+        },
         horzLine: {
-          color: "#f7a2c4",
-          labelBackgroundColor: "#f7a2c4",
+          color: "rgba(28, 246, 194, 0.4)",
+          labelBackgroundColor: "#1CF6C2",
         },
       },
       timeScale: {
         minBarSpacing: 0.01,
         timeVisible: true,
         secondsVisible: false,
+        borderColor: "#0F3C32",
         tickMarkFormatter: (time: number) => {
           const date = new Date(time * 1000);
           return date.toLocaleString("en-US", {
@@ -107,15 +112,16 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
           });
         },
       },
+      rightPriceScale: {
+        borderColor: "#0F3C32",
+      },
     });
 
-    // Handle loading more data when user scrolls to the left
     if (onTimeRangeChange) {
       chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
         if (!range || loadingRef.current) return;
 
         const logicalFrom = range.from;
-        // Load more data when we're within 10% of the start of the visible range
         if (logicalFrom < 10) {
           loadingRef.current = true;
           Promise.resolve(onTimeRangeChange()).finally(() => {
@@ -128,8 +134,10 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
     chart.timeScale().fitContent();
 
     const lineSeries = chart.addSeries(LineSeries, {
-      color: "#a855f7bb",
+      color: "#1CF6C2",
       lineWidth: 2,
+      lineStyle: LineStyle.Solid,
+      priceLineVisible: false,
     });
     lineSeries.setData(data);
 
@@ -143,7 +151,7 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
       chart.remove();
       chartRef.current = {};
     };
-  }, [onTimeRangeChange]); // Remove data dependency since we handle it in a separate effect
+  }, [onTimeRangeChange]);
 
   const { getMarketAccount } = useMatoProgram();
 
@@ -157,12 +165,19 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
       .toNumber() || 0;
 
   let isTrading = tradingVolumeA * tradingVolumeB !== 0;
+
   useEffect(() => {
     if (isTrading && chartRef.current.lineSeries) {
-      chartRef.current.lineSeries.update({
-        time: time as UTCTimestamp,
-        value: (tradingVolumeB * 1000) / tradingVolumeA,
-      });
+      const currentTime = Math.floor(time);
+
+      if (currentTime > lastTimeRef.current) {
+        lastTimeRef.current = currentTime;
+
+        chartRef.current.lineSeries.update({
+          time: currentTime as UTCTimestamp,
+          value: (tradingVolumeB * 1000) / tradingVolumeA,
+        });
+      }
     }
   }, [isTrading, tradingVolumeA, tradingVolumeB, time]);
 
@@ -173,38 +188,13 @@ export function PriceChart({ data, onTimeRangeChange }: PriceChartProps) {
     : "no trades right now";
 
   return (
-    <Card className="w-full lg:w-1/2 sm:min-h-96">
-      <CardHeader>
-        <CardTitle>
-          <div className="flex justify-between items-center">
-            <div className="flex gap-4 text-xl items-center">
-              <div className="flex gap-0">
-                <Avatar className="w-6 h-6 sm:w-8 sm:h-8 bg-black">
-                  <AvatarImage src={"solana-sol-logo.png"} />
-                  <AvatarFallback>{"SOL"}</AvatarFallback>
-                </Avatar>
-                <Avatar className="w-6 h-6 sm:w-8 sm:h-8">
-                  <AvatarImage src={"usd-coin-usdc-logo.png"} />
-                  <AvatarFallback>{"USDC"}</AvatarFallback>
-                </Avatar>
-              </div>
-              SOL / USDC
-            </div>
-            <span className="text-2xl">{marketPrice}</span>
-          </div>
-          {/* <div className="mt-4 text-sm">
-            Flow (SOL per minute):{" "}
-            {((tradingVolumeA * 2.5 * 60) / LAMPORTS_PER_SOL).toFixed(2)}
-          </div>
-          <div className="mt-0 text-sm">
-            Flow (USDC per minute):{" "}
-            {((tradingVolumeB * 2.5 * 60) / 1000000).toFixed(2)}
-          </div> */}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex w-full justify-center">
-        <div className="w-full h-full" ref={chartContainerRef} />
-      </CardContent>
-    </Card>
+    <div className="flex flex-col w-full h-full">
+      <div className="flex justify-between items-center mb-4 px-2">
+        <span className="text-2xl text-[#E9F6F3] font-medium">
+          {marketPrice}
+        </span>
+      </div>
+      <div className="w-full h-80" ref={chartContainerRef} />
+    </div>
   );
 }

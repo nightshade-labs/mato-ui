@@ -1,4 +1,4 @@
-export const CREATE_POSITION = "Position has been created.";
+export const CREATE_POSITION = "Position has been created successfully.";
 export const CLOSE_POSITION =
   "Position has been closed and funds have been withdrawn.";
 export const WITHDRAW_TOKENS = "Tokens have been withdrawn.";

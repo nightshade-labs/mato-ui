@@ -85,8 +85,8 @@ export default function HeroSection() {
                   <Button
                     asChild
                     size="lg"
-                    variant={"outline"}
-                    className="rounded-xl w-40 border-none outline-none bg-hover:bg-primary/90 px-5 text-base"
+                    variant={"default"}
+                    className="rounded-xl w-40 border-none outline-none bg-black text-white hover:bg-neutral-800 px-5 text-base"
                   >
                     <Link href="/swap" className="flex items-center gap-2">
                       <span className="text-nowrap">Launch App</span>
