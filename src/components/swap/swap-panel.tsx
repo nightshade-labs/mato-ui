@@ -55,6 +55,8 @@ export function SwapPanel({
   const [outputError, setOutputError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isHardError, setIsHardError] = useState(false);
+  const [isSoftError, setIsSoftError] = useState(false);
   const provider = useAnchorProvider();
 
   const getBalance = useGetBalance({ address: provider.publicKey });
@@ -111,73 +113,88 @@ export function SwapPanel({
     let currentInputError = false;
     let currentOutputError = false;
     let currentErrorMessage = "";
+    let hardErrorActive = false;
+    let softErrorActive = false;
+
+    // Reset errors at the beginning of validation
+    setIsHardError(false);
+    setIsSoftError(false);
 
     if (fromToken.symbol === "USDC") {
-      if (!getTokenBalance.data) {
-        // Data not yet loaded, can't validate yet or assume error/loading state
-      } else {
+      if (amount < 0) {
+        currentInputError = true;
+        hardErrorActive = true;
+        currentErrorMessage = "Amount must be greater than zero";
+      } else if (getTokenBalance.data) {
         const maxAmount = getTokenBalance.data?.value?.uiAmount || 0;
-        if (amount < 0) {
+        if (amount > maxAmount) {
           currentInputError = true;
-          currentErrorMessage = "Amount must be greater than zero";
-        } else if (amount > maxAmount) {
-          currentInputError = true;
+          softErrorActive = true;
           currentErrorMessage = "Insufficient USDC balance";
         }
+      } else if (getTokenBalance.isLoading) {
+        // Optionally handle loading state, e.g., disable input or show loader
       }
     } else if (fromToken.symbol === "SOL") {
-      if (!getBalance.data) {
-        // Data not yet loaded
-      } else {
+      if (amount < 0) {
+        currentInputError = true;
+        hardErrorActive = true;
+        currentErrorMessage = "Amount must be greater than zero";
+      } else if (getBalance.data) {
         const maxAmount = getBalance.data / LAMPORTS_PER_SOL - 0.003; // Buffer for fees
-        if (amount < 0) {
+        if (amount > maxAmount) {
           currentInputError = true;
-          currentErrorMessage = "Amount must be greater than zero";
-        } else if (amount > maxAmount) {
-          currentInputError = true;
+          softErrorActive = true;
           currentErrorMessage = "Insufficient SOL balance";
         }
+      } else if (getBalance.isLoading) {
+        // Optionally handle loading state
       }
     }
 
+    setIsHardError(hardErrorActive);
+    setIsSoftError(softErrorActive);
     setInputError(currentInputError);
-    if (currentInputError) {
-      setErrorMessage(currentErrorMessage);
-    } else {
-      setErrorMessage(""); // Clear message if no input error
-    }
 
-    // Output validation logic for liquidity checks (simplified, needs proper implementation)
+    // Output validation logic for liquidity checks
     // This part needs to be updated based on the actual from/to tokens and their liquidity
+    let currentOutputErrorState = false; // store output error state separately
     if (!currentInputError) {
       // Only check output error if no input error
       if (fromToken.symbol === "USDC" && toToken.symbol === "SOL") {
         if (amount / 98 > 10000) {
           // Mock liquidity for SOL
-          currentOutputError = true;
-          setErrorMessage("Not enough SOL liquidity for this amount.");
+          currentOutputErrorState = true;
+          currentErrorMessage = "Not enough SOL liquidity for this amount.";
         }
       } else if (fromToken.symbol === "SOL" && toToken.symbol === "USDC") {
         if (amount * 98 > 1000000) {
           // Mock liquidity for USDC
-          currentOutputError = true;
-          setErrorMessage("Not enough USDC liquidity for this amount.");
+          currentOutputErrorState = true;
+          currentErrorMessage = "Not enough USDC liquidity for this amount.";
         }
       }
     }
-    setOutputError(currentOutputError);
-    if (currentOutputError && !currentInputError) {
-      // Error message for output error is set above
-    } else if (!currentInputError && !currentOutputError) {
+    setOutputError(currentOutputErrorState); // Set output error state
+
+    // Set errorMessage based on priority: input error > output error
+    if (currentInputError) {
+      setErrorMessage(currentErrorMessage);
+    } else if (currentOutputErrorState) {
+      setErrorMessage(currentErrorMessage); // This was already set by output logic
+    } else {
       setErrorMessage(""); // Clear message if no errors
     }
   }, [
     amount,
     getBalance.data,
+    getBalance.isLoading,
     getTokenBalance.data,
+    getTokenBalance.isLoading,
     fromToken,
     toToken,
     LAMPORTS_PER_SOL,
+    form.formState.isSubmitted, // Keep for potential future use if submit interaction affects errors
   ]);
 
   function onSubmit(data: z.infer<typeof SwapFormSchema>) {
@@ -229,6 +246,8 @@ export function SwapPanel({
     setInputError(false);
     setOutputError(false);
     setErrorMessage("");
+    setIsHardError(false);
+    setIsSoftError(false);
     setIsChartVisible(!isChartVisible);
   };
 
@@ -268,6 +287,8 @@ export function SwapPanel({
     setInputError(false);
     setOutputError(false);
     setErrorMessage("");
+    setIsHardError(false);
+    setIsSoftError(false);
   };
 
   const renderPercentageButtons = () => {
@@ -278,6 +299,8 @@ export function SwapPanel({
             <PercentageButton
               percent="25%"
               error={inputError}
+              isHardError={isHardError}
+              isSoftError={isSoftError}
               onClick={() => {
                 form.setValue(
                   "amount",
@@ -287,6 +310,8 @@ export function SwapPanel({
             />
             <PercentageButton
               error={inputError}
+              isHardError={isHardError}
+              isSoftError={isSoftError}
               percent="50%"
               onClick={() => {
                 form.setValue(
@@ -297,6 +322,8 @@ export function SwapPanel({
             />
             <PercentageButton
               error={inputError}
+              isHardError={isHardError}
+              isSoftError={isSoftError}
               percent="Max"
               onClick={() => {
                 form.setValue(
@@ -317,6 +344,8 @@ export function SwapPanel({
             <PercentageButton
               percent="25%"
               error={inputError}
+              isHardError={isHardError}
+              isSoftError={isSoftError}
               onClick={() => {
                 form.setValue(
                   "amount",
@@ -330,6 +359,8 @@ export function SwapPanel({
             />
             <PercentageButton
               error={inputError}
+              isHardError={isHardError}
+              isSoftError={isSoftError}
               percent="50%"
               onClick={() => {
                 form.setValue(
@@ -344,6 +375,8 @@ export function SwapPanel({
             />
             <PercentageButton
               error={inputError}
+              isHardError={isHardError}
+              isSoftError={isSoftError}
               percent="Max"
               onClick={() => {
                 form.setValue(
@@ -413,16 +446,20 @@ export function SwapPanel({
                     balance={currentBalance}
                     percentageButtons={renderPercentageButtons()}
                     error={inputError}
+                    isHardError={isHardError}
+                    isSoftError={isSoftError}
                     errorMessage={inputError ? errorMessage : ""}
                   />
 
-                  <button
+                  <motion.button
                     type="button"
                     onClick={handleTokenSwitch}
-                    className={`${inputError ? "top-[53%]" : ""} focus:outline-none absolute left-1/2 top-1/2  -translate-x-1/2 -translate-y-1/2 z-10 mt-1`}
+                    animate={{ top: inputError ? "53%" : "50%" }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="focus:outline-none absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 mt-1"
                   >
                     <SwitchArrow error={inputError || outputError} />
-                  </button>
+                  </motion.button>
 
                   <TokenInputBlock
                     title="To"
@@ -475,17 +512,21 @@ export function SwapPanel({
                 >
                   {!provider.publicKey
                     ? "Connect Wallet"
-                    : inputError || outputError
-                      ? errorMessage || "Error"
-                      : isSubmitting
-                        ? "Processing..."
-                        : fromToken.symbol === "USDC" &&
-                            toToken.symbol === "SOL"
-                          ? "Buy SOL"
-                          : fromToken.symbol === "SOL" &&
-                              toToken.symbol === "USDC"
-                            ? "Sell SOL"
-                            : "Swap"}
+                    : isHardError
+                      ? "Amount Required"
+                      : isSoftError
+                        ? "Insufficient Balance"
+                        : outputError
+                          ? errorMessage || "Error"
+                          : isSubmitting
+                            ? "Processing..."
+                            : fromToken.symbol === "USDC" &&
+                                toToken.symbol === "SOL"
+                              ? "Buy SOL"
+                              : fromToken.symbol === "SOL" &&
+                                  toToken.symbol === "USDC"
+                                ? "Sell SOL"
+                                : "Swap"}
                 </Button>
               </form>
             </Form>
