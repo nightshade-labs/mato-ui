@@ -15,8 +15,8 @@ export const PriceImpactDisplay = ({
   price = "[Price]",
   percentage = "+0.0%",
 }: PriceImpactDisplayProps) => (
-  <div className="bg-[#102924] p-3 rounded-lg mb-3">
-    <div className="flex justify-between mb-1">
+  <div className="bg-bg-2-80 p-3  rounded-lg ">
+    <div className="flex justify-between ">
       <div className="flex items-center gap-1">
         <span className="text-sm font-medium text-[#E9F6F3]">Price Impact</span>
         <TooltipProvider>

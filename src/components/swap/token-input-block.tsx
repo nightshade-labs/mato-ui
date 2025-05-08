@@ -23,6 +23,8 @@ type TokenInputBlockProps = {
   fieldName?: string;
   error?: boolean;
   errorMessage?: string;
+  isHardError?: boolean;
+  isSoftError?: boolean;
 };
 
 export const TokenInputBlock = ({
@@ -37,6 +39,8 @@ export const TokenInputBlock = ({
   fieldName,
   error = false,
   errorMessage,
+  isHardError = false,
+  isSoftError = false,
 }: TokenInputBlockProps) => (
   <motion.div
     layout
@@ -44,20 +48,38 @@ export const TokenInputBlock = ({
       layout: { duration: 0.3, ease: "easeOut" },
     }}
     className={cn(
-      "bg-[#0A352B] mt-2 rounded-lg p-3 border",
-      error ? "border-destructive bg-[#382424]" : "border-[#1CF6C2]/50"
+      "bg-bg-2-60 rounded-lg p-3 border",
+      isHardError
+        ? "border-[#FF2121] bg-[#382424]"
+        : isSoftError
+          ? "border-[#1CF6C2]/50 bg-bg-2-60"
+          : error
+            ? "border-destructive bg-[#382424]"
+            : "border-[#1CF6C2]/50"
     )}
   >
     <motion.div layout className="flex justify-between items-center mb-3">
       <motion.div
         layout
-        className={`text-base font-semibold ${error ? "text-destructive-80" : ""} text-[#E9F6F3]`}
+        className={cn(
+          "text-base font-semibold",
+          isHardError ? "text-[#FF4D4D]" : "text-[#E9F6F3]"
+        )}
       >
         {title}
       </motion.div>
       <motion.div
         layout
-        className={`flex gap-1 items-start ${error ? "text-destructive-40" : ""} text-[#109071]`}
+        className={cn(
+          "flex gap-1 items-start",
+          isHardError
+            ? "text-[#FFA6A6]"
+            : isSoftError
+              ? "text-[#109071]"
+              : error
+                ? "text-destructive-40"
+                : "text-[#109071]"
+        )}
       >
         <div className="flex items-center mr-1">
           <svg
@@ -71,13 +93,17 @@ export const TokenInputBlock = ({
             <g clipPath="url(#clip0_172_2634)">
               <path
                 d="M2.96875 4.15625V13.6562C2.96875 13.9712 3.09386 14.2732 3.31656 14.4959C3.53926 14.7186 3.84131 14.8438 4.15625 14.8438H16.0312C16.1887 14.8438 16.3397 14.7812 16.4511 14.6698C16.5624 14.5585 16.625 14.4075 16.625 14.25V5.9375C16.625 5.78003 16.5624 5.62901 16.4511 5.51766C16.3397 5.40631 16.1887 5.34375 16.0312 5.34375H4.15625C3.84131 5.34375 3.53926 5.21864 3.31656 4.99594C3.09386 4.77324 2.96875 4.47119 2.96875 4.15625ZM2.96875 4.15625C2.96875 3.84131 3.09386 3.53926 3.31656 3.31656C3.53926 3.09386 3.84131 2.96875 4.15625 2.96875H14.25"
-                stroke={error ? "#FFA6A6" : "#109071"}
+                stroke={
+                  isHardError ? "#FFA6A6" : isSoftError ? "#FF4D4D" : "#109071"
+                }
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
               <path
                 d="M13.3594 10.5391C13.7693 10.5391 14.1016 10.2068 14.1016 9.79688C14.1016 9.38698 13.7693 9.05469 13.3594 9.05469C12.9495 9.05469 12.6172 9.38698 12.6172 9.79688C12.6172 10.2068 12.9495 10.5391 13.3594 10.5391Z"
-                fill={error ? "#FFA6A6" : "#109071"}
+                fill={
+                  isHardError ? "#FFA6A6" : isSoftError ? "#FF4D4D" : "#109071"
+                }
               />
             </g>
             <defs>
@@ -89,7 +115,11 @@ export const TokenInputBlock = ({
           <span
             className={cn(
               "text-sm mt-0.5 ml-0.5",
-              error ? "text-destructive-40" : "text-[#109071]"
+              isHardError
+                ? "text-[#FFA6A6]"
+                : isSoftError
+                  ? "text-[#FF4D4D]"
+                  : "text-[#109071]"
             )}
           >
             {balance}
@@ -118,7 +148,9 @@ export const TokenInputBlock = ({
                   <Input
                     className={cn(
                       "text-3xl font-medium bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:outline-none shadow-none",
-                      error ? "text-destructive-80" : ""
+                      isHardError || isSoftError
+                        ? "text-[#FF4D4D]"
+                        : "text-[#E9F6F3]"
                     )}
                     id={fieldName || "amount"}
                     placeholder="0"
@@ -138,7 +170,11 @@ export const TokenInputBlock = ({
                     layout
                     className={cn(
                       "text-xs font-medium",
-                      error ? "text-destructive-80" : "text-[#109071]"
+                      isHardError
+                        ? "text-[#FFA6A6]"
+                        : isSoftError
+                          ? "text-[#109071]"
+                          : "text-[#109071]"
                     )}
                   >
                     {usdValue}
@@ -172,7 +208,7 @@ export const TokenInputBlock = ({
             layout
             className={cn(
               "text-3xl font-medium",
-              error ? "text-destructive-80" : "text-[#9DA5A3]"
+              error ? "text-red-400" : "text-[#9DA5A3]"
             )}
           >
             {amount}
@@ -181,7 +217,7 @@ export const TokenInputBlock = ({
             layout
             className={cn(
               "text-xs font-medium",
-              error ? "text-destructive-40" : "text-[#109071]"
+              error ? "text-red-300" : "text-[#109071]"
             )}
           >
             {usdValue}
