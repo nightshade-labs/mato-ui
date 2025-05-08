@@ -172,6 +172,8 @@ export default function PositionsSection() {
     return null;
   }
 
+  console.log(getAllPositionA.data, "A postison");
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex justify-between items-center">

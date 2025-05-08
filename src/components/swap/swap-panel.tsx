@@ -213,18 +213,30 @@ export function SwapPanel({
 
     try {
       const data = form.getValues();
-      let slotDuration = durationStringToSlots.get(data.duration);
+      const slotDuration = durationStringToSlots.get(data.duration) || 30;
 
-      if (getTokenBalance.data) {
+      if (fromToken.symbol === "USDC") {
+        if (!getTokenBalance.data) {
+          console.error("USDC balance not loaded.");
+          setErrorMessage("USDC balance not available. Please try again.");
+          setIsSubmitting(false);
+          return;
+        }
         await depositTokenB.mutateAsync({
           amount:
             data.amount * 10 ** (getTokenBalance.data.value.decimals || 6),
-          duration: slotDuration || 30,
+          duration: slotDuration,
         });
-      } else if (getBalance.data) {
+      } else if (fromToken.symbol === "SOL") {
+        if (!getBalance.data) {
+          console.error("SOL balance not loaded.");
+          setErrorMessage("SOL balance not available. Please try again.");
+          setIsSubmitting(false);
+          return;
+        }
         await depositTokenA.mutateAsync({
           amount: data.amount * LAMPORTS_PER_SOL,
-          duration: slotDuration || 30,
+          duration: slotDuration,
         });
       } else {
         console.error("Unsupported token pair for transaction");
@@ -234,6 +246,9 @@ export function SwapPanel({
       }
     } catch (error) {
       console.error("Transaction failed:", error);
+      setErrorMessage(
+        `Transaction failed: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     } finally {
       setIsSubmitting(false);
     }

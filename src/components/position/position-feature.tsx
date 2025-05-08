@@ -286,7 +286,7 @@ export default function PositionsFeature() {
   };
 
   return (
-    <div className="bg-[#102924] rounded-lg p-2.5 space-y-3">
+    <div className="bg-[#102924] mt-14 rounded-lg p-2.5 space-y-3">
       <div className="bg-[#0A352B] rounded-lg p-2.5 flex justify-between items-center">
         <h3 className="text-xl font-semibold text-[#E9F6F3]">
           Current Positions
