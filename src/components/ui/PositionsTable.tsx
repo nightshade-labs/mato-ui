@@ -41,87 +41,6 @@ interface Position {
   statusTooltip?: string;
 }
 
-const mockPositions: Position[] = [
-  {
-    id: "1",
-    tokens: {
-      from: "SOL",
-      to: "USDC",
-      fromIcon: TokenSolIcon,
-      toIcon: TokenUsdcIcon,
-    },
-    amountFrom: "10 SOL",
-    amountTo: "~1,280 USDC",
-    avgPrice: "128.20 USDC/SOL",
-    duration: "10 min",
-    progress: 80,
-    estSavings: "+1.3%",
-    status: "Active",
-    startTime: "Apr 15, 15:24",
-    endTime: "Apr 15, 15:34",
-    positionId: "#123456",
-  },
-  {
-    id: "2",
-    tokens: {
-      from: "SOL",
-      to: "USDC",
-      fromIcon: TokenSolIcon,
-      toIcon: TokenUsdcIcon,
-    },
-    amountFrom: "10 SOL",
-    amountTo: "1,280 USDC",
-    avgPrice: "128.20 USDC/SOL",
-    duration: "0 min",
-    progress: 100,
-    estSavings: "+1.3%",
-    status: "Successful",
-    startTime: "Apr 15, 15:24",
-    endTime: "Apr 15, 15:34",
-    positionId: "#123457",
-  },
-  {
-    id: "3",
-    tokens: {
-      from: "SOL",
-      to: "USDC",
-      fromIcon: TokenSolIcon,
-      toIcon: TokenUsdcIcon,
-    },
-    amountFrom: "10 SOL",
-    amountTo: "~1,280 USDC",
-    avgPrice: "128.20 USDC/SOL",
-    duration: "10 min",
-    progress: 80,
-    estSavings: "+1.3%",
-    status: "Canceled",
-    startTime: "Apr 15, 15:24",
-    endTime: "Apr 15, 15:34",
-    positionId: "#123458",
-  },
-  {
-    id: "4",
-    tokens: {
-      from: "SOL",
-      to: "USDC",
-      fromIcon: TokenSolIcon,
-      toIcon: TokenUsdcIcon,
-    },
-    amountFrom: "10 SOL",
-    amountTo: "~1,280 USDC",
-    avgPrice: "128.20 USDC/SOL",
-    duration: "10 min",
-    progress: 80,
-    estSavings: "+1.3%",
-    status: "Failed",
-    startTime: "Apr 15, 15:24",
-    endTime: "Apr 15, 15:34",
-    positionId: "#123459",
-    statusTooltip:
-      "Your limit price wasn't reached during the selected duration. Your funds have been returned.",
-  },
-];
-
 const getRowStyles = (status: Position["status"]) => {
   switch (status) {
     case "Active":
@@ -168,7 +87,7 @@ const getProgressColor = (status: Position["status"]): string => {
 };
 
 export const PositionsTable = ({
-  positions = mockPositions,
+  positions = [],
 }: {
   positions?: Position[];
 }) => {
@@ -229,9 +148,6 @@ export const PositionsTable = ({
               <TableHead className="px-3 py-3 text-xs font-medium text-[#E9F6F3] tracking-wider">
                 End Time
               </TableHead>
-              <TableHead className="px-3 py-3 text-xs font-medium text-[#E9F6F3] tracking-wider">
-                Position ID
-              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -242,8 +158,7 @@ export const PositionsTable = ({
               >
                 <TableCell className="px-3 py-3 text-center">
                   {(position.status === "Active" ||
-                    position.status ===
-                      "Canceled") /* As per figma, X shown on Canceled too */ && (
+                    position.status === "Canceled") && (
                     <button
                       onClick={() => handleClosePosition(position.positionId)}
                       className="p-1 hover:bg-gray-700/50 rounded focus:outline-none disabled:opacity-50"
@@ -307,7 +222,7 @@ export const PositionsTable = ({
                 </TableCell>
                 <TableCell className="px-3 py-3">
                   <div className="flex items-center gap-1">
-                    <Badge
+                    {/* <Badge
                       variant={getStatusBadgeVariant(position.status)}
                       className={
                         position.status === "Active"
@@ -320,9 +235,24 @@ export const PositionsTable = ({
                                 ? "bg-[#FF4D4D] text-white"
                                 : "" // Figma 'Failed' label color
                       }
+                    > */}
+                    [{" "}
+                    <span
+                      className={
+                        position.status === "Active"
+                          ? " text-accent"
+                          : position.status === "Successful"
+                            ? "  text-secondary" // Figma 'Successful' label color
+                            : position.status === "Canceled"
+                              ? " text-destructive-40 bg-transparent" // Ensure border is visible
+                              : position.status === "Failed"
+                                ? " text-destructive-60 "
+                                : "" // Figma 'Failed' label color
+                      }
                     >
-                      {position.status}
-                    </Badge>
+                      {position.status}{" "}
+                    </span>
+                    ]
                     {position.statusTooltip && (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -343,12 +273,9 @@ export const PositionsTable = ({
                   {position.startTime}
                 </TableCell>
                 <TableCell className="px-3 py-3">{position.endTime}</TableCell>
-                <TableCell className="px-3 py-3">
-                  {position.positionId}
-                </TableCell>
               </TableRow>
             ))}
-            {positions.length === 0 && (
+            {positions && positions.length === 0 && (
               <TableRow className="hover:bg-[#0A352B]">
                 <TableCell
                   colSpan={12}

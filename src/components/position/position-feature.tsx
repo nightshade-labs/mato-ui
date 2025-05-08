@@ -32,7 +32,8 @@ const formatPrice = (
   displayDecimals: number = 4
 ): string => {
   if (!priceBn) return "0.00";
-  const val = Number(priceBn.toString()) / VOLUME_PRECISION;
+  const val =
+    Number(priceBn.toString()) / (VOLUME_PRECISION * VOLUME_PRECISION);
   const price = (val * 10 ** baseDecimals) / 10 ** quoteDecimals;
   return price.toFixed(displayDecimals);
 };
@@ -50,101 +51,48 @@ const formatSlotDuration = (startSlotBn: BN, endSlotBn: BN): string => {
   return `${minutes}m ${seconds}s`;
 };
 
+// Reference epoch for Solana Mainnet Beta (March 16, 2020, 00:00:00 UTC)
+const SOLANA_MAINNET_GENESIS_EPOCH_MS = 1584316800000;
+
 // Placeholder for formatting slot to date string - replace with actual logic if available
 const formatSlotToDateTime = (slotBn: BN | undefined): string => {
   if (!slotBn) return "N/A";
-  // This is a placeholder. In a real app, you'd convert slot to a timestamp
-  // then to a human-readable date. For now, just returning slot number.
-  // Or, if you can estimate block time:
-  // const date = new Date(slotBn.toNumber() * SLOT_TIME_MS + SOME_REFERENCE_EPOCH_MS);
-  // return date.toLocaleString();
-  return `Slot: ${slotBn.toString()}`;
+
+  const slotNumber = slotBn.toNumber();
+  // Calculate estimated timestamp
+  const estimatedTimestamp =
+    slotNumber * SLOT_TIME_MS + SOLANA_MAINNET_GENESIS_EPOCH_MS;
+
+  const date = new Date(estimatedTimestamp);
+
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  const month = monthNames[date.getMonth()];
+  const day = date.getDate();
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+
+  // Pad minutes with a leading zero if necessary
+  const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes.toString();
+
+  return `${month} ${day}, ${hours}:${formattedMinutes}`;
 };
 
 const SOL_DECIMALS = 9;
 const USDC_DECIMALS = 6;
-
-// Function to escape CSV cell content
-// const escapeCsvCell = (cellData: any): string => {
-//   const stringData = String(cellData);
-//   // If the data contains a comma, double quote, or newline, wrap it in double quotes
-//   // and escape any existing double quotes by doubling them.
-//   if (
-//     stringData.includes(",") ||
-//     stringData.includes('"') ||
-//     stringData.includes("\\n")
-//   ) {
-//     return `"${stringData.replace(/"/g, '""')}"`;
-//   }
-//   return stringData;
-// };
-
-// Function to convert positions data to CSV and trigger download
-// const exportPositionsToCsv = (
-//   positionsData: any[],
-//   fileName: string = "positions.csv"
-// ) => {
-//   if (!positionsData || positionsData.length === 0) {
-//     console.warn("No data to export.");
-//     // Optionally, show a user notification here
-//     return;
-//   }
-
-//   const headers = [
-//     "Position ID",
-//     "Tokens (From/To)",
-//     "Amount (From)",
-//     "Amount (To)",
-//     "Avg. Price",
-//     "Duration",
-//     "Progress (%)",
-//     "Status",
-//     "Start Time",
-//     "End Time",
-//   ];
-
-//   const csvRows = [
-//     headers.join(","), // Header row
-//     ...positionsData.map((p) =>
-//       [
-//         escapeCsvCell(p.positionId),
-//         escapeCsvCell(`${p.tokens.from}/${p.tokens.to}`),
-//         escapeCsvCell(p.amountFrom),
-//         escapeCsvCell(p.amountTo),
-//         escapeCsvCell(p.avgPrice),
-//         escapeCsvCell(p.duration),
-//         escapeCsvCell(p.progress),
-//         escapeCsvCell(p.status),
-//         escapeCsvCell(p.startTime),
-//         escapeCsvCell(p.endTime),
-//       ].join(",")
-//     ),
-//   ];
-
-//   const csvString = csvRows.join("\\n");
-//   const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-//   const link = document.createElement("a");
-
-//   if (link.download !== undefined) {
-//     // feature detection
-//     const url = URL.createObjectURL(blob);
-//     link.setAttribute("href", url);
-//     link.setAttribute("download", fileName);
-//     link.style.visibility = "hidden";
-//     document.body.appendChild(link);
-//     link.click();
-//     document.body.removeChild(link);
-//     URL.revokeObjectURL(url);
-//   } else {
-//     // Fallback for older browsers (e.g., IE)
-//     // This might open the CSV in a new window/tab instead of downloading directly.
-//     console.error(
-//       "Browser does not support direct download. Opening CSV data in a new tab."
-//     );
-//     const newWindow = window.open();
-//     newWindow?.document.write(csvString);
-//   }
-// };
 
 export default function PositionsFeature() {
   const {
@@ -195,7 +143,8 @@ export default function PositionsFeature() {
         const amountFromNum =
           Number(posData.amount.toString()) / 10 ** fromDecimals;
         const avgPriceForCalc =
-          (Number(bookkeepingData.bPerA.toString()) / VOLUME_PRECISION) *
+          (Number(bookkeepingData.bPerA.toString()) /
+            (VOLUME_PRECISION * VOLUME_PRECISION)) *
           (10 ** fromDecimals / 10 ** toDecimals);
         const amountToNum = amountFromNum * avgPriceForCalc;
 
@@ -251,7 +200,8 @@ export default function PositionsFeature() {
         const amountFromNum =
           Number(posData.amount.toString()) / 10 ** fromDecimals;
         const avgPriceForCalc =
-          (Number(bookkeepingData.aPerB.toString()) / VOLUME_PRECISION) *
+          (Number(bookkeepingData.aPerB.toString()) /
+            (VOLUME_PRECISION * VOLUME_PRECISION)) *
           (10 ** fromDecimals / 10 ** toDecimals);
         const amountToNum = amountFromNum * avgPriceForCalc;
 
