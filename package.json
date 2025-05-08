@@ -40,6 +40,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotted-map": "^2.2.3",
+    "export-to-csv": "^1.4.0",
     "jotai": "^2.10.3",
     "lightweight-charts": "^5.0.2",
     "lucide-react": "^0.453.0",
