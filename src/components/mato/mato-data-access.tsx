@@ -186,6 +186,12 @@ export function useMatoProgram() {
       queryClient.invalidateQueries({
         queryKey: [GET_BALANCE, { cluster, address: provider.publicKey }],
       });
+      queryClient.invalidateQueries({
+        queryKey: [GET_ALL_POSITION_A, { cluster }],
+      });
+      queryClient.refetchQueries({
+        queryKey: [GET_ALL_POSITION_A, { cluster }],
+      });
     },
     onError: (e) =>
       toast({
@@ -223,6 +229,12 @@ export function useMatoProgram() {
           GET_TOKEN_BALANCE,
           { cluster, address: provider.publicKey, mintAddress: USDC_MINT },
         ],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [GET_ALL_POSITION_B, { cluster }],
+      });
+      queryClient.refetchQueries({
+        queryKey: [GET_ALL_POSITION_B, { cluster }],
       });
     },
     onError: (e) =>
@@ -360,6 +372,9 @@ export function useMatoProgram() {
           { cluster, address: provider.publicKey, mintAddress: USDC_MINT },
         ],
       });
+      queryClient.refetchQueries({
+        queryKey: [GET_ALL_POSITION_A, { cluster }],
+      });
     },
     onError: (e) =>
       toast({
@@ -415,6 +430,9 @@ export function useMatoProgram() {
           GET_TOKEN_BALANCE,
           { cluster, address: provider.publicKey, mintAddress: USDC_MINT },
         ],
+      });
+      queryClient.refetchQueries({
+        queryKey: [GET_ALL_POSITION_B, { cluster }],
       });
     },
     onError: (e) =>
