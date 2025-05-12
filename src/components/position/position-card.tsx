@@ -1,7 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import { ArrowRight, X } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 
