@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { BN } from "@coral-xyz/anchor";
 import { useMatoProgram } from "../mato/mato-data-access";
@@ -53,6 +53,15 @@ const formatSlotDuration = (startSlotBn: BN, endSlotBn: BN): string => {
   return `${minutes}m ${seconds}s`;
 };
 
+// Helper to format remaining time
+const formatRemainingTime = (remainingSlots: number): string => {
+  if (remainingSlots <= 0) return "0m 00s";
+  const remainingTimeSeconds = remainingSlots * (SLOT_TIME_MS / 1000);
+  const minutes = Math.floor(remainingTimeSeconds / 60);
+  const seconds = Math.floor(remainingTimeSeconds % 60);
+  return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+};
+
 // Reference epoch for Solana Mainnet Beta (March 16, 2020, 00:00:00 UTC)
 const SOLANA_MAINNET_GENESIS_EPOCH_MS = 1584316800000;
 
@@ -98,6 +107,8 @@ const USDC_DECIMALS = 6;
 
 export default function PositionsFeature() {
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [tickCount, setTickCount] = useState(0); // State to trigger re-renders for timer updates
+
   const {
     getAllPositionA,
     getAllPositionB,
@@ -108,6 +119,28 @@ export default function PositionsFeature() {
 
   const getSlot = useGetSlot();
   const currentSlot = getSlot.data ? new BN(getSlot.data) : undefined;
+
+  // Set up refetch interval to update the positions data
+  useEffect(() => {
+    // Refetch positions every 10 seconds
+    const refetchInterval = setInterval(() => {
+      getAllPositionA.refetch();
+      getAllPositionB.refetch();
+      getSlot.refetch();
+    }, 10000);
+
+    return () => clearInterval(refetchInterval);
+  }, [getAllPositionA, getAllPositionB, getSlot]);
+
+  // Set up timer interval to update countdown timers every second
+  useEffect(() => {
+    // Update time counters every second
+    const timerInterval = setInterval(() => {
+      setTickCount((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timerInterval);
+  }, []);
 
   const transformedPositions = React.useMemo(() => {
     if (!currentSlot || !getBookkeepingAccount.data) {
@@ -129,8 +162,10 @@ export default function PositionsFeature() {
       startTime: string;
       endTime: string;
       positionId: string;
+      timeLeft?: string;
       onClose?: () => void;
       statusTooltip?: string;
+      endSlot?: number;
     };
 
     const allPositionsData: TransformedPosition[] = [];
@@ -169,6 +204,15 @@ export default function PositionsFeature() {
           status = "Successful";
         }
 
+        // Calculate remaining time for active positions
+        const remainingSlots = currentSlot.gte(posData.endSlot)
+          ? 0
+          : posData.endSlot.toNumber() - currentSlot.toNumber();
+
+        // For active positions, calculate time remaining
+        const timeLeft =
+          status === "Active" ? formatRemainingTime(remainingSlots) : undefined;
+
         allPositionsData.push({
           id: publicKey.toString(),
           tokens: {
@@ -187,7 +231,12 @@ export default function PositionsFeature() {
           startTime: formatSlotToDateTime(posData.startSlot),
           endTime: formatSlotToDateTime(posData.endSlot),
           positionId: `#${posData.id.toString()}`,
-          onClose: () => closePositionA.mutate(posData.id),
+          timeLeft,
+          endSlot: posData.endSlot.toNumber(),
+          onClose:
+            status === "Active"
+              ? () => closePositionA.mutate(posData.id)
+              : undefined,
         });
       });
     }
@@ -226,6 +275,15 @@ export default function PositionsFeature() {
           status = "Successful";
         }
 
+        // Calculate remaining time for active positions
+        const remainingSlots = currentSlot.gte(posData.endSlot)
+          ? 0
+          : posData.endSlot.toNumber() - currentSlot.toNumber();
+
+        // For active positions, calculate time remaining
+        const timeLeft =
+          status === "Active" ? formatRemainingTime(remainingSlots) : undefined;
+
         allPositionsData.push({
           id: publicKey.toString(),
           tokens: {
@@ -244,7 +302,12 @@ export default function PositionsFeature() {
           startTime: formatSlotToDateTime(posData.startSlot),
           endTime: formatSlotToDateTime(posData.endSlot),
           positionId: `#${posData.id.toString()}`,
-          onClose: () => closePositionB.mutate(posData.id),
+          timeLeft,
+          endSlot: posData.endSlot.toNumber(),
+          onClose:
+            status === "Active"
+              ? () => closePositionB.mutate(posData.id)
+              : undefined,
         });
       });
     }
@@ -254,8 +317,9 @@ export default function PositionsFeature() {
     getAllPositionA.data,
     getAllPositionB.data,
     getBookkeepingAccount.data,
-    closePositionA, // These are stable mutation functions
-    closePositionB, // but included if their references could change
+    closePositionA,
+    closePositionB,
+    tickCount, // Added tick count to ensure re-renders for time updates
   ]);
 
   const handleExportCsv = () => {

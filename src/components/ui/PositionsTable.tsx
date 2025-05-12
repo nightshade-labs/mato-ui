@@ -39,6 +39,7 @@ interface Position {
   positionId: string;
   onClose?: () => void;
   statusTooltip?: string;
+  timeLeft?: string;
 }
 
 const getRowStyles = (status: Position["status"]) => {
@@ -91,10 +92,6 @@ export const PositionsTable = ({
 }: {
   positions?: Position[];
 }) => {
-  const handleClosePosition = (positionId: string) => {
-    console.log("Close position:", positionId);
-  };
-
   return (
     <TooltipProvider>
       <div className="rounded-md border border-none  overflow-hidden bg-[#091F1A]">
@@ -157,21 +154,14 @@ export const PositionsTable = ({
                 className={`text-sm font-medium ${getRowStyles(position.status)} ${getCellTextColor(position.status)}`}
               >
                 <TableCell className="px-3 py-3 text-center">
-                  {(position.status === "Active" ||
-                    position.status === "Canceled") && (
+                  {position.status === "Active" && position.onClose && (
                     <button
-                      onClick={() => handleClosePosition(position.positionId)}
+                      onClick={position.onClose}
                       className="p-1 hover:bg-gray-700/50 rounded focus:outline-none disabled:opacity-50"
                       aria-label={`Close position ${position.positionId}`}
                       tabIndex={0}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" &&
-                        handleClosePosition(position.positionId)
-                      }
                     >
-                      <X
-                        className={`h-3.5 w-3.5 ${position.status === "Active" ? "text-[#1CF6C2]" : "text-[#FF4D4D]"}`}
-                      />
+                      <X className="h-3.5 w-3.5 text-[#1CF6C2]" />
                     </button>
                   )}
                 </TableCell>
@@ -211,7 +201,11 @@ export const PositionsTable = ({
                 <TableCell className="px-3 py-3 font-semibold">
                   {position.avgPrice}
                 </TableCell>
-                <TableCell className="px-3 py-3">{position.duration}</TableCell>
+                <TableCell className="px-3 py-3">
+                  {position.status === "Active" && position.timeLeft
+                    ? position.timeLeft
+                    : position.duration}
+                </TableCell>
                 <TableCell
                   className={`px-3 py-3 font-semibold ${getProgressColor(position.status)}`}
                 >

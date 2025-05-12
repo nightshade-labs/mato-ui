@@ -50,7 +50,7 @@ export function PositionsGrid({ positions }: PositionsGridProps) {
           duration={position.duration}
           progress={position.progress}
           status={position.status}
-          timeLeft={position.duration}
+          timeLeft={position.timeLeft}
           onClose={position.onClose}
         />
       ))}
