@@ -16,19 +16,32 @@ import {
 import { PriceImpactDisplay } from "./price-impact-display";
 import { ProtectionStatus } from "./protection-status";
 import { useWatch } from "react-hook-form";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { durationStringToSlots } from "@/lib/utils";
+import { PriceImpact } from "./price-impact";
 
 type DurationSelectorProps = {
   form: any;
+  fromToken: string;
 };
 
-export const DurationSelector = ({ form }: DurationSelectorProps) => {
+export const DurationSelector = ({
+  form,
+  fromToken,
+}: DurationSelectorProps) => {
   const amount = useWatch({
     control: form.control,
     defaultValue: 0,
     name: "amount", // specify the field name you want to watch
   });
 
-  // const priceImpact = isNaN(amount) ? 0 :
+  const priceImpact = isNaN(amount)
+    ? 0
+    : fromToken === "SOL"
+      ? (amount * LAMPORTS_PER_SOL) /
+        (durationStringToSlots.get(form.watch("duration")) || 5)
+      : (amount * 1000000) /
+        (durationStringToSlots.get(form.watch("duration")) || 5);
 
   return (
     <div className="bg-bg-2-60 flex flex-col gap-4 rounded-lg p-3">
@@ -77,9 +90,17 @@ export const DurationSelector = ({ form }: DurationSelectorProps) => {
             {/* <div className="text-xs text-[#109071] font-medium mt-1">
             Recommended duration: 10 minutes
           </div> */}
-            <PriceImpactDisplay
-              price="[Price]"
-              percentage={amount.toString()}
+            <PriceImpact
+              flow={
+                isNaN(amount)
+                  ? 0
+                  : fromToken == "SOL"
+                    ? (amount * LAMPORTS_PER_SOL) /
+                      (durationStringToSlots.get(form.watch("duration")) || 5)
+                    : (amount * 1000000) /
+                      (durationStringToSlots.get(form.watch("duration")) || 5)
+              }
+              side={fromToken == "SOL" ? "sell" : "buy"}
             />
             <ProtectionStatus />
           </FormItem>

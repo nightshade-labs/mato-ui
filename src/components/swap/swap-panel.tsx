@@ -597,7 +597,7 @@ export function SwapPanel({
                     )}
                   </div>
                 </LayoutGroup>
-                <DurationSelector form={form} />
+                <DurationSelector form={form} fromToken={fromToken.symbol} />
 
                 <Button
                   type="button"
