@@ -41,7 +41,7 @@ export function PositionCard({
   const toAmount = amountTo.split(" ")[0];
 
   // Calculate sell progress percentage (just using progress value)
-  const sellProgress = progress;
+  const sellProgress = 100 - progress;
 
   // Calculate buy progress (for demo, using the same progress)
   const buyProgress = progress;
@@ -208,7 +208,7 @@ export function PositionCard({
         <div className="flex items-center w-full gap-1 flex-wrap">
           <span className="text-xs font-bold text-[#E9F6F3]">Time Left:</span>
           <span className={`text-xs font-medium ${styles.statusColor}`}>
-            {timeLeft || duration}
+            {timeLeft || "0m 00s"}
           </span>
         </div>
 
