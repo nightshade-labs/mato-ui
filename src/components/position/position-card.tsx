@@ -19,6 +19,8 @@ type PositionCardProps = {
   amountTo: string;
   avgPrice: string;
   duration: string;
+  remainingAmount: number;
+  swappedAmount: number;
   progress: number;
   status: "Active" | "Successful" | "Canceled" | "Failed";
   timeLeft?: string;
@@ -30,6 +32,8 @@ export function PositionCard({
   amountFrom,
   amountTo,
   avgPrice,
+  remainingAmount,
+  swappedAmount,
   duration,
   progress,
   status,
@@ -153,7 +157,7 @@ export function PositionCard({
               </span>
             </div>
             <span className={`text-xs font-bold ${styles.valueColor}`}>
-              {fromAmount}
+              {remainingAmount.toFixed(4)}
             </span>
           </div>
           <div className={`w-full ${styles.progressBarBg} rounded-lg h-2`}>
@@ -188,7 +192,7 @@ export function PositionCard({
               </span>
             </div>
             <span className={`text-xs font-bold ${styles.valueColor}`}>
-              {toAmount}
+              {swappedAmount.toFixed(4)}
             </span>
           </div>
           <div className={`w-full ${styles.progressBarBg} rounded-lg h-2`}>

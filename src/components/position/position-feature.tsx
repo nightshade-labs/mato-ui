@@ -10,7 +10,7 @@ import { Download, LayoutGrid, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TokenSolIcon from "../../../public/solana-sol-logo.png";
 import TokenUsdcIcon from "../../../public/usd-coin-usdc-logo.png";
-import { VOLUME_PRECISION } from "@/lib/constants";
+import { BOOKKEEPING_PRECISION, VOLUME_PRECISION } from "@/lib/constants";
 import { mkConfig, generateCsv, download } from "export-to-csv";
 import { PositionsGrid } from "./position-grid";
 import { motion, AnimatePresence } from "motion/react";
@@ -115,6 +115,7 @@ export default function PositionsFeature() {
     closePositionA,
     closePositionB,
     getBookkeepingAccount,
+    getMarketAccount,
   } = useMatoProgram();
 
   const getSlot = useGetSlot();
@@ -143,15 +144,18 @@ export default function PositionsFeature() {
   }, []);
 
   const transformedPositions = React.useMemo(() => {
-    if (!currentSlot || !getBookkeepingAccount.data) {
+    if (!currentSlot || !getBookkeepingAccount.data || !getMarketAccount.data) {
       return [];
     }
 
     const bookkeepingData = getBookkeepingAccount.data;
+    const marketData = getMarketAccount.data;
     // Define Position type based on transformation for clarity if not imported
     type TransformedPosition = {
       id: string;
       tokens: { from: string; to: string; fromIcon: any; toIcon: any };
+      remainingAmount: number;
+      swappedAmount: number;
       amountFrom: string;
       amountTo: string;
       avgPrice: string;
@@ -213,6 +217,39 @@ export default function PositionsFeature() {
         const timeLeft =
           status === "Active" ? formatRemainingTime(remainingSlots) : undefined;
 
+        // Price calculation
+        let slot =
+          currentSlot.toNumber() > posData.endSlot.toNumber()
+            ? posData.endSlot
+            : new BN(currentSlot);
+        let amount = posData.amount;
+        let volume = amount.div(posData.endSlot.sub(posData.startSlot));
+        let soldTokens = volume.mul(slot.sub(posData.startSlot));
+        let remainingAmount = amount.sub(soldTokens);
+
+        let lastSlot =
+          bookkeepingData.lastSlot.toNumber() > posData.endSlot.toNumber()
+            ? posData.endSlot
+            : bookkeepingData.lastSlot;
+        let marketPrice = marketData.tokenBVolume
+          .mul(new BN(VOLUME_PRECISION))
+          .div(marketData.tokenAVolume);
+        let bookkeeping = posData.bookkeeping;
+        let swappedTokensMarket = volume
+          .mul(slot.sub(lastSlot).mul(marketPrice))
+          .div(new BN(VOLUME_PRECISION));
+        let swappedTokensBook = bookkeepingData.bPerA
+          .sub(bookkeeping)
+          .mul(volume)
+          .div(new BN(BOOKKEEPING_PRECISION));
+        let swappedTokens = swappedTokensBook.add(swappedTokensMarket);
+
+        let averagePrice = swappedTokens
+          .mul(new BN(VOLUME_PRECISION))
+          .mul(new BN(10 ** SOL_DECIMALS))
+          .div(soldTokens)
+          .div(new BN(10 ** USDC_DECIMALS));
+
         allPositionsData.push({
           id: publicKey.toString(),
           tokens: {
@@ -221,9 +258,12 @@ export default function PositionsFeature() {
             fromIcon: TokenSolIcon,
             toIcon: TokenUsdcIcon,
           },
+          remainingAmount: remainingAmount.toNumber() / 10 ** SOL_DECIMALS,
+          swappedAmount: swappedTokens.toNumber() / 10 ** USDC_DECIMALS,
           amountFrom: `${formatTokenAmount(posData.amount, fromDecimals)} ${fromToken}`,
           amountTo: `~${amountToNum.toFixed(toDecimals)} ${toToken}`,
-          avgPrice: `${formatPrice(bookkeepingData.bPerA, fromDecimals, toDecimals)} ${toToken}/${fromToken}`,
+          // avgPrice: `${formatPrice(bookkeepingData.bPerA, fromDecimals, toDecimals)} ${toToken}/${fromToken}`,
+          avgPrice: (averagePrice.toNumber() / VOLUME_PRECISION).toFixed(4),
           duration: formatSlotDuration(posData.startSlot, posData.endSlot),
           progress: Math.round(progress),
           estSavings: "N/A", // Placeholder
@@ -284,6 +324,39 @@ export default function PositionsFeature() {
         const timeLeft =
           status === "Active" ? formatRemainingTime(remainingSlots) : undefined;
 
+        // Price calculation
+        let slot =
+          currentSlot.toNumber() > posData.endSlot.toNumber()
+            ? posData.endSlot
+            : new BN(currentSlot);
+        let amount = posData.amount;
+        let volume = amount.div(posData.endSlot.sub(posData.startSlot));
+        let soldTokens = volume.mul(slot.sub(posData.startSlot));
+        let remainingAmount = amount.sub(soldTokens);
+
+        let lastSlot =
+          bookkeepingData.lastSlot.toNumber() > posData.endSlot.toNumber()
+            ? posData.endSlot
+            : bookkeepingData.lastSlot;
+        let marketPrice = marketData.tokenAVolume
+          .mul(new BN(VOLUME_PRECISION))
+          .div(marketData.tokenBVolume);
+        let bookkeeping = posData.bookkeeping;
+        let swappedTokensMarket = volume
+          .mul(slot.sub(lastSlot).mul(marketPrice))
+          .div(new BN(VOLUME_PRECISION));
+        let swappedTokensBook = bookkeepingData.aPerB
+          .sub(bookkeeping)
+          .mul(volume)
+          .div(new BN(BOOKKEEPING_PRECISION));
+        let swappedTokens = swappedTokensBook.add(swappedTokensMarket);
+
+        let averagePrice = soldTokens
+          .mul(new BN(VOLUME_PRECISION))
+          .mul(new BN(10 ** SOL_DECIMALS))
+          .div(swappedTokens)
+          .div(new BN(10 ** USDC_DECIMALS));
+
         allPositionsData.push({
           id: publicKey.toString(),
           tokens: {
@@ -292,9 +365,12 @@ export default function PositionsFeature() {
             fromIcon: TokenUsdcIcon,
             toIcon: TokenSolIcon,
           },
+          remainingAmount: remainingAmount.toNumber() / 10 ** USDC_DECIMALS,
+          swappedAmount: swappedTokens.toNumber() / 10 ** SOL_DECIMALS,
           amountFrom: `${formatTokenAmount(posData.amount, fromDecimals)} ${fromToken}`,
           amountTo: `~${amountToNum.toFixed(toDecimals)} ${toToken}`,
-          avgPrice: `${formatPrice(bookkeepingData.aPerB, fromDecimals, toDecimals)} ${toToken}/${fromToken}`,
+          avgPrice: (averagePrice.toNumber() / VOLUME_PRECISION).toFixed(4),
+          // avgPrice: `${formatPrice(bookkeepingData.aPerB, fromDecimals, toDecimals)} ${toToken}/${fromToken}`,
           duration: formatSlotDuration(posData.startSlot, posData.endSlot),
           progress: Math.round(progress),
           estSavings: "N/A", // Placeholder

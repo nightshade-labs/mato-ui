@@ -9,6 +9,8 @@ type Position = {
     fromIcon: any;
     toIcon: any;
   };
+  remainingAmount: number;
+  swappedAmount: number;
   amountFrom: string;
   amountTo: string;
   avgPrice: string;
@@ -44,6 +46,8 @@ export function PositionsGrid({ positions }: PositionsGridProps) {
           key={position.id}
           id={position.id}
           tokens={position.tokens}
+          remainingAmount={position.remainingAmount}
+          swappedAmount={position.swappedAmount}
           amountFrom={position.amountFrom}
           amountTo={position.amountTo}
           avgPrice={position.avgPrice}

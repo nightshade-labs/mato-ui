@@ -2,7 +2,7 @@
 
 import MarketDataPage from "./market-data";
 import { SwapPanel } from "./swap-panel";
-import PositionsSection from "./positions-section";
+// import PositionsSection from "./positions-section";
 import { useState } from "react";
 
 export default function MatoFeature() {
@@ -21,7 +21,7 @@ export default function MatoFeature() {
         </div>
       </div>
 
-      <PositionsSection />
+      {/* <PositionsSection /> */}
     </div>
   );
 }
