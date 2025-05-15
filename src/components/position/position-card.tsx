@@ -222,7 +222,7 @@ export function PositionCard({
           <span
             className={`text-xs font-medium ${status === "Canceled" ? "text-[#1CF6C2]" : styles.statusColor}`}
           >
-            {avgPrice}
+            {avgPrice} USDC
           </span>
         </div>
       </div>

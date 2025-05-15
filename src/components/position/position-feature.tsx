@@ -106,7 +106,7 @@ const SOL_DECIMALS = 9;
 const USDC_DECIMALS = 6;
 
 export default function PositionsFeature() {
-  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("grid");
   const [tickCount, setTickCount] = useState(0); // State to trigger re-renders for timer updates
 
   const {
