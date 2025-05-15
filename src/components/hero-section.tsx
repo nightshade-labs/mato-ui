@@ -86,10 +86,12 @@ export default function HeroSection() {
                     asChild
                     size="lg"
                     variant={"default"}
-                    className="rounded-xl w-40 border-none outline-none bg-black text-white hover:bg-neutral-800 px-5 text-base"
+                    className="rounded-xl  w-40 border-none outline-none bg-black text-white hover:bg-neutral-800 px-5 text-base"
                   >
-                    <Link href="/swap" className="flex items-center gap-2">
-                      <span className="text-nowrap">Launch App</span>
+                    <Link href="/swap" className="flex  items-center gap-2">
+                      <span className="text-nowrap animate-pulse">
+                        Launch App
+                      </span>
                     </Link>
                   </Button>
                 </div>

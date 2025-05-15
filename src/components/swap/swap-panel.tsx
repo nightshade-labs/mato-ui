@@ -263,6 +263,10 @@ export function SwapPanel({
       );
     } finally {
       setIsSubmitting(false);
+      form.reset({
+        amount: 0,
+        duration: form.getValues().duration,
+      });
     }
   }
 
