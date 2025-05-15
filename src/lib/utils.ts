@@ -11,6 +11,7 @@ const slotsPerSecond = 2.5;
 durationStringToSlots.set("5sec", 5 * slotsPerSecond);
 durationStringToSlots.set("1min", 60 * slotsPerSecond);
 durationStringToSlots.set("5min", 5 * 60 * slotsPerSecond);
+durationStringToSlots.set("10min", 10 * 60 * slotsPerSecond);
 durationStringToSlots.set("1hour", 60 * 60 * slotsPerSecond);
 durationStringToSlots.set("1day", 60 * 60 * 24 * slotsPerSecond);
 durationStringToSlots.set("1week", 60 * 60 * 24 * 7 * slotsPerSecond);

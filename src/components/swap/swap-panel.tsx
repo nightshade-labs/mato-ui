@@ -30,6 +30,7 @@ import { ControlButtons } from "./control-buttons";
 import { PriceImpactDisplay } from "./price-impact-display";
 import { ProtectionStatus } from "./protection-status";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
+import { NATIVE_MINT } from "@solana/spl-token";
 
 const SwapFormSchema = z.object({
   amount: z.number().gt(0, "Must be greater than zero"),
@@ -61,9 +62,13 @@ export function SwapPanel({
   const provider = useAnchorProvider();
 
   const getBalance = useGetBalance({ address: provider.publicKey });
-  const getTokenBalance = useGetTokenBalance({
+  const getUSDCTokenBalance = useGetTokenBalance({
     address: provider.publicKey,
     mintAddress: USDC_MINT,
+  });
+  const getSOLTokenBalance = useGetTokenBalance({
+    address: provider.publicKey,
+    mintAddress: NATIVE_MINT,
   });
 
   const form = useForm<z.infer<typeof SwapFormSchema>>({
@@ -126,14 +131,14 @@ export function SwapPanel({
         currentInputError = true;
         hardErrorActive = true;
         currentErrorMessage = "Amount must be greater than zero";
-      } else if (getTokenBalance.data) {
-        const maxAmount = getTokenBalance.data?.value?.uiAmount || 0;
+      } else if (getUSDCTokenBalance.data) {
+        const maxAmount = getUSDCTokenBalance.data?.value?.uiAmount || 0;
         if (amount > maxAmount) {
           currentInputError = true;
           softErrorActive = true;
           currentErrorMessage = "Insufficient USDC balance";
         }
-      } else if (getTokenBalance.isLoading) {
+      } else if (getUSDCTokenBalance.isLoading) {
         // Optionally handle loading state, e.g., disable input or show loader
       }
     } else if (fromToken.symbol === "SOL") {
@@ -141,8 +146,15 @@ export function SwapPanel({
         currentInputError = true;
         hardErrorActive = true;
         currentErrorMessage = "Amount must be greater than zero";
-      } else if (getBalance.data) {
-        const maxAmount = getBalance.data / LAMPORTS_PER_SOL - 0.003; // Buffer for fees
+      } else if (
+        getBalance.data !== undefined &&
+        getSOLTokenBalance !== undefined
+      ) {
+        const maxAmount =
+          (getBalance.data +
+            parseInt(getSOLTokenBalance.data?.value.amount || "0")) /
+            LAMPORTS_PER_SOL -
+          0.003; // Buffer for fees
         if (amount > maxAmount) {
           currentInputError = true;
           softErrorActive = true;
@@ -160,22 +172,22 @@ export function SwapPanel({
     // Output validation logic for liquidity checks
     // This part needs to be updated based on the actual from/to tokens and their liquidity
     let currentOutputErrorState = false; // store output error state separately
-    if (!currentInputError) {
-      // Only check output error if no input error
-      if (fromToken.symbol === "USDC" && toToken.symbol === "SOL") {
-        if (amount / 98 > 10000) {
-          // Mock liquidity for SOL
-          currentOutputErrorState = true;
-          currentErrorMessage = "Not enough SOL liquidity for this amount.";
-        }
-      } else if (fromToken.symbol === "SOL" && toToken.symbol === "USDC") {
-        if (amount * 98 > 1000000) {
-          // Mock liquidity for USDC
-          currentOutputErrorState = true;
-          currentErrorMessage = "Not enough USDC liquidity for this amount.";
-        }
-      }
-    }
+    // if (!currentInputError) {
+    //   // Only check output error if no input error
+    //   if (fromToken.symbol === "USDC" && toToken.symbol === "SOL") {
+    //     if (amount / 98 > 10000) {
+    //       // Mock liquidity for SOL
+    //       currentOutputErrorState = true;
+    //       currentErrorMessage = "Not enough SOL liquidity for this amount.";
+    //     }
+    //   } else if (fromToken.symbol === "SOL" && toToken.symbol === "USDC") {
+    //     if (amount * 98 > 1000000) {
+    //       // Mock liquidity for USDC
+    //       currentOutputErrorState = true;
+    //       currentErrorMessage = "Not enough USDC liquidity for this amount.";
+    //     }
+    //   }
+    // }
     setOutputError(currentOutputErrorState); // Set output error state
 
     // Set errorMessage based on priority: input error > output error
@@ -190,8 +202,8 @@ export function SwapPanel({
     amount,
     getBalance.data,
     getBalance.isLoading,
-    getTokenBalance.data,
-    getTokenBalance.isLoading,
+    getUSDCTokenBalance.data,
+    getUSDCTokenBalance.isLoading,
     fromToken,
     toToken,
     LAMPORTS_PER_SOL,
@@ -216,7 +228,7 @@ export function SwapPanel({
       const slotDuration = durationStringToSlots.get(data.duration) || 30;
 
       if (fromToken.symbol === "USDC") {
-        if (!getTokenBalance.data) {
+        if (!getUSDCTokenBalance.data) {
           console.error("USDC balance not loaded.");
           setErrorMessage("USDC balance not available. Please try again.");
           setIsSubmitting(false);
@@ -224,7 +236,7 @@ export function SwapPanel({
         }
         await depositTokenB.mutateAsync({
           amount:
-            data.amount * 10 ** (getTokenBalance.data.value.decimals || 6),
+            data.amount * 10 ** (getUSDCTokenBalance.data.value.decimals || 6),
           duration: slotDuration,
         });
       } else if (fromToken.symbol === "SOL") {
@@ -311,7 +323,8 @@ export function SwapPanel({
   const renderPercentageButtons = () => {
     if (fromToken.symbol === "SOL") {
       return (
-        getBalance.data !== undefined && (
+        getBalance.data !== undefined &&
+        getSOLTokenBalance.data !== undefined && (
           <div className="flex gap-1 items-center">
             <PercentageButton
               percent="25%"
@@ -321,7 +334,16 @@ export function SwapPanel({
               onClick={() => {
                 form.setValue(
                   "amount",
-                  Number((getBalance.data / LAMPORTS_PER_SOL / 4).toFixed(9))
+                  Number(
+                    (
+                      (getBalance.data +
+                        parseInt(
+                          getSOLTokenBalance.data?.value.amount || "0"
+                        )) /
+                      LAMPORTS_PER_SOL /
+                      4
+                    ).toFixed(9)
+                  )
                 );
               }}
             />
@@ -333,7 +355,16 @@ export function SwapPanel({
               onClick={() => {
                 form.setValue(
                   "amount",
-                  Number((getBalance.data / LAMPORTS_PER_SOL / 2).toFixed(9))
+                  Number(
+                    (
+                      (getBalance.data +
+                        parseInt(
+                          getSOLTokenBalance.data?.value.amount || "0"
+                        )) /
+                      LAMPORTS_PER_SOL /
+                      2
+                    ).toFixed(9)
+                  )
                 );
               }}
             />
@@ -346,7 +377,14 @@ export function SwapPanel({
                 form.setValue(
                   "amount",
                   Number(
-                    (getBalance.data / LAMPORTS_PER_SOL - 0.003).toFixed(9)
+                    (
+                      (getBalance.data +
+                        parseInt(
+                          getSOLTokenBalance.data?.value.amount || "0"
+                        )) /
+                        LAMPORTS_PER_SOL -
+                      0.003
+                    ).toFixed(9)
                   )
                 );
               }}
@@ -356,7 +394,7 @@ export function SwapPanel({
       );
     } else if (fromToken.symbol === "USDC") {
       return (
-        getTokenBalance.data !== undefined && (
+        getUSDCTokenBalance.data !== undefined && (
           <div className="flex gap-1 items-center">
             <PercentageButton
               percent="25%"
@@ -367,9 +405,9 @@ export function SwapPanel({
                 form.setValue(
                   "amount",
                   Number(
-                    ((getTokenBalance.data?.value?.uiAmount || 0) / 4).toFixed(
-                      getTokenBalance.data?.value?.decimals || 6
-                    )
+                    (
+                      (getUSDCTokenBalance.data?.value?.uiAmount || 0) / 4
+                    ).toFixed(getUSDCTokenBalance.data?.value?.decimals || 6)
                   )
                 );
               }}
@@ -383,9 +421,9 @@ export function SwapPanel({
                 form.setValue(
                   "amount",
                   Number(
-                    ((getTokenBalance.data?.value?.uiAmount || 0) / 2).toFixed(
-                      getTokenBalance.data?.value?.decimals || 6
-                    )
+                    (
+                      (getUSDCTokenBalance.data?.value?.uiAmount || 0) / 2
+                    ).toFixed(getUSDCTokenBalance.data?.value?.decimals || 6)
                   )
                 );
               }}
@@ -399,8 +437,8 @@ export function SwapPanel({
                 form.setValue(
                   "amount",
                   Number(
-                    (getTokenBalance.data?.value?.uiAmount || 0).toFixed(
-                      getTokenBalance.data?.value?.decimals || 6
+                    (getUSDCTokenBalance.data?.value?.uiAmount || 0).toFixed(
+                      getUSDCTokenBalance.data?.value?.decimals || 6
                     )
                   )
                 );
@@ -415,10 +453,14 @@ export function SwapPanel({
 
   const currentBalance =
     fromToken.symbol === "SOL"
-      ? getBalance.data
-        ? (getBalance.data / LAMPORTS_PER_SOL).toFixed(4)
+      ? getBalance.data !== undefined && getSOLTokenBalance.data !== undefined
+        ? (
+            (getBalance.data +
+              parseInt(getSOLTokenBalance.data?.value.amount || "0")) /
+            LAMPORTS_PER_SOL
+          ).toFixed(4)
         : "0.00"
-      : getTokenBalance.data?.value?.uiAmountString || "0.00";
+      : getUSDCTokenBalance.data?.value?.uiAmountString || "0.00";
 
   const swapAnimationTransition = {
     type: "spring",
@@ -452,10 +494,14 @@ export function SwapPanel({
     usdValue: `$${estimatedToUsd.toFixed(2)}`,
     balance:
       toToken.symbol === "SOL"
-        ? getBalance.data
-          ? (getBalance.data / LAMPORTS_PER_SOL).toFixed(4)
+        ? getBalance.data !== undefined && getSOLTokenBalance.data !== undefined
+          ? (
+              (getBalance.data +
+                parseInt(getSOLTokenBalance.data?.value.amount || "0")) /
+              LAMPORTS_PER_SOL
+            ).toFixed(4)
           : "0.00"
-        : getTokenBalance.data?.value?.uiAmountString || "0.00",
+        : getUSDCTokenBalance.data?.value?.uiAmountString || "0.00",
     error: outputError,
     errorMessage: outputError ? errorMessage : "",
   };
@@ -551,7 +597,7 @@ export function SwapPanel({
                     )}
                   </div>
                 </LayoutGroup>
-                <DurationSelector form={form} />
+                <DurationSelector form={form} fromToken={fromToken.symbol} />
 
                 <Button
                   type="button"

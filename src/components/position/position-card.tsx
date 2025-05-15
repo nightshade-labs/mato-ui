@@ -19,6 +19,8 @@ type PositionCardProps = {
   amountTo: string;
   avgPrice: string;
   duration: string;
+  remainingAmount: number;
+  swappedAmount: number;
   progress: number;
   status: "Active" | "Successful" | "Canceled" | "Failed";
   timeLeft?: string;
@@ -30,6 +32,8 @@ export function PositionCard({
   amountFrom,
   amountTo,
   avgPrice,
+  remainingAmount,
+  swappedAmount,
   duration,
   progress,
   status,
@@ -41,7 +45,7 @@ export function PositionCard({
   const toAmount = amountTo.split(" ")[0];
 
   // Calculate sell progress percentage (just using progress value)
-  const sellProgress = progress;
+  const sellProgress = 100 - progress;
 
   // Calculate buy progress (for demo, using the same progress)
   const buyProgress = progress;
@@ -153,7 +157,7 @@ export function PositionCard({
               </span>
             </div>
             <span className={`text-xs font-bold ${styles.valueColor}`}>
-              {fromAmount}
+              {remainingAmount.toFixed(4)}
             </span>
           </div>
           <div className={`w-full ${styles.progressBarBg} rounded-lg h-2`}>
@@ -188,7 +192,7 @@ export function PositionCard({
               </span>
             </div>
             <span className={`text-xs font-bold ${styles.valueColor}`}>
-              {toAmount}
+              {swappedAmount.toFixed(4)}
             </span>
           </div>
           <div className={`w-full ${styles.progressBarBg} rounded-lg h-2`}>
@@ -208,7 +212,7 @@ export function PositionCard({
         <div className="flex items-center w-full gap-1 flex-wrap">
           <span className="text-xs font-bold text-[#E9F6F3]">Time Left:</span>
           <span className={`text-xs font-medium ${styles.statusColor}`}>
-            {timeLeft || duration}
+            {timeLeft || "0m 00s"}
           </span>
         </div>
 
@@ -218,7 +222,7 @@ export function PositionCard({
           <span
             className={`text-xs font-medium ${status === "Canceled" ? "text-[#1CF6C2]" : styles.statusColor}`}
           >
-            {avgPrice}
+            {avgPrice} USDC
           </span>
         </div>
       </div>
