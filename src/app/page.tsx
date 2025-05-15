@@ -9,8 +9,8 @@ function LandingPage() {
   return (
     <div>
       <HeroSection />
-      <FeaturesSection />
       <Features />
+      <FeaturesSection />
 
       <FAQsFour />
       <FooterSection />

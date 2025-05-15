@@ -19,12 +19,12 @@ export default function FeaturesSection() {
           <div className="p-6 sm:p-12">
             <span className="text-muted-foreground flex items-center gap-2">
               <TrendingUp className="size-4 " />
-              Better Trading Prices
+              Low Price Impact
             </span>
 
             <p className="mt-8 text-2xl  font-clash font-medium">
-              Get better prices with continuous trade execution that minimizes
-              market impact.
+              Choose a trade duration to adjusting your needs between urgency
+              and better prices.
             </p>
           </div>
 
@@ -36,54 +36,44 @@ export default function FeaturesSection() {
               </div> */}
             </div>
 
-            <div className="relative overflow-hidden">
+            {/* <div className="relative overflow-hidden">
               <div className="bg-radial z-1 to-background absolute inset-0 from-transparent to-75%"></div>
-              {/* <Map /> */}
-              {/* <video src="/gif.mp4" autoPlay loop muted /> */}
               <Image
-                src="/a1.jpeg"
+                src="/drop.jpg"
                 width={300}
-                className="mx-auto pb-8 hover:scale-105 duration-300"
+                className="mx-auto pb-8 hover:scale-105 duration-300 rounded-md"
                 height={400}
-                alt="gif"
+                alt="drop"
               />
-            </div>
+            </div> */}
           </div>
         </div>
         <div className="overflow-hidden border-t bg-zinc-50 p-6 sm:p-12 md:border-0 md:border-l dark:bg-transparent">
           <div className="relative z-10">
             <span className="text-muted-foreground  flex items-center gap-2">
               <Shield className="size-4" />
-              Always-On Bot Protection
+              No value leakage
             </span>
 
             <p className="my-8 text-2xl font-clash font-medium">
-              Trade with confidence knowing your orders are protected from
-              front-running and sandwich attacks.
+              By eliminating extractive strategies like front-running and
+              sandwich attacks, Mato ensures users receive better prices.
             </p>
           </div>
           <div aria-hidden className="flex flex-col gap-8">
-            <div>
+            {/* <div>
               <div className="flex items-center gap-2">
-                <span className="flex size-5 rounded-full border">
-                  {/* <Logo className="m-auto size-3" /> */}
-                </span>
-                {/* <span className="text-muted-foreground text-xs">
-                  Sat 22 Feb
-                </span> */}
+                <span className="flex size-5 rounded-full border"></span>
               </div>
-              {/* <div className="rounded-(--radius) bg-background mt-1.5 w-3/5 border p-3 text-xs">
-                Hey, I'm having trouble with my account.
-              </div> */}
 
               <Image
-                src="/a2.jpeg"
+                src="/peaceful.jpg"
                 width={300}
                 height={100}
-                className="mx-auto  hover:scale-105 duration-300"
-                alt="Another description"
+                className="mx-auto  hover:scale-105 duration-300 rounded-md"
+                alt=""
               />
-            </div>
+            </div> */}
 
             {/* <div>
               <div className="rounded-(--radius) mb-1 ml-auto w-3/5 bg-green-800 p-3 text-xs text-white">

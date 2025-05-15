@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ShieldCheck, LineChart, Timer } from "lucide-react";
 import { ReactNode } from "react";
+import Image from "next/image";
 
 export default function Features() {
   return (
@@ -11,66 +12,75 @@ export default function Features() {
       <div className="@container mx-auto max-w-5xl px-6">
         <div className="text-center">
           <h2 className="text-balance font-clash text-4xl font-semibold lg:text-5xl">
-            Trading on Mato is Simple
+            Trading as a Stream
           </h2>
           <p className="mt-4">
-            We've designed the interface to be intuitive for everyone, with
-            powerful features that protect your trades.
+            Instead of treating trades as instant, all-or-nothing events, Mato
+            executes orders continuously over time.
           </p>
         </div>
         <div className="max-w-full lg:grid-cols-3 mx-auto mt-8 grid grid-cols-1 gap-6 *:text-center md:mt-16">
           <Card className="group bg-black shadow-zinc-950/5">
-            <CardHeader className="pb-3">
-              <CardDecorator>
-                <Timer className="size-6" aria-hidden />
-              </CardDecorator>
-
-              <h3 className="mt-6 font-medium font-clash ">
-                Set Your Duration
-              </h3>
+            <CardHeader className="h-40 pb-3 items-center">
+              <Image
+                className="items-center"
+                alt={""}
+                src={"/intent.svg"}
+                width={200}
+                height={200}
+              />
             </CardHeader>
-
             <CardContent>
-              <p className="text-sm">
-                Choose how long your order continuously executes in the market.
-                Longer durations typically result in better prices.
+              <h3 className="mt-6 text-xl font-medium font-clash ">
+                Submit your Trade Intent
+              </h3>
+
+              <p className="text-sm mt-4">
+                Set your terms by specifying quantity, limit price and trade
+                duration.
               </p>
             </CardContent>
           </Card>
-
           <Card className="group bg-black shadow-zinc-950/5">
-            <CardHeader className="pb-3">
-              <CardDecorator>
-                <ShieldCheck className="size-6" aria-hidden />
-              </CardDecorator>
-
-              <h3 className="mt-6 font-medium font-clash ">
-                Protected Trading
-              </h3>
+            <CardHeader className="h-40 pb-3 items-center">
+              <Image
+                className="items-center"
+                alt={""}
+                src={"/marketprice.svg"}
+                width={180}
+                height={180}
+              />
             </CardHeader>
-
             <CardContent>
-              <p className="mt-3 text-sm">
-                Trade with confidence knowing your orders are automatically
-                protected from front-running and sandwich attacks.
+              <h3 className="mt-6 text-xl font-medium font-clash ">
+                Price Discovery
+              </h3>
+
+              <p className="text-sm mt-4">
+                Mato finds the market clearing price by matching supply and
+                demand. Every order settles at this uniform price.
               </p>
             </CardContent>
           </Card>
-
           <Card className="group bg-black shadow-zinc-950/5">
-            <CardHeader className="pb-3">
-              <CardDecorator>
-                <LineChart className="size-6" aria-hidden />
-              </CardDecorator>
-
-              <h3 className="mt-6 font-medium font-clash ">See Your Savings</h3>
+            <CardHeader className="h-40 pb-3 items-center">
+              <Image
+                className="items-center"
+                alt={""}
+                src={"/automation.svg"}
+                width={180}
+                height={280}
+              />
             </CardHeader>
-
             <CardContent>
-              <p className="mt-3 text-sm">
-                After each trade, see how much you saved compared to an
-                immediate market swap. Track your trading performance in
-                real-time.
+              <h3 className="mt-6 text-xl font-medium font-clash ">
+                Built-in Automation
+              </h3>
+
+              <p className="text-sm mt-4">
+                Your trade executes continuously as long as the market stays
+                within your price limits, pausing automatically when it moves
+                out of range.
               </p>
             </CardContent>
           </Card>

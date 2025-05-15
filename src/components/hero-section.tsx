@@ -53,7 +53,7 @@ export default function HeroSection() {
                 as="h1"
                 className="text-balance text-4xl font-medium sm:text-5xl md:text-6xl"
               >
-                Fairer Trades, Better Outcomes. Experience Mato on Solana.
+                What Markets were meant to be
               </TextEffect>
               <TextEffect
                 per="line"
@@ -63,9 +63,9 @@ export default function HeroSection() {
                 as="p"
                 className="mx-auto mt-8 max-w-2xl text-pretty text-lg"
               >
-                Mato is the Solana DEX built for fair, bot-protected trading.
-                Set your price and duration, and let Mato execute your trades
-                continuously for better results.
+                Mato is a DEX built for fair, bot-protected trading. It serves
+                users with an honest trade interest instead of bots, snipers and
+                pump'n'dumpers.
               </TextEffect>
               <AnimatedGroup
                 variants={{
