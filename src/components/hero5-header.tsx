@@ -7,8 +7,8 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
-  { name: "Features", href: "#features" },
   { name: "Solutions", href: "#solutions" },
+  { name: "Features", href: "#features" },
   { name: "FAQs", href: "#faqs" },
   { name: "Join Us", href: "#join-us" },
 ];
@@ -63,7 +63,7 @@ export const HeroHeader = () => {
                   <li key={index}>
                     <Link
                       href={item.href}
-                      className="text-muted-foreground hover:text-accent-foreground block duration-150"
+                      className="text-muted-foreground hover:text-accent block duration-150"
                     >
                       <span>{item.name}</span>
                     </Link>
