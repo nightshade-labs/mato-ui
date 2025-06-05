@@ -46,8 +46,8 @@ export default function HeroSectionNew() {
             aria-hidden
             className="bg-linear-to-b to-[#101111] absolute contain-strict inset-0 z-40 from-transparent from-35%"
           /> */}
-          <div className="relative bg-[url('/bg.png')] bg-blend-darken bg-contain  pt-24 md:pt-36">
-            <AnimatedGroup
+          <div className="relative bg-[url('/bg.png')]  bg-blend-darken bg-contain  pt-24 md:pt-36">
+            {/* <AnimatedGroup
               variants={{
                 container: {
                   visible: {
@@ -81,7 +81,7 @@ export default function HeroSectionNew() {
                 width="3276"
                 height="4095"
               />
-            </AnimatedGroup>
+            </AnimatedGroup> */}
             <div className="absolute inset-0 -z-10 size-full [background:radial-gradient(125%_125%_at_50%_100%,transparent_0%,var(--color-background)_75%)]"></div>
             <div className="mx-auto max-w-7xl px-6">
               <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0">

@@ -15,7 +15,7 @@ function LandingPage() {
     <div className="bg-[#101111]">
       {/* <HeroSection /> */}
       <HeroSectionNew />
-      <div className="max-w-7xl pt-16 mx-auto flex flex-col gap-16">
+      <div className="max-w-6xl pt-16 mx-auto flex flex-col gap-16">
         {/* <Features /> */}
         <WhyChooseMato />
         <CTASection />
