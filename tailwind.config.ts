@@ -108,10 +108,50 @@ const config: Config = {
             height: "0",
           },
         },
+        "scroll-left": {
+          "0%": {
+            transform: "translateX(0%)",
+          },
+          "100%": {
+            transform: "translateX(-100%)",
+          },
+        },
+        "scroll-right": {
+          "0%": {
+            transform: "translateX(-100%)",
+          },
+          "100%": {
+            transform: "translateX(0%)",
+          },
+        },
+        "shimmer-slide": {
+          to: {
+            transform: "translate(calc(100cqw - 50%), -50%) rotate(90deg)",
+          },
+        },
+        "spin-around": {
+          "0%": {
+            transform: "translateZ(0) rotate(0)",
+          },
+          "15%, 35%": {
+            transform: "translateZ(0) rotate(90deg)",
+          },
+          "65%, 85%": {
+            transform: "translateZ(0) rotate(270deg)",
+          },
+          "100%": {
+            transform: "translateZ(0) rotate(360deg)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "scroll-left": "scroll-left var(--duration) linear infinite",
+        "scroll-right": "scroll-right var(--duration) linear infinite",
+        "shimmer-slide":
+          "shimmer-slide var(--speed) ease-out infinite alternate",
+        "spin-around": "spin-around calc(var(--speed) * 2) infinite linear",
       },
     },
   },
