@@ -1,5 +1,3 @@
-import { delay } from "framer-motion";
-
 export const navVariants = {
   hidden: {
     opacity: 0,
@@ -25,7 +23,7 @@ export const slideIn = (
   direction: string,
   type: any,
   delay: any,
-  duration: any,
+  duration: any
 ) => ({
   hidden: {
     x: direction === "left" ? "-100%" : direction === "right" ? "100%" : 0,
@@ -98,7 +96,7 @@ export const fadeIn = (
   direction: string,
   type: any,
   delay: any,
-  duration: any,
+  duration: any
 ) => ({
   hidden: {
     x: direction === "left" ? 100 : direction === "right" ? -100 : 0,
@@ -192,7 +190,7 @@ export const textVariantStagger = (staggerTime = 0.1, initialDelay = 0) => ({
 // For child elements
 export const textVariantStaggerChild = (
   staggerTime = 0.1,
-  initialDelay = 0,
+  initialDelay = 0
 ) => ({
   hidden: { opacity: 0, y: 20 },
   show: {
