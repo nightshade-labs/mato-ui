@@ -85,7 +85,7 @@ export default function FAQsFour() {
           <h1 className="text-white text-4xl md:text-5xl font-medium mb-4">
             Frequently Asked Questions
           </h1>
-          <p className="text-white text-lg font-medium max-w-4xl mx-auto">
+          <p className="text-white/80  text-lg font-medium max-w-4xl mx-auto">
             Find clear answers to common questions about MATO, decentralized
             trading on Solana, and our unique Time-Weighted Order Book (TWOB)
             model.

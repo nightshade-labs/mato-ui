@@ -1,6 +1,7 @@
 import React from "react";
 import { ShimmerButton } from "@/components/magicui/shimmer-button";
 import { ArrowUpRight } from "lucide-react";
+import Image from "next/image";
 
 interface TokenData {
   name: string;
@@ -9,6 +10,7 @@ interface TokenData {
   change: string;
   isPositive: boolean;
   iconColor: string;
+  logo?: string;
 }
 
 const tokenData: TokenData[] = [
@@ -19,14 +21,16 @@ const tokenData: TokenData[] = [
     change: "+1.71%",
     isPositive: true,
     iconColor: "bg-purple-500",
+    logo: "/solana-sol-logo.png",
   },
   {
-    name: "Aave",
-    symbol: "AAVE",
+    name: "USDC",
+    symbol: "USDC",
     price: "$200.73",
     change: "+2.63%",
     isPositive: true,
     iconColor: "bg-pink-500",
+    logo: "/usdc-icon.png",
   },
   {
     name: "Chainlink",
@@ -35,20 +39,34 @@ const tokenData: TokenData[] = [
     change: "+1.04%",
     isPositive: true,
     iconColor: "bg-blue-500",
+    logo: "/chainlink.webp",
   },
   {
-    name: "GateToken",
-    symbol: "GT",
+    name: "Jupiter",
+    symbol: "JUP",
     price: "$19.13",
     change: "-1.61%",
     isPositive: false,
     iconColor: "bg-orange-500",
+    logo: "/jupiter.webp",
   },
 ];
 
 const TokenTicker = ({ token }: { token: TokenData }) => (
   <div className="flex cursor-crosshair hover:scale-105 transition-all duration-200 items-center gap-3 bg-[#109071] rounded-full px-4 py-2 whitespace-nowrap">
-    <div className={`w-12 h-12 rounded-full ${token.iconColor}`} />
+    {token.logo ? (
+      <div className="w-12 h-12 rounded-full ">
+        <Image
+          src={token.logo}
+          width={48}
+          height={48}
+          alt={`${token.name} logo`}
+          className="w-12 h-12 rounded-full"
+        />
+      </div>
+    ) : (
+      <div className={`w-12 h-12 rounded-full ${token.iconColor}`} />
+    )}
     <div className="flex flex-col">
       <span className="text-[#E9F6F3] font-medium text-lg">{token.name}</span>
       <div className="flex items-center gap-2">

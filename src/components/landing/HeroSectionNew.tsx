@@ -46,7 +46,7 @@ export default function HeroSectionNew() {
             aria-hidden
             className="bg-linear-to-b to-[#101111] absolute contain-strict inset-0 z-40 from-transparent from-35%"
           /> */}
-          <div className="relative bg-[url('/bg.png')]  bg-blend-darken bg-contain  pt-24 md:pt-36">
+          <div className="relative bg-[url('/bg.png')]  bg-blend-darken lg:bg-contain  pt-24 md:pt-36">
             {/* <AnimatedGroup
               variants={{
                 container: {
@@ -115,7 +115,7 @@ export default function HeroSectionNew() {
                   preset="fade-in-blur"
                   speedSegment={0.3}
                   as="h1"
-                  className="mt-8 text-balance font-medium text-6xl md:text-7xl lg:mt-16 xl:text-[5.25rem]"
+                  className="mt-8 text-balance font-medium text-5xl md:text-7xl lg:mt-16 xl:text-[5.25rem]"
                 >
                   What Markets were meant to be
                 </TextEffect>
@@ -197,46 +197,45 @@ export default function HeroSectionNew() {
           <div className="group relative m-auto max-w-5xl px-6">
             <div className="absolute inset-0 z-10 flex scale-95 items-center justify-center opacity-0 duration-500 group-hover:scale-100 group-hover:opacity-100">
               <Link
-                href="/"
-                className="block text-sm duration-150 hover:opacity-75"
+                href="#social-proof"
+                className="block text-sm duration-150 -mt-16 hover:opacity-75"
               >
                 <span> Our Connections</span>
 
                 <ChevronRight className="ml-1 inline-block size-3" />
               </Link>
             </div>
-            <div className="group-hover:blur-xs mx-auto mt-12 grid max-w-2xl grid-cols-4 gap-x-12 gap-y-8 transition-all duration-500 group-hover:opacity-50 sm:gap-x-16 sm:gap-y-14">
+            <div className="group-hover:blur-xs mx-auto mt-8 grid max-w-2xl grid-cols-3 gap-x-12 gap-y-8 transition-all duration-500 group-hover:opacity-50 sm:gap-x-16 sm:gap-y-14">
               <div className="flex">
-                <img
-                  className="mx-auto h-4 w-fit dark:invert"
-                  src="https://html.tailus.io/blocks/customers/column.svg"
+                <Image
+                  className="mx-auto h-24 lg:h-40 w-fit -mt-8 "
+                  src="/builderMansion.png"
                   alt="Column Logo"
-                  height="16"
-                  width="auto"
+                  height="800"
+                  width="800"
                 />
               </div>
 
               <div className="flex">
-                <img
-                  className="mx-auto h-5 w-fit dark:invert"
-                  src="https://html.tailus.io/blocks/customers/lemonsqueezy.svg"
-                  alt="Lemon Squeezy Logo"
-                  height="20"
-                  width="auto"
+                <Image
+                  className="mx-auto h-20 lg:h-36 -mt-6 w-fit  "
+                  src="/breakoutLogo.png"
+                  alt="Column Logo"
+                  height="500"
+                  width="500"
+                />
+              </div>
+              <div className="flex">
+                <Image
+                  className="mx-auto h-30  lg:h-40 w-fit  -mt-11  "
+                  src="/superteamBlack.png"
+                  alt="Column Logo"
+                  height="500"
+                  width="500"
                 />
               </div>
 
-              <div className="flex">
-                <img
-                  className="mx-auto h-7 w-fit dark:invert"
-                  src="https://html.tailus.io/blocks/customers/lilly.svg"
-                  alt="Lilly Logo"
-                  height="28"
-                  width="auto"
-                />
-              </div>
-
-              <div className="flex">
+              {/* <div className="flex">
                 <img
                   className="mx-auto h-6 w-fit dark:invert"
                   src="https://html.tailus.io/blocks/customers/openai.svg"
@@ -244,7 +243,7 @@ export default function HeroSectionNew() {
                   height="24"
                   width="auto"
                 />
-              </div>
+              </div> */}
             </div>
           </div>
         </section>

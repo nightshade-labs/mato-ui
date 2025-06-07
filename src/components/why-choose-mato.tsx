@@ -8,48 +8,48 @@ const WhyChooseMato = () => {
         <div className="w-12 h-12 relative">
           <Image
             src={"/Shield.png"}
-            alt="price-impact"
+            alt="MEV Protection"
             width={48}
             height={48}
             className="w-full h-full "
           />
         </div>
       ),
-      title: "No Value Leakage",
+      title: "MEV Protection",
       description:
-        "By eliminating extractive strategies like front-running and sandwich attacks, Mato ensures users receive better prices.",
+        "Eliminates sandwich attacks and front-running through continuous streaming trades. Orders flow infinitely between blocks, making MEV extraction impossible.",
     },
     {
       icon: (
         <div className="w-12 h-12 relative">
           <Image
             src={"/Gauge.png"}
-            alt="price-impact"
+            alt="Time-Weighted Execution"
             width={25}
             height={25}
             className="w-full h-full"
           />
         </div>
       ),
-      title: "Low Price Impact",
+      title: "Time-Weighted Execution",
       description:
-        "Large orders are streamed into the market gradually, preventing sudden price swings and giving you more predictable execution.",
+        "Revolutionary TWOB technology streams large orders over time, dramatically reducing price impact. Trade millions without moving the market.",
     },
     {
       icon: (
         <div className="w-12 h-12 relative">
           <Image
             src={"/Scales.png"}
-            alt="price-impact"
+            alt="Fair Market Pricing"
             width={25}
             height={25}
             className="w-full h-full"
           />
         </div>
       ),
-      title: "Fair Pricing",
+      title: "Fair Market Pricing",
       description:
-        "Mato ensures everyone trading at the same time gets the same fair price, regardless of order size or trading sophistication.",
+        "All orders trading simultaneously receive the same time-weighted average price. No advantage for sophisticated traders or large institutions.",
     },
   ];
 
@@ -61,8 +61,9 @@ const WhyChooseMato = () => {
           Why Choose Mato?
         </h1>
         <p className="text-white text-lg font-medium font-['Inter'] leading-[1.21] text-center">
-          Our revolutionary Time-Weighted Order Book technology changes the game
-          for crypto traders of all levels.
+          The first Time-Weighted Order Book (TWOB) on Solana. Stream your
+          trades continuously and eliminate MEV with revolutionary on-chain
+          technology.
         </p>
       </div>
 
@@ -84,7 +85,7 @@ const WhyChooseMato = () => {
               </div>
 
               {/* Description */}
-              <p className="text-[#C5CECC] text-base font-normal font-['Inter'] leading-[1.21] flex-1">
+              <p className="text-[#C5CECC] px-2 text-base font-normal font-['Inter'] leading-[1.21] flex-1">
                 {feature.description}
               </p>
             </div>

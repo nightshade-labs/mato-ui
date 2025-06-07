@@ -6,7 +6,7 @@ const HowItWorks = () => {
     <div className="flex flex-col max-w-7xl mx-auto items-center px-2.5 py-0 gap-12 w-full">
       {/* Header Section */}
       <div className="flex flex-col items-center gap-2.5 p-2.5 w-full">
-        <h1 className="text-4xl lg:text-5xl font-medium text-white font-archivo">
+        <h1 className="text-4xl max-md:text-center lg:text-5xl font-medium text-white font-archivo">
           Trading as a Stream
         </h1>
         <p className="text-lg text-balance max-w-5xl font-medium text-center text-white/80 leading-[1.21]">
