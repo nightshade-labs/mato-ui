@@ -1,5 +1,8 @@
+"use client";
 import Image from "next/image";
 import React from "react";
+import { motion } from "motion/react";
+import { textVariant } from "@/lib/anims";
 
 const WhyChooseMato = () => {
   const features = [
@@ -57,9 +60,14 @@ const WhyChooseMato = () => {
     <section className="w-full py-16 px-4 flex flex-col items-center gap-12 ">
       {/* Header Section */}
       <div className="flex flex-col items-center gap-2.5 max-w-4xl text-center">
-        <h1 className="text-white text-5xl font-medium leading-[1.088]">
+        <motion.h1
+          // variants={textVariant(0.2)}
+          // initial="hidden"
+          // whileInView={"show"}
+          className="text-white text-5xl font-medium leading-[1.088]"
+        >
           Why Choose Mato?
-        </h1>
+        </motion.h1>
         <p className="text-white text-lg font-medium font-['Inter'] leading-[1.21] text-center">
           The first Time-Weighted Order Book (TWOB) on Solana. Stream your
           trades continuously and eliminate MEV with revolutionary on-chain

@@ -228,7 +228,7 @@ export default function HeroSectionNew() {
               <div className="flex">
                 <Image
                   className="mx-auto h-30  lg:h-40 w-fit  -mt-11  "
-                  src="/superteamBlack.png"
+                  src="/superTeamBlack.png"
                   alt="Column Logo"
                   height="500"
                   width="500"
