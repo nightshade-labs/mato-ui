@@ -144,9 +144,10 @@ export default function PositionsSection() {
                   .mul(new BN(10 ** SOL_DECIMALS))
                   .div(soldTokensBn.isZero() ? new BN(1) : soldTokensBn) // Avoid division by zero
                   .div(new BN(10 ** USDC_DECIMALS));
-                const formattedAvgPrice = (
-                  avgPriceNum.toNumber() / VOLUME_PRECISION
-                ).toFixed(4);
+                const formattedAvgPrice = avgPriceNum
+                  .div(new BN(VOLUME_PRECISION))
+                  .toNumber()
+                  .toFixed(4);
 
                 // Format amounts
                 const amountSol =
@@ -253,9 +254,10 @@ export default function PositionsSection() {
                   .mul(new BN(10 ** SOL_DECIMALS)) // Using SOL for 'to' token
                   .div(swappedTokensBn.isZero() ? new BN(1) : swappedTokensBn) // Avoid division by zero
                   .div(new BN(10 ** USDC_DECIMALS)); // Using USDC for 'from' token
-                const formattedAvgPrice = (
-                  avgPriceNum.toNumber() / VOLUME_PRECISION
-                ).toFixed(4);
+                const formattedAvgPrice = avgPriceNum
+                  .div(new BN(VOLUME_PRECISION))
+                  .toNumber()
+                  .toFixed(4);
 
                 // Format amounts
                 const amountUsdc =
