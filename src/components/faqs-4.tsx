@@ -6,6 +6,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { slideIn, textVariant } from "@/lib/anims";
+
+import { motion } from "motion/react";
 
 export default function FAQsFour() {
   const leftColumnFaqs = [
@@ -82,14 +85,24 @@ export default function FAQsFour() {
       <div className="mx-auto max-w-7xl px-4 md:px-6">
         {/* Header Section */}
         <div className="text-center mb-12">
-          <h1 className="text-white text-4xl md:text-5xl font-medium mb-4">
+          <motion.h1
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="text-white text-4xl md:text-5xl font-medium mb-4"
+          >
             Frequently Asked Questions
-          </h1>
-          <p className="text-white/80  text-lg font-medium max-w-4xl mx-auto">
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="text-white/80  text-lg font-medium max-w-4xl mx-auto"
+          >
             Find clear answers to common questions about MATO, decentralized
             trading on Solana, and our unique Time-Weighted Order Book (TWOB)
             model.
-          </p>
+          </motion.p>
         </div>
 
         {/* Two Column FAQ Layout */}
@@ -97,7 +110,10 @@ export default function FAQsFour() {
           {/* Left Column */}
           <div className="flex-1 space-y-3">
             {leftColumnFaqs.map((item) => (
-              <div
+              <motion.div
+                initial="hidden"
+                whileInView={"show"}
+                variants={textVariant(0.2)}
                 key={item.id}
                 className="bg-[#101111] border border-[#202626] rounded-lg p-5"
               >
@@ -111,14 +127,17 @@ export default function FAQsFour() {
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
-              </div>
+              </motion.div>
             ))}
           </div>
 
           {/* Right Column */}
           <div className="flex-1 space-y-3">
             {rightColumnFaqs.map((item) => (
-              <div
+              <motion.div
+                initial="hidden"
+                whileInView={"show"}
+                variants={textVariant(0.2)}
                 key={item.id}
                 className="bg-[#101111] border border-[#202626] rounded-lg p-5"
               >
@@ -132,7 +151,7 @@ export default function FAQsFour() {
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>

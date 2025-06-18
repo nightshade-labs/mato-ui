@@ -1,25 +1,46 @@
+"use client";
+import { motion } from "motion/react";
 import React from "react";
 import Image from "next/image";
+import { textVariant } from "@/lib/anims";
 
 const HowItWorks = () => {
   return (
     <div className="flex flex-col max-w-7xl mx-auto items-center px-2.5 py-0 gap-12 w-full">
       {/* Header Section */}
       <div className="flex flex-col items-center gap-2.5 p-2.5 w-full">
-        <h1 className="text-4xl max-md:text-center lg:text-5xl font-medium text-white font-archivo">
+        <motion.h1
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.7, delay: 0.2 }}
+          viewport={{ once: true }}
+          className="text-4xl max-md:text-center lg:text-5xl font-medium text-white font-archivo"
+        >
           Trading as a Stream
-        </h1>
-        <p className="text-lg text-balance max-w-5xl font-medium text-center text-white/80 leading-[1.21]">
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.7, delay: 0.3 }}
+          viewport={{ once: true }}
+          className="text-lg text-balance max-w-5xl font-medium text-center text-white/80 leading-[1.21]"
+        >
           Instead of treating trades as instant, all-or-nothing events, Mato
           executes orders continuously over time.
-        </p>
+        </motion.p>
       </div>
 
       {/* Cards Section */}
       <div className="flex flex-col gap-6 w-full">
         <div className="flex flex-col lg:flex-row justify-stretch items-stretch gap-6 w-full">
           {/* Card 1: Set Your Trade Parameters */}
-          <div className="flex flex-col gap-5 p-6 bg-[#101111] border border-[#202626] rounded-2xl flex-1 shadow-[inset_0px_0px_50px_-16px_rgba(16,144,113,0.2)]">
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            variants={textVariant(0.3)}
+            viewport={{ once: true }}
+            className="flex flex-col gap-5 p-6 bg-[#101111] border border-[#202626] rounded-2xl flex-1 shadow-[inset_0px_0px_50px_-16px_rgba(16,144,113,0.2)]"
+          >
             <div className="px-3">
               <h1 className="text-lg font-medium text-[#E9F6F3]">
                 Set Your Trade Parameters
@@ -39,10 +60,16 @@ const HowItWorks = () => {
               height={600}
               className="w-full"
             />
-          </div>
+          </motion.div>
 
           {/* Card 2: Gradual Execution Begins */}
-          <div className="flex flex-col gap-5 p-6 bg-[#101111] border border-[#202626] rounded-2xl flex-1  shadow-[inset_0px_0px_50px_-16px_rgba(16,144,113,0.2)]">
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            variants={textVariant(0.4)}
+            viewport={{ once: true }}
+            className="flex flex-col gap-5 p-6 bg-[#101111] border border-[#202626] rounded-2xl flex-1  shadow-[inset_0px_0px_50px_-16px_rgba(16,144,113,0.2)]"
+          >
             <div className="px-3">
               <h1 className="text-lg font-medium text-[#E9F6F3]">
                 Gradual Execution Begins
@@ -62,11 +89,17 @@ const HowItWorks = () => {
               height={1200}
               className="w-full"
             />
-          </div>
+          </motion.div>
         </div>
 
         {/* Card 3: Monitor & Complete Your Trade - Full Width */}
-        <div className="flex flex-col lg:flex-row justify-stretch items-stretch gap-10 p-6 bg-[#101111] border border-[#202626] rounded-2xl w-full shadow-[inset_0px_0px_50px_-16px_rgba(16,144,113,0.2)]">
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          variants={textVariant(0.5)}
+          viewport={{ once: true }}
+          className="flex flex-col lg:flex-row justify-stretch items-stretch gap-10 p-6 bg-[#101111] border border-[#202626] rounded-2xl w-full shadow-[inset_0px_0px_50px_-16px_rgba(16,144,113,0.2)]"
+        >
           {/* Left Content */}
           <div className="flex px-2 flex-col justify-between gap-5 flex-1">
             <h1 className="text-lg font-medium text-[#E9F6F3]">
@@ -87,7 +120,7 @@ const HowItWorks = () => {
             height={600}
             className="w-full lg:w-[48%]"
           />
-        </div>
+        </motion.div>
       </div>
     </div>
   );

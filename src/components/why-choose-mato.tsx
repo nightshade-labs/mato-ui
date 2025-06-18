@@ -2,7 +2,7 @@
 import Image from "next/image";
 import React from "react";
 import { motion } from "motion/react";
-import { textVariant } from "@/lib/anims";
+import { fadeIn, textVariant } from "@/lib/anims";
 
 const WhyChooseMato = () => {
   const features = [
@@ -61,25 +61,36 @@ const WhyChooseMato = () => {
       {/* Header Section */}
       <div className="flex flex-col items-center gap-2.5 max-w-4xl text-center">
         <motion.h1
-          // variants={textVariant(0.2)}
-          // initial="hidden"
-          // whileInView={"show"}
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.7, delay: 0.2 }}
+          viewport={{ once: true }}
           className="text-white text-5xl font-medium leading-[1.088]"
         >
           Why Choose Mato?
         </motion.h1>
-        <p className="text-white text-lg font-medium font-['Inter'] leading-[1.21] text-center">
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.7, delay: 0.3 }}
+          viewport={{ once: true }}
+          className="text-white text-lg font-medium font-['Inter'] leading-[1.21] text-center"
+        >
           The first Time-Weighted Order Book (TWOB) on Solana. Stream your
           trades continuously and eliminate MEV with revolutionary on-chain
           technology.
-        </p>
+        </motion.p>
       </div>
 
       {/* Cards Section */}
       <div className="w-full max-w-7xl">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, index) => (
-            <div
+            <motion.div
+              initial="hidden"
+              whileInView={"show"}
+              variants={textVariant(0.2 + index * 0.1)}
+              viewport={{ once: true }}
               key={index}
               className="bg-[#101111] border border-[#202626] rounded-2xl p-6 flex flex-col gap-4 shadow-[inset_0_0_50px_-16px_rgba(16,144,113,0.2)] h-full"
             >
@@ -96,7 +107,7 @@ const WhyChooseMato = () => {
               <p className="text-[#C5CECC] px-2 text-base font-normal font-['Inter'] leading-[1.21] flex-1">
                 {feature.description}
               </p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>

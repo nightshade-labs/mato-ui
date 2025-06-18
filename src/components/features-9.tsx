@@ -10,6 +10,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import Image from "next/image";
+import { motion } from "motion/react";
 
 export default function FeaturesSection() {
   return (
@@ -105,6 +106,7 @@ export default function FeaturesSection() {
               </span>
             </p>
           </div>
+
           <MonitoringChart />
         </div>
       </div>

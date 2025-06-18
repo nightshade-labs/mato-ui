@@ -586,7 +586,13 @@ export function SwapPanel({
                     <motion.button
                       type="button"
                       onClick={handleTokenSwitch}
-                      animate={{ top: inputError ? "53%" : "50%" }}
+                      animate={{
+                        top: !provider.publicKey
+                          ? " 47%"
+                          : inputError
+                            ? "53%"
+                            : "50%",
+                      }}
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                       className="focus:outline-none absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 mt-1"
                       aria-label="Switch tokens"

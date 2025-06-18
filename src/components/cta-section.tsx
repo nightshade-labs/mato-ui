@@ -1,7 +1,11 @@
+"use client";
 import React from "react";
 import { ShimmerButton } from "@/components/magicui/shimmer-button";
 import { ArrowUpRight } from "lucide-react";
 import Image from "next/image";
+import { motion } from "motion/react";
+import { textVariant } from "@/lib/anims";
+import Link from "next/link";
 
 interface TokenData {
   name: string;
@@ -115,7 +119,14 @@ const TickerTapeRow = ({
 
 const CTASection = () => {
   return (
-    <div className="flex flex-col  items-stretch gap-12 px-4">
+    <motion.div
+      initial="hidden"
+      whileInView={"show"}
+      variants={textVariant(0.5)}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6, delay: 0.4 }}
+      className="flex flex-col  items-stretch gap-12 px-4"
+    >
       <div className="relative bg-[#101111] border border-[#202626] rounded-2xl p-3 shadow-[inset_0px_0px_50px_-16px_rgba(16,144,113,0.2)] overflow-hidden">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Content Section */}
@@ -130,16 +141,18 @@ const CTASection = () => {
               </p>
             </div>
             <div className="mt-4">
-              <ShimmerButton
-                className="bg-[#1CF6C2] border-[#1CF6C2]/40 border-2 text-black font-semibold px-6 py-3 rounded-xl shadow-[0px_0px_34px_-5px_rgba(28,246,194,0.35)] hover:bg-[#1CF6C2]/90 transition-all duration-300"
-                shimmerColor="#ffffff"
-                background="#1CF6C2"
-              >
-                <span className="flex items-center gap-2">
-                  Launch App
-                  <ArrowUpRight className="w-4 h-4" />
-                </span>
-              </ShimmerButton>
+              <Link href={"/swap"}>
+                <ShimmerButton
+                  className="bg-[#1CF6C2] border-[#1CF6C2]/40 border-2 text-black font-semibold px-6 py-3 rounded-xl group-[hover]:shadow-[0px_0px_34px_-5px_rgba(28,246,194,0.35)]  shadow-[0px_0px_34px_-5px_rgba(28,246,194,0.35)] hover:bg-[#1CF6C2]/90 transition-all duration-300 hover:scale-105"
+                  shimmerColor="#ffffff"
+                  background="#1CF6C2"
+                >
+                  <span className="flex items-center gap-2">
+                    Launch App
+                    <ArrowUpRight className=" group-hover:rotate-45 duration-300 transition-all w-5 h-5" />
+                  </span>
+                </ShimmerButton>
+              </Link>
             </div>
           </div>
 
@@ -157,7 +170,7 @@ const CTASection = () => {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
