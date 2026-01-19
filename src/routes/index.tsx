@@ -1,5 +1,7 @@
 import ActivePositionCard from '@/components/ActivePositionCard'
+import PriceChart from '@/components/PriceChart'
 import type { TradePosition } from '@/lib/types/position'
+import { useMarketUpdates } from '@/integrations/supabase'
 import { createFileRoute } from '@tanstack/react-router'
 
 const mockPosition: TradePosition = {
@@ -27,6 +29,8 @@ import {
 export const Route = createFileRoute('/')({ component: App })
 
 function App() {
+  const { data: marketUpdates = [], isLoading } = useMarketUpdates()
+
   const features = [
     {
       icon: <Zap className="w-12 h-12 text-cyan-400" />,
@@ -109,6 +113,22 @@ function App() {
             </p>
           </div>
         </div>
+      </section>
+
+      <section className="py-8 px-6 max-w-4xl mx-auto">
+        {isLoading ? (
+          <div className="bg-gray-800 rounded-lg p-4 h-[468px] flex items-center justify-center text-gray-400">
+            Loading market data...
+          </div>
+        ) : (
+          <PriceChart
+            marketUpdates={marketUpdates}
+            baseDecimals={9}
+            quoteDecimals={6}
+            baseSymbol="SOL"
+            quoteSymbol="USDC"
+          />
+        )}
       </section>
 
       <section className="py-8 px-6 max-w-md mx-auto">

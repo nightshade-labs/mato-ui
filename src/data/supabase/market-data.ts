@@ -9,7 +9,7 @@ export const getMarketUpdates = createServerFn({
     .from('market_update_events')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(100)
+    // .limit(100)
 
   if (error) {
     throw new Error(`Failed to fetch market updates: ${error.message}`)
