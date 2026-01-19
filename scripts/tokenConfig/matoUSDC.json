@@ -1,6 +1,0 @@
-{
-  "name": "Mato USDC",
-  "symbol": "matoUSDC",
-  "description": "A USDC demo token for Mato DEX",
-  "image": "https://cdn.jsdelivr.net/gh/nightshade-labs/mato-ui/public/usd-coin-usdc-logo.png"
-}
