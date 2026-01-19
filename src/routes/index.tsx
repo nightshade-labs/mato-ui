@@ -1,4 +1,20 @@
+import ActivePositionCard from '@/components/ActivePositionCard'
+import type { TradePosition } from '@/lib/types/position'
 import { createFileRoute } from '@tanstack/react-router'
+
+const mockPosition: TradePosition = {
+  authority: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+  id: BigInt(1),
+  amount: BigInt(10_000_000_000), // 10 SOL (9 decimals)
+  startSlot: BigInt(100_000),
+  endSlot: BigInt(101_000), // 1000 slots duration
+  bookkeepingSnapshot: BigInt(0),
+  slotsWithoutTradesSnapshot: BigInt(0),
+  isBuy: false, // Selling SOL for USDC
+  bump: 255,
+}
+
+const mockCurrentSlot = BigInt(100_350) // 35% progress
 import {
   Zap,
   Server,
@@ -93,6 +109,16 @@ function App() {
             </p>
           </div>
         </div>
+      </section>
+
+      <section className="py-8 px-6 max-w-md mx-auto">
+        <ActivePositionCard
+          position={mockPosition}
+          currentSlot={mockCurrentSlot}
+          inputMint={{ symbol: 'SOL', decimals: 9 }}
+          outputMint={{ symbol: 'USDC', decimals: 6 }}
+          amountReceived={BigInt(350_000_000)} // 350 USDC received so far
+        />
       </section>
 
       <section className="py-16 px-6 max-w-7xl mx-auto">
