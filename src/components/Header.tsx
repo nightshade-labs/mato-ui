@@ -12,6 +12,7 @@ import {
   Table,
   X,
 } from 'lucide-react'
+import { WalletConnectButton } from './wallet-connect-button'
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
@@ -38,6 +39,7 @@ export default function Header() {
             />
           </Link>
         </h1>
+        <WalletConnectButton/>
       </header>
 
       <aside

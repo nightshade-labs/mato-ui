@@ -9,6 +9,7 @@ import { TanStackDevtools } from '@tanstack/react-devtools'
 import Header from '../components/Header'
 
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
+import { SolanaProvider } from '../integrations/solana'
 
 import appCss from '../styles.css?url'
 
@@ -50,8 +51,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <Header />
-        {children}
+        <SolanaProvider>
+          <Header />
+          {children}
+        </SolanaProvider>
         <TanStackDevtools
           config={{
             position: 'bottom-right',

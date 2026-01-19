@@ -16,7 +16,10 @@
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.13.8",
     "@faker-js/faker": "^10.0.0",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@solana/client": "^1.7.0",
     "@solana/kit": "^5.4.0",
+    "@solana/react-hooks": "^1.4.1",
     "@supabase/supabase-js": "^2.90.1",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/match-sorter-utils": "^8.19.4",

@@ -1,5 +1,5 @@
-import ActivePositionCard from '@/components/ActivePositionCard'
-import PriceChart from '@/components/PriceChart'
+import ActivePositionCard from '@/components/active-position-card'
+import PriceChart from '@/components/price-chart'
 import type { TradePosition } from '@/lib/types/position'
 import { useMarketUpdates } from '@/integrations/supabase'
 import { createFileRoute } from '@tanstack/react-router'
