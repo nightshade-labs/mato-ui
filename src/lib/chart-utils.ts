@@ -89,26 +89,37 @@ export function marketUpdatesToCandles(
     }
   }
 
-  const candles: CandlestickData<UTCTimestamp>[] = []
   const sortedTimes = Array.from(candleMap.keys()).sort((a, b) => a - b)
+  if (sortedTimes.length === 0) return []
 
-  let lastClose: number | null = null
-  for (const time of sortedTimes) {
-    const candle = candleMap.get(time)!
+  const firstTime = sortedTimes[0]
+  const lastTime = sortedTimes[sortedTimes.length - 1]
 
-    if (lastClose !== null && candle.open !== lastClose) {
-      candle.open = lastClose
+  const candles: CandlestickData<UTCTimestamp>[] = []
+  let lastPrice = candleMap.get(firstTime)!.open
+
+  for (let time = firstTime; time <= lastTime; time += intervalMs) {
+    const existing = candleMap.get(time)
+
+    if (existing) {
+      existing.open = lastPrice
+      candles.push({
+        time: (time / 1000) as UTCTimestamp,
+        open: existing.open,
+        high: Math.max(existing.high, existing.open),
+        low: Math.min(existing.low, existing.open),
+        close: existing.close,
+      })
+      lastPrice = existing.close
+    } else {
+      candles.push({
+        time: (time / 1000) as UTCTimestamp,
+        open: lastPrice,
+        high: lastPrice,
+        low: lastPrice,
+        close: lastPrice,
+      })
     }
-
-    candles.push({
-      time: (time / 1000) as UTCTimestamp,
-      open: candle.open,
-      high: candle.high,
-      low: candle.low,
-      close: candle.close,
-    })
-
-    lastClose = candle.close
   }
 
   return candles
