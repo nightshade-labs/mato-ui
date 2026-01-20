@@ -6,11 +6,6 @@ import {
   useWalletConnection,
 } from "@solana/react-hooks";
 
-const CONNECTORS = [
-  { id: "wallet-standard:phantom", label: "Phantom" },
-  { id: "wallet-standard:solflare", label: "Solflare" },
-  { id: "wallet-standard:backpack", label: "Backpack" },
-];
 
 function truncate(address: string) {
   return `${address.slice(0, 4)}…${address.slice(-4)}`;

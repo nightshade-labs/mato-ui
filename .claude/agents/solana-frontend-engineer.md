@@ -160,7 +160,7 @@ Use the new @theme directive for design tokens:
 - Extend shadcn/ui components using class-variance-authority (cva)
 - Use compound component pattern for complex components (Card, CardHeader, CardContent, etc.)
 - Always include loading prop with aria-busy for async buttons
-- Use Radix primitives for accessibility-first interactive components
+- Use Base primitives for accessibility-first interactive components
 
 ### Animation Guidelines
 | Type | Duration | Use Case |
