@@ -84,7 +84,7 @@ export default function ActivePositionCard({
           </div>
         </div>
         <div className="bg-gray-900 rounded-lg p-3">
-          <div className="text-xs text-gray-400">Spent</div>
+          <div className="text-xs text-gray-400"> {position.isBuy ? 'Spent' : 'Sold'}</div>
           <div className="text-white font-medium">
             {formatAmount(amountSpent, inputMint.decimals)} {inputMint.symbol}
           </div>
@@ -113,8 +113,8 @@ export default function ActivePositionCard({
           {elapsedSlots.toString()} / {totalSlots.toString()}
         </div>
         <div>
-          <span className="text-gray-500">Rate: </span>
-          {formatAmount(ratePerSlot, inputMint.decimals)}/slot
+          <span className="text-gray-500">Flow: </span>
+          {formatAmount(ratePerSlot, inputMint.decimals)} SOL/slot
         </div>
       </div>
       <div className="text-sm text-gray-400 mt-1">
