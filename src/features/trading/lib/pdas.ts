@@ -6,7 +6,7 @@ import {
   getU64Encoder,
   type Address,
 } from '@solana/kit'
-import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '@/lib/generated/twob/programs'
+import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '@/lib/generated/twob/src/generated/programs'
 import { ARRAY_LENGTH } from '../constants'
 
 const textEncoder = new TextEncoder()

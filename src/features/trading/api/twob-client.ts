@@ -7,10 +7,19 @@ import {
 } from '@solana/client'
 import type { UseSendTransactionReturnType } from '@solana/react-hooks'
 import {
+  appendTransactionMessageInstructions,
+  createTransactionMessage,
   getAddressEncoder,
+  getBase58Decoder,
   getBytesEncoder,
   getProgramDerivedAddress,
   getU64Encoder,
+  isTransactionMessageWithSingleSendingSigner,
+  pipe,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  signAndSendTransactionMessageWithSigners,
+  signTransactionMessageWithSigners,
   type Address,
 } from '@solana/kit'
 import {
@@ -20,12 +29,12 @@ import {
   fetchTradePosition,
   getTradePositionDecoder,
   getTradePositionDiscriminatorBytes,
-} from '@/lib/generated/twob/accounts'
+} from '@/lib/generated/twob/src/generated/accounts'
 import {
   getAuthorityClosePositionInstructionAsync,
   getSubmitOrderInstructionAsync,
-} from '@/lib/generated/twob/instructions'
-import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '@/lib/generated/twob/programs'
+} from '@/lib/generated/twob/src/generated/instructions'
+import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '@/lib/generated/twob/src/generated/programs'
 import { ARRAY_LENGTH } from '../constants'
 import type { StreamingMarketState, TradePositionRecord } from '../domain/models'
 import { encodeBase58 } from '../lib/base58'
@@ -271,7 +280,6 @@ export async function sendSubmitOrder({
   client,
   onBeforeSend,
   request,
-  sendTransaction,
   session,
 }: {
   client: SolanaClient
@@ -285,7 +293,6 @@ export async function sendSubmitOrder({
     isBuy: boolean
     marketAddress: Address
   }
-  sendTransaction: SendTransactionHelper
   session: WalletSession
 }) {
   const {
@@ -298,15 +305,11 @@ export async function sendSubmitOrder({
     marketAddress,
   } = request
 
-  if (inputMintAddress === WRAPPED_SOL_MINT && amount > existingWrappedAtoms) {
-    await client.wsol.sendWrap({
-      amount: amount - existingWrappedAtoms,
-      authority: session,
-      owner: session.account.address,
-    })
-  }
-
   const walletSigner = createWalletTransactionSigner(session).signer
+  const wrapShortfall =
+    inputMintAddress === WRAPPED_SOL_MINT && amount > existingWrappedAtoms
+      ? amount - existingWrappedAtoms
+      : 0n
   const marketAccount = await fetchMarket(client.runtime.rpc, marketAddress, {
     commitment: 'confirmed',
   })
@@ -355,12 +358,51 @@ export async function sendSubmitOrder({
     tokenProgram: tokenProgram.programAddress,
   })
 
-  onBeforeSend?.()
-  const signature = await sendTransaction.send({
-    authority: walletSigner,
-    instructions: [instruction],
-  })
+  const wrapInstructions =
+    wrapShortfall > 0n
+      ? (
+          await client.wsol.prepareWrap({
+            amount: wrapShortfall,
+            authority: session,
+            commitment: 'confirmed',
+            owner: session.account.address,
+          })
+        ).message.instructions
+      : []
 
+  onBeforeSend?.()
+  const { value: blockhashLifetime } = await client.runtime.rpc
+    .getLatestBlockhash({ commitment: 'confirmed' })
+    .send()
+
+  const transactionMessage = pipe(
+    createTransactionMessage({ version: 0 }),
+    (message) => setTransactionMessageFeePayerSigner(walletSigner, message),
+    (message) =>
+      setTransactionMessageLifetimeUsingBlockhash(blockhashLifetime, message),
+    (message) =>
+      appendTransactionMessageInstructions(
+        [...wrapInstructions, instruction],
+        message,
+      ),
+  )
+
+  if (isTransactionMessageWithSingleSendingSigner(transactionMessage)) {
+    const signatureBytes = await signAndSendTransactionMessageWithSigners(
+      transactionMessage,
+    )
+    return getBase58Decoder().decode(signatureBytes)
+  }
+
+  const signedTransaction = await signTransactionMessageWithSigners(
+    transactionMessage,
+  )
+  const blockhashBackedTransaction =
+    signedTransaction as Parameters<typeof client.actions.sendTransaction>[0]
+  const signature = await client.actions.sendTransaction(
+    blockhashBackedTransaction,
+    'confirmed',
+  )
   return signature.toString()
 }
 

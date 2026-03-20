@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react'
 import { WRAPPED_SOL_MINT } from '@solana/client'
 import { type Address } from '@solana/kit'
-import { useSendTransaction, useSolanaClient, useWalletSession } from '@solana/react-hooks'
+import { useSolanaClient, useWalletSession } from '@solana/react-hooks'
 import { useQueryClient } from '@tanstack/react-query'
 import { sendSubmitOrder } from '../api/twob-client'
+import { formatTransactionError } from '../lib/transaction-errors'
 import { tradingQueryKeys } from '../query-keys'
 
 type SubmitOrderStatus = 'idle' | 'building' | 'wrapping' | 'submitting' | 'success' | 'error'
@@ -11,7 +12,6 @@ type SubmitOrderStatus = 'idle' | 'building' | 'wrapping' | 'submitting' | 'succ
 export function useSubmitOrder() {
   const client = useSolanaClient()
   const session = useWalletSession()
-  const sendTransaction = useSendTransaction()
   const queryClient = useQueryClient()
   const [status, setStatus] = useState<SubmitOrderStatus>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -62,7 +62,6 @@ export function useSubmitOrder() {
             isBuy,
             marketAddress,
           },
-          sendTransaction,
           session,
         })
         setStatus('success')
@@ -73,19 +72,18 @@ export function useSubmitOrder() {
         return true
       } catch (error) {
         setStatus('error')
-        setError(error instanceof Error ? error.message : 'Failed to submit order.')
+        setError(formatTransactionError(error, 'Failed to submit order.'))
         return false
       }
     },
-    [client, queryClient, sendTransaction, session],
+    [client, queryClient, session],
   )
 
   const reset = useCallback(() => {
-    sendTransaction.reset()
     setStatus('idle')
     setError(null)
     setSignature(null)
-  }, [sendTransaction])
+  }, [])
 
   return {
     error,

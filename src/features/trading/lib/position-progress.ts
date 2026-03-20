@@ -1,5 +1,5 @@
 import type { Address } from '@solana/kit'
-import type { TradePosition } from '@/lib/generated/twob/accounts'
+import type { TradePosition } from '@/lib/generated/twob/src/generated/accounts'
 import type { StreamingMarketState } from '../domain/models'
 import { computeAveragePrice } from './market'
 

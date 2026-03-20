@@ -6,5 +6,4 @@
  * @see https://github.com/codama-idl/codama
  */
 
-export * from './closePositionEvent'
-export * from './marketUpdateEvent'
+export * from '../src/generated/types'

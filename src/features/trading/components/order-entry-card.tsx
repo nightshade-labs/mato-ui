@@ -79,35 +79,47 @@ export function OrderEntryCard({
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Available</span>
-            <Button className="rounded-full px-3" onClick={onMaxClick} size="xs" variant="ghost">
-              Max
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <label
+                className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground"
+                htmlFor="order-amount"
+              >
+                Order size
+              </label>
+              <div className="mt-1 text-sm text-muted-foreground">
+                Available {formatUiAmount(availableAmountDisplay)} {amountTokenTicker}
+              </div>
+            </div>
+            <Button className="rounded-full px-3" onClick={onMaxClick} size="xs" variant="outline">
+              Use max
             </Button>
           </div>
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <div className="text-3xl font-semibold">{formatUiAmount(availableAmountDisplay)}</div>
-              <div className="text-sm text-muted-foreground">{amountTokenTicker}</div>
+
+          <div className="rounded-[1.25rem] border border-white/10 bg-black/25 p-2">
+            <div className="flex items-center gap-3">
+              <Input
+                autoComplete="off"
+                className="h-14 border-0 bg-transparent px-3 text-2xl font-semibold shadow-none focus-visible:ring-0"
+                id="order-amount"
+                inputMode="decimal"
+                onChange={(event) => onAmountChange(event.target.value)}
+                placeholder="0.00"
+                value={amountInput}
+              />
+              <Badge className="shrink-0 rounded-full px-3 py-2 text-sm" variant="muted">
+                {amountTokenTicker}
+              </Badge>
             </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm text-muted-foreground">{selectedPercent.toFixed(2)}% of available balance</span>
             {nativeBalanceNote ? <Badge variant="muted">{nativeBalanceNote}</Badge> : null}
           </div>
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground" htmlFor="order-amount">
-              Order size ({amountTokenTicker})
-            </label>
-            <span className="text-sm text-muted-foreground">{selectedPercent.toFixed(2)}%</span>
-          </div>
-          <Input
-            id="order-amount"
-            inputMode="decimal"
-            onChange={(event) => onAmountChange(event.target.value)}
-            placeholder={`0.00 ${amountTokenTicker}`}
-            value={amountInput}
-          />
           <input
             aria-label="Use balance percentage"
             className="w-full accent-[var(--color-accent-strong)]"

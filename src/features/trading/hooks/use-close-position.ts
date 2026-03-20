@@ -3,6 +3,7 @@ import type { Address } from '@solana/kit'
 import { useSendTransaction, useSolanaClient, useWalletSession } from '@solana/react-hooks'
 import { useQueryClient } from '@tanstack/react-query'
 import { sendClosePosition } from '../api/twob-client'
+import { formatTransactionError } from '../lib/transaction-errors'
 import { tradingQueryKeys } from '../query-keys'
 
 type ClosePositionStatus = 'idle' | 'building' | 'submitting' | 'success' | 'error'
@@ -58,7 +59,7 @@ export function useClosePosition() {
         return true
       } catch (error) {
         setStatus('error')
-        setError(error instanceof Error ? error.message : 'Failed to close position.')
+        setError(formatTransactionError(error, 'Failed to close position.'))
         return false
       }
     },
