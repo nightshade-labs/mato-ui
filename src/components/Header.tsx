@@ -39,7 +39,7 @@ export default function Header() {
             />
           </Link>
         </h1>
-        <WalletConnectButton/>
+        <WalletConnectButton />
       </header>
 
       <aside

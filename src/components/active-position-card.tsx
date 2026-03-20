@@ -84,7 +84,10 @@ export default function ActivePositionCard({
           </div>
         </div>
         <div className="bg-gray-900 rounded-lg p-3">
-          <div className="text-xs text-gray-400"> {position.isBuy ? 'Spent' : 'Sold'}</div>
+          <div className="text-xs text-gray-400">
+            {' '}
+            {position.isBuy ? 'Spent' : 'Sold'}
+          </div>
           <div className="text-white font-medium">
             {formatAmount(amountSpent, inputMint.decimals)} {inputMint.symbol}
           </div>

@@ -1,46 +1,43 @@
-import { useState } from "react";
+import { useState } from 'react'
 import {
   useConnectWallet,
   useDisconnectWallet,
   useWallet,
   useWalletConnection,
-} from "@solana/react-hooks";
-
+} from '@solana/react-hooks'
 
 function truncate(address: string) {
-  return `${address.slice(0, 4)}…${address.slice(-4)}`;
+  return `${address.slice(0, 4)}…${address.slice(-4)}`
 }
 
 export function WalletConnectButton() {
-  const wallet = useWallet();
-  const { connectors } = useWalletConnection();
-  const connectWallet = useConnectWallet();
-  const disconnectWallet = useDisconnectWallet();
-  const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+  const wallet = useWallet()
+  const { connectors } = useWalletConnection()
+  const connectWallet = useConnectWallet()
+  const disconnectWallet = useDisconnectWallet()
+  const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
 
-  const isConnected = wallet.status === "connected";
-  const address = isConnected
-    ? wallet.session.account.address.toString()
-    : null;
+  const isConnected = wallet.status === 'connected'
+  const address = isConnected ? wallet.session.account.address.toString() : null
 
   async function handleConnect(connectorId: string) {
-    setError(null);
+    setError(null)
     try {
-      await connectWallet(connectorId, { autoConnect: true });
-      setOpen(false);
+      await connectWallet(connectorId, { autoConnect: true })
+      setOpen(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to connect");
+      setError(err instanceof Error ? err.message : 'Unable to connect')
     }
   }
 
   async function handleDisconnect() {
-    setError(null);
+    setError(null)
     try {
-      await disconnectWallet();
-      setOpen(false);
+      await disconnectWallet()
+      setOpen(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to disconnect");
+      setError(err instanceof Error ? err.message : 'Unable to disconnect')
     }
   }
 
@@ -56,7 +53,7 @@ export function WalletConnectButton() {
         ) : (
           <span>Connect wallet</span>
         )}
-        <span className="text-xs text-slate-500">{open ? "▲" : "▼"}</span>
+        <span className="text-xs text-slate-500">{open ? '▲' : '▼'}</span>
       </button>
 
       {open ? (
@@ -64,9 +61,14 @@ export function WalletConnectButton() {
           {isConnected ? (
             <div className="space-y-3">
               <div className="rounded border border-slate-100 bg-slate-50 px-3 py-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Connected</p>
-                <p className="font-mono text-sm text-slate-900" title={address ?? ""}>
-                  {address ? truncate(address) : ""}
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  Connected
+                </p>
+                <p
+                  className="font-mono text-sm text-slate-900"
+                  title={address ?? ''}
+                >
+                  {address ? truncate(address) : ''}
                 </p>
               </div>
               <button
@@ -79,7 +81,9 @@ export function WalletConnectButton() {
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Wallet Standard</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                Wallet Standard
+              </p>
               <div className="space-y-1.5">
                 {connectors.map((connector) => (
                   <button
@@ -101,5 +105,5 @@ export function WalletConnectButton() {
         </div>
       ) : null}
     </div>
-  );
+  )
 }
