@@ -1,6 +1,7 @@
 export { supabase } from './client'
 export type {
   ClosePositionEvent,
+  MarketConfigRow,
   MarketUpdateEvent,
   ClosePositionEventRow,
   MarketUpdateEventRow,

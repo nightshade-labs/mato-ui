@@ -6,8 +6,6 @@ import {
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
-import Header from '../components/Header'
-
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import { SolanaProvider } from '../integrations/solana'
 
@@ -30,7 +28,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'Mato TWOB Web',
       },
     ],
     links: [
@@ -52,7 +50,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <SolanaProvider>
-          <Header />
           {children}
         </SolanaProvider>
         <TanStackDevtools
