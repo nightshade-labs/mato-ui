@@ -3,7 +3,7 @@ export const ARRAY_LENGTH = 20
 export const SLOT_DURATION_MS = 400
 export const SLOT_DURATION_SECONDS = SLOT_DURATION_MS / 1000
 export const NATIVE_FEE_BUFFER_ATOMS = 2_000_000n
-export const DEFAULT_MARKET_UPDATES_LIMIT = 400
+export const DEFAULT_MARKET_UPDATES_LIMIT = 600
 
 export const DURATION_OPTIONS = [
   { label: '1m', seconds: 1 * 60 },

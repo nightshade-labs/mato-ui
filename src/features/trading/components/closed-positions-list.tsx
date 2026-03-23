@@ -1,71 +1,98 @@
-import { memo, startTransition, useEffect, useMemo, useRef, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { ArrowUpRight, ChevronDown } from 'lucide-react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { ClosePositionEvent, MarketUpdateEvent } from '@/integrations/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useClosedPositionEvents } from '../hooks/use-closed-position-events'
-import { tradingQueries } from '../queries'
-import { buildClosedPositionMiniChart, normalizeMarketPricePoints, type MiniPriceChartPoint } from '../lib/mini-chart'
+import type { EnsureHistoryOptions } from '../lib/market-history-store'
+import {
+  buildClosedPositionMiniChart,
+  normalizeMarketPricePoints,
+  type MiniPriceChartPoint,
+} from '../lib/mini-chart'
 import { formatAtoms, shortenAddress, formatExplorerTransactionUrl } from '../lib/format'
+import {
+  hasFullCoverage,
+  mergeAdjacentRanges,
+  selectPointsForRange,
+  type SlotRange,
+} from '../lib/slot-ranges'
 import { buildClosedPositionSummary } from '../view-models/closed-position'
 import { MiniPriceChart } from './mini-price-chart'
 import { endpoint } from '@/integrations/solana'
+import { ArrowUpRight, ChevronDown } from 'lucide-react'
 
 interface ClosedPositionChartState {
   error: string | null
   points: MiniPriceChartPoint[] | null
-  status: 'idle' | 'loading' | 'ready' | 'unavailable' | 'error'
+  status: 'loading' | 'ready' | 'unavailable' | 'error'
 }
 
-const IDLE_CHART_STATE: ClosedPositionChartState = {
-  error: null,
-  points: null,
-  status: 'idle',
-}
-const MAX_CONCURRENT_CHART_LOADS = 4
+const MAX_CONCURRENT_CHART_LOADS = 12
+const MINI_CHART_BATCH_GAP_SLOTS = 600
+const INITIAL_VISIBLE_ROW_COUNT = 8
+const VISIBLE_ROW_OVERSCAN_PX = 320
 
-function buildChartStateFromHistory(
-  marketHistory: MarketUpdateEvent[],
-  event: ClosePositionEvent,
-  baseDecimals: number,
-  quoteDecimals: number,
-): ClosedPositionChartState {
-  const normalizedHistory = normalizeMarketPricePoints(marketHistory, baseDecimals, quoteDecimals)
-  const points = buildClosedPositionMiniChart(normalizedHistory, event.start_slot, event.end_slot)
-
-  if (points && points.length >= 2) {
-    return { error: null, points, status: 'ready' }
-  }
-
-  return { error: null, points: null, status: 'unavailable' }
-}
-
-function hasValidChartRange(event: ClosePositionEvent) {
+function hasValidChartRange(
+  event: { start_slot: number | null; end_slot: number | null },
+): event is { start_slot: number; end_slot: number } {
   return event.start_slot !== null && event.end_slot !== null && event.start_slot <= event.end_slot
 }
 
-function findNextPendingChartEvents(
-  events: ClosePositionEvent[],
-  chartStatesByEventId: ReadonlyMap<number, ClosedPositionChartState>,
-  maxCount: number,
-) {
-  const pendingEvents: ClosePositionEvent[] = []
+function toChartRange(event: { start_slot: number; end_slot: number }): SlotRange {
+  return {
+    endSlot: event.end_slot,
+    startSlot: event.start_slot,
+  }
+}
 
-  for (let index = 0; index < events.length; index += 1) {
-    const event = events[index]
-    if (!hasValidChartRange(event)) continue
-    if (chartStatesByEventId.has(event.id)) continue
-    pendingEvents.push(event)
-    if (pendingEvents.length >= maxCount) break
+function buildChartStateFromSharedHistory({
+  event,
+  failedRanges,
+  loadedRanges,
+  normalizedHistory,
+}: {
+  event: { end_slot: number | null; start_slot: number | null }
+  failedRanges: SlotRange[]
+  loadedRanges: SlotRange[]
+  normalizedHistory: ReturnType<typeof normalizeMarketPricePoints>
+}): ClosedPositionChartState {
+  if (!hasValidChartRange(event)) {
+    return { error: null, points: null, status: 'unavailable' }
   }
 
-  return pendingEvents
+  const chartRange = toChartRange({
+    end_slot: event.end_slot,
+    start_slot: event.start_slot,
+  })
+
+  if (hasFullCoverage(loadedRanges, chartRange)) {
+    const points = buildClosedPositionMiniChart(
+      selectPointsForRange(normalizedHistory, chartRange),
+      chartRange.startSlot,
+      chartRange.endSlot,
+    )
+
+    if (points && points.length >= 2) {
+      return { error: null, points, status: 'ready' }
+    }
+
+    return { error: null, points: null, status: 'unavailable' }
+  }
+
+  if (hasFullCoverage(failedRanges, chartRange)) {
+    return { error: 'Price history unavailable.', points: null, status: 'error' }
+  }
+
+  return { error: null, points: null, status: 'loading' }
 }
 
 export function ClosedPositionsList({
   baseDecimals,
   baseTicker,
+  ensureMarketHistoryRanges,
+  marketHistoryFailedRanges = [],
+  marketHistoryLoadedRanges = [],
+  marketHistoryPendingRanges = [],
   marketHistorySeed = [],
   marketId,
   positionAuthority,
@@ -74,145 +101,165 @@ export function ClosedPositionsList({
 }: {
   baseDecimals: number
   baseTicker: string
+  ensureMarketHistoryRanges?: (
+    ranges: SlotRange[],
+    options?: EnsureHistoryOptions,
+  ) => Promise<void>
+  marketHistoryFailedRanges?: SlotRange[]
+  marketHistoryLoadedRanges?: SlotRange[]
+  marketHistoryPendingRanges?: SlotRange[]
   marketHistorySeed?: MarketUpdateEvent[]
   marketId: number
   positionAuthority: string
   quoteDecimals: number
   quoteTicker: string
 }) {
-  const queryClient = useQueryClient()
   const eventsQuery = useClosedPositionEvents({ limit: 50, marketId, positionAuthority })
   const events = eventsQuery.data ?? []
-  const [chartStatesByEventId, setChartStatesByEventId] = useState<Map<number, ClosedPositionChartState>>(
-    new Map(),
-  )
-  const chartLoadRunRef = useRef(0)
-  const isMountedRef = useRef(true)
   const normalizedSeedHistory = useMemo(
     () => normalizeMarketPricePoints(marketHistorySeed, baseDecimals, quoteDecimals),
     [baseDecimals, marketHistorySeed, quoteDecimals],
   )
+  const requestedRanges = useMemo(
+    () =>
+      mergeAdjacentRanges(
+        [...marketHistoryLoadedRanges, ...marketHistoryPendingRanges, ...marketHistoryFailedRanges],
+        0,
+      ),
+    [marketHistoryFailedRanges, marketHistoryLoadedRanges, marketHistoryPendingRanges],
+  )
+  const pendingEnsureKeyRef = useRef<string | null>(null)
+  const rowElementByIdRef = useRef(new Map<number, HTMLDivElement>())
+  const [visibleEventIds, setVisibleEventIds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
-    return () => {
-      isMountedRef.current = false
+    setVisibleEventIds(new Set(events.slice(0, INITIAL_VISIBLE_ROW_COUNT).map((event) => event.id)))
+  }, [events])
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') {
+      return
     }
-  }, [])
 
-  useEffect(() => {
-    chartLoadRunRef.current += 1
-    const cachedChartStates = new Map<number, ClosedPositionChartState>()
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setVisibleEventIds((current) => {
+          const next = new Set(current)
+          let changed = false
+
+          for (const entry of entries) {
+            const id = Number((entry.target as HTMLElement).dataset.eventId)
+            if (!Number.isFinite(id)) continue
+
+            if (entry.isIntersecting) {
+              if (!next.has(id)) {
+                next.add(id)
+                changed = true
+              }
+              continue
+            }
+
+            if (next.delete(id)) {
+              changed = true
+            }
+          }
+
+          return changed ? next : current
+        })
+      },
+      {
+        root: null,
+        rootMargin: `${VISIBLE_ROW_OVERSCAN_PX}px 0px`,
+        threshold: 0,
+      },
+    )
+
+    for (const [eventId, element] of rowElementByIdRef.current.entries()) {
+      element.dataset.eventId = String(eventId)
+      observer.observe(element)
+    }
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [events])
+
+  const unresolvedRanges = useMemo(() => {
+    const nextRanges: SlotRange[] = []
 
     for (const event of events) {
+      if (!visibleEventIds.has(event.id)) continue
       if (!hasValidChartRange(event)) continue
 
-      const cachedHistory = queryClient.getQueryData<MarketUpdateEvent[]>(
-        tradingQueries.marketUpdateRange({
-          endSlot: event.end_slot,
-          marketId,
-          startSlot: event.start_slot,
-        }).queryKey,
-      )
-      if (!cachedHistory) continue
-
-      cachedChartStates.set(event.id, buildChartStateFromHistory(cachedHistory, event, baseDecimals, quoteDecimals))
-    }
-
-    setChartStatesByEventId(cachedChartStates)
-  }, [baseDecimals, events, marketId, queryClient, quoteDecimals])
-
-  useEffect(() => {
-    if (normalizedSeedHistory.length === 0) return
-
-    startTransition(() => {
-      setChartStatesByEventId((current) => {
-        let next: Map<number, ClosedPositionChartState> | null = null
-
-        for (const event of events) {
-          if (!hasValidChartRange(event)) continue
-          if (current.get(event.id)?.status === 'ready') continue
-
-          const chart = buildClosedPositionMiniChart(normalizedSeedHistory, event.start_slot, event.end_slot)
-          if (chart === null) continue
-
-          if (next === null) {
-            next = new Map(current)
-          }
-          next.set(event.id, { error: null, points: chart, status: 'ready' })
-        }
-
-        return next ?? current
+      const chartRange = toChartRange({
+        end_slot: event.end_slot,
+        start_slot: event.start_slot,
       })
-    })
-  }, [events, normalizedSeedHistory])
 
-  const activeChartLoadCount = useMemo(() => {
-    let count = 0
-    for (const chartState of chartStatesByEventId.values()) {
-      if (chartState.status === 'loading') {
-        count += 1
+      if (hasFullCoverage(requestedRanges, chartRange)) {
+        continue
+      }
+
+      nextRanges.push(chartRange)
+      if (nextRanges.length >= MAX_CONCURRENT_CHART_LOADS) {
+        break
       }
     }
-    return count
-  }, [chartStatesByEventId])
 
-  const pendingChartEvents = useMemo(() => {
-    const remainingSlots = MAX_CONCURRENT_CHART_LOADS - activeChartLoadCount
-    if (remainingSlots <= 0) return []
-    return findNextPendingChartEvents(events, chartStatesByEventId, remainingSlots)
-  }, [activeChartLoadCount, chartStatesByEventId, events])
+    return nextRanges
+  }, [events, requestedRanges, visibleEventIds])
+
+  const registerRowElement = (eventId: number) => (element: HTMLDivElement | null) => {
+    if (element) {
+      element.dataset.eventId = String(eventId)
+      rowElementByIdRef.current.set(eventId, element)
+      return
+    }
+
+    rowElementByIdRef.current.delete(eventId)
+  }
 
   useEffect(() => {
-    if (pendingChartEvents.length === 0) return
-
-    const runVersion = chartLoadRunRef.current
-    setChartStatesByEventId((current) => {
-      const next = new Map(current)
-      for (const event of pendingChartEvents) {
-        if (!next.has(event.id)) {
-          next.set(event.id, { error: null, points: null, status: 'loading' })
-        }
-      }
-      return next
-    })
-
-    for (const event of pendingChartEvents) {
-      if (event.start_slot === null || event.end_slot === null) continue
-
-      const startSlot = event.start_slot
-      const endSlot = event.end_slot
-      queryClient
-        .fetchQuery(
-          tradingQueries.marketUpdateRange({
-            endSlot,
-            marketId,
-            startSlot,
-          }),
-        )
-        .then((marketHistory) => {
-          if (!isMountedRef.current || runVersion !== chartLoadRunRef.current) return
-
-          startTransition(() => {
-            setChartStatesByEventId((current) => {
-              const next = new Map(current)
-              next.set(event.id, buildChartStateFromHistory(marketHistory, event, baseDecimals, quoteDecimals))
-              return next
-            })
-          })
-        })
-        .catch((error) => {
-          if (!isMountedRef.current || runVersion !== chartLoadRunRef.current) return
-          const message = error instanceof Error ? error.message : 'Unknown error'
-          startTransition(() => {
-            setChartStatesByEventId((current) => {
-              const next = new Map(current)
-              next.set(event.id, { error: message, points: null, status: 'error' })
-              return next
-            })
-          })
-        })
+    if (!ensureMarketHistoryRanges || unresolvedRanges.length === 0) {
+      pendingEnsureKeyRef.current = null
+      return
     }
-  }, [baseDecimals, marketId, pendingChartEvents, queryClient, quoteDecimals])
+
+    const requestKey = unresolvedRanges
+      .map((range) => `${range.startSlot}:${range.endSlot}`)
+      .join('|')
+    if (pendingEnsureKeyRef.current === requestKey) {
+      return
+    }
+
+    pendingEnsureKeyRef.current = requestKey
+    void ensureMarketHistoryRanges(unresolvedRanges, {
+      maxGapSlots: MINI_CHART_BATCH_GAP_SLOTS,
+      reason: 'mini-chart',
+    }).finally(() => {
+      if (pendingEnsureKeyRef.current === requestKey) {
+        pendingEnsureKeyRef.current = null
+      }
+    })
+  }, [ensureMarketHistoryRanges, unresolvedRanges])
+
+  const chartStatesByEventId = useMemo(() => {
+    const next = new Map<number, ClosedPositionChartState>()
+
+    for (const event of events) {
+      next.set(
+        event.id,
+        buildChartStateFromSharedHistory({
+          event,
+          failedRanges: marketHistoryFailedRanges,
+          loadedRanges: marketHistoryLoadedRanges,
+          normalizedHistory: normalizedSeedHistory,
+        }),
+      )
+    }
+
+    return next
+  }, [events, marketHistoryFailedRanges, marketHistoryLoadedRanges, normalizedSeedHistory])
 
   return (
     <Card className="border-white/10 bg-black/15">
@@ -226,15 +273,16 @@ export function ClosedPositionsList({
           <p className="text-sm text-muted-foreground">No closed positions yet.</p>
         ) : (
           events.map((event) => (
-            <ClosedPositionRow
-              key={event.id}
-              baseDecimals={baseDecimals}
-              baseTicker={baseTicker}
-              chartState={chartStatesByEventId.get(event.id) ?? IDLE_CHART_STATE}
-              event={event}
-              quoteDecimals={quoteDecimals}
-              quoteTicker={quoteTicker}
-            />
+            <div key={event.id} ref={registerRowElement(event.id)}>
+              <ClosedPositionRow
+                baseDecimals={baseDecimals}
+                baseTicker={baseTicker}
+                chartState={chartStatesByEventId.get(event.id) ?? { error: null, points: null, status: 'loading' }}
+                event={event}
+                quoteDecimals={quoteDecimals}
+                quoteTicker={quoteTicker}
+              />
+            </div>
           ))
         )}
 
@@ -275,6 +323,7 @@ const ClosedPositionRow = memo(function ClosedPositionRow({
   )
   const chartPoints = chartState.points
   const hasChart = chartState.status === 'ready' && chartPoints && chartPoints.length >= 2
+  const showChartSkeleton = chartState.status === 'loading'
 
   return (
     <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
@@ -321,6 +370,8 @@ const ClosedPositionRow = memo(function ClosedPositionRow({
             points={chartPoints}
           />
         </div>
+      ) : showChartSkeleton ? (
+        <MiniChartSkeleton />
       ) : null}
 
       {expanded ? (
@@ -350,6 +401,25 @@ const ClosedPositionRow = memo(function ClosedPositionRow({
     </div>
   )
 })
+
+function MiniChartSkeleton() {
+  return (
+    <div className="mt-4 rounded-xl border border-border/50 bg-background/50 p-2">
+      <div className="mb-2 flex gap-3">
+        <div className="h-2 w-24 animate-pulse rounded-full bg-white/10" />
+        <div className="h-2 w-20 animate-pulse rounded-full bg-white/10" />
+      </div>
+      <div className="flex items-stretch gap-3">
+        <div className="flex h-[60px] w-14 shrink-0 flex-col justify-between">
+          <div className="h-2 w-12 animate-pulse rounded-full bg-white/10" />
+          <div className="h-2 w-10 animate-pulse rounded-full bg-white/10" />
+          <div className="h-2 w-12 animate-pulse rounded-full bg-white/10" />
+        </div>
+        <div className="h-[60px] flex-1 animate-pulse rounded-lg bg-white/5" />
+      </div>
+    </div>
+  )
+}
 
 function DetailCard({ label, value }: { label: string; value: string }) {
   return (

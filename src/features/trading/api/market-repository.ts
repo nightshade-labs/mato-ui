@@ -9,7 +9,7 @@ import {
 } from '@/integrations/supabase'
 import { marketPriceFromFlows } from '../lib/market'
 
-const MARKET_UPDATE_RANGE_PAGE_SIZE = 1_000
+const MARKET_UPDATE_RANGE_PAGE_SIZE = 5_000
 
 export function sortMarketUpdatesDescending(events: MarketUpdateEvent[]) {
   return [...events].sort((left, right) => right.slot - left.slot)

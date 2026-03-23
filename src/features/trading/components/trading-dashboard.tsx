@@ -9,6 +9,7 @@ import {
   CHART_TIMEFRAMES,
   DEFAULT_MARKET_UPDATES_LIMIT,
   MARKET_ID,
+  SLOT_DURATION_MS,
   type ChartTimeframe,
   type MarketPanelTab,
   type OrderSide,
@@ -26,7 +27,7 @@ import { useTradePositions } from '../hooks/use-trade-positions'
 import { useWalletTokenBalance } from '../hooks/use-wallet-token-balance'
 import { useSubmitOrder } from '../hooks/use-submit-order'
 import { useClosePosition } from '../hooks/use-close-position'
-import { MarketPriceChart, type ChartCrosshairData } from './market-price-chart'
+import { MarketPriceChart, type ChartCrosshairData, type ChartHistoryRequest } from './market-price-chart'
 import { WalletConnectionButton } from './wallet-connection-button'
 import { OrderEntryCard } from './order-entry-card'
 import { ActivePositionCard } from './active-position-card'
@@ -136,6 +137,7 @@ export function TradingDashboard() {
     activeOhlcv,
     activeOhlcvTimeLabel,
     chartCandles,
+    chartIntervalMs,
     displayPrice,
     estimatedConversionText,
     executionPriceDisplay,
@@ -166,6 +168,14 @@ export function TradingDashboard() {
 
   const refreshBalances = async () => {
     await Promise.allSettled([baseBalance.refresh(), quoteBalance.refresh()])
+  }
+
+  const handleNeedOlderChartHistory = ({ oldestVisibleCandle, visibleBarCount }: ChartHistoryRequest) => {
+    void marketUpdates.ensureOlderChartHistory({
+      oldestVisibleSlot: oldestVisibleCandle.startSlot,
+      slotsPerBar: Math.max(1, Math.round(chartIntervalMs / SLOT_DURATION_MS)),
+      visibleBarCount,
+    })
   }
 
   const handleSliderChange = (percent: number) => {
@@ -358,16 +368,6 @@ export function TradingDashboard() {
                           </Button>
                         ))}
                       </div>
-                      {marketUpdates.hasMoreHistory ? (
-                        <Button
-                          className="rounded-full"
-                          onClick={() => void marketUpdates.loadMoreHistory()}
-                          size="xs"
-                          variant="outline"
-                        >
-                          {marketUpdates.loadingMoreHistory ? 'Loading history...' : 'Load older candles'}
-                        </Button>
-                      ) : null}
                     </div>
 
                     {activeOhlcv ? (
@@ -392,7 +392,10 @@ export function TradingDashboard() {
                       <div className="overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),rgba(255,255,255,0)_55%)]">
                         <MarketPriceChart
                           data={chartCandles}
+                          hasMoreHistory={marketUpdates.hasMoreHistory}
+                          isLoadingMoreHistory={marketUpdates.loadingMoreHistory}
                           onCrosshairMove={setCrosshairData}
+                          onNeedOlderHistory={handleNeedOlderChartHistory}
                           resetSignal={chartResetSignal}
                         />
                       </div>
@@ -403,7 +406,11 @@ export function TradingDashboard() {
                     <ClosedPositionsList
                       baseDecimals={baseDecimals}
                       baseTicker={baseTicker}
-                      marketHistorySeed={marketUpdates.events}
+                      ensureMarketHistoryRanges={marketUpdates.ensureRanges}
+                      marketHistoryFailedRanges={marketUpdates.failedRanges}
+                      marketHistoryLoadedRanges={marketUpdates.loadedRanges}
+                      marketHistoryPendingRanges={marketUpdates.pendingRanges}
+                      marketHistorySeed={marketUpdates.sharedEvents}
                       marketId={MARKET_ID}
                       positionAuthority={address}
                       quoteDecimals={quoteDecimals}
@@ -468,7 +475,11 @@ export function TradingDashboard() {
                 <ClosedPositionsList
                   baseDecimals={baseDecimals}
                   baseTicker={baseTicker}
-                  marketHistorySeed={marketUpdates.events}
+                  ensureMarketHistoryRanges={marketUpdates.ensureRanges}
+                  marketHistoryFailedRanges={marketUpdates.failedRanges}
+                  marketHistoryLoadedRanges={marketUpdates.loadedRanges}
+                  marketHistoryPendingRanges={marketUpdates.pendingRanges}
+                  marketHistorySeed={marketUpdates.sharedEvents}
                   marketId={MARKET_ID}
                   positionAuthority={address}
                   quoteDecimals={quoteDecimals}

@@ -1,7 +1,9 @@
 import type { MarketUpdateEvent } from '@/integrations/supabase'
 
 export interface TradingViewAggregatedCandle {
+  endSlot: number
   time: number
+  startSlot: number
   open: number
   high: number
   low: number
@@ -17,6 +19,7 @@ interface SlotPricePoint {
 }
 
 interface SlotBucketCandle {
+  bucketEndSlot: number
   bucketStartSlot: number
   open: number
   high: number
@@ -26,7 +29,9 @@ interface SlotBucketCandle {
 }
 
 interface NormalizedCandle {
+  endSlot: number
   timestampMs: number
+  startSlot: number
   open: number
   high: number
   low: number
@@ -119,6 +124,7 @@ function aggregateSparseSlotCandles(
           current.close = point.price
         } else {
           buckets.set(bucketStart, {
+            bucketEndSlot: bucketEnd - 1,
             bucketStartSlot: bucketStart,
             open: point.price,
             high: point.price,
@@ -142,6 +148,8 @@ function aggregateSparseSlotCandles(
   return Array.from(buckets.values())
     .sort((left, right) => left.bucketStartSlot - right.bucketStartSlot)
     .map((bucket) => ({
+      endSlot: bucket.bucketEndSlot,
+      startSlot: bucket.bucketStartSlot,
       timestampMs: Math.max(0, Math.round(anchorMs + bucket.bucketStartSlot * slotDurationMs)),
       open: bucket.open,
       high: bucket.high,
@@ -160,7 +168,9 @@ export function aggregateTradingViewCandles(
 ) {
   const candles = aggregateSparseSlotCandles(events, intervalMs, baseDecimals, quoteDecimals, slotDurationMs)
   return candles.map<TradingViewAggregatedCandle>((candle) => ({
+    endSlot: candle.endSlot,
     time: Math.floor(candle.timestampMs / 1000),
+    startSlot: candle.startSlot,
     open: candle.open,
     high: candle.high,
     low: candle.low,

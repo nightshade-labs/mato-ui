@@ -3,6 +3,7 @@ import {
   CrosshairMode,
   HistogramSeries,
   CandlestickSeries,
+  type LogicalRange,
   createChart,
   type IChartApi,
   type ISeriesApi,
@@ -22,15 +23,26 @@ export interface ChartCrosshairData {
   volume: number | null
 }
 
+export interface ChartHistoryRequest {
+  oldestVisibleCandle: TradingViewAggregatedCandle
+  visibleBarCount: number
+}
+
 export function MarketPriceChart({
   data,
   height = 420,
+  hasMoreHistory = false,
+  isLoadingMoreHistory = false,
   onCrosshairMove,
+  onNeedOlderHistory,
   resetSignal = 0,
 }: {
   data: TradingViewAggregatedCandle[]
   height?: number
+  hasMoreHistory?: boolean
+  isLoadingMoreHistory?: boolean
   onCrosshairMove?: (value: ChartCrosshairData | null) => void
+  onNeedOlderHistory?: (request: ChartHistoryRequest) => void
   resetSignal?: number
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -38,6 +50,11 @@ export function MarketPriceChart({
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null)
   const previousDataLengthRef = useRef(0)
+  const previousFirstTimeRef = useRef<number | null>(null)
+  const previousLastTimeRef = useRef<number | null>(null)
+  const hasUserScrollIntentRef = useRef(false)
+  const isAdjustingVisibleRangeRef = useRef(false)
+  const lastHistoryRequestAtRef = useRef(0)
 
   const histogramData = useMemo(
     () =>
@@ -62,6 +79,39 @@ export function MarketPriceChart({
 
   const handleCrosshairMove = useEffectEvent((payload: ChartCrosshairData | null) => {
     onCrosshairMove?.(payload)
+  })
+  const handleNeedOlderHistory = useEffectEvent((range: LogicalRange | null) => {
+    if (!range || !hasUserScrollIntentRef.current || isAdjustingVisibleRangeRef.current) {
+      return
+    }
+    if (!hasMoreHistory || isLoadingMoreHistory || !onNeedOlderHistory) {
+      return
+    }
+    if (range.from > 20) {
+      return
+    }
+
+    const now = Date.now()
+    if (now - lastHistoryRequestAtRef.current < 600) {
+      return
+    }
+
+    if (data.length === 0) {
+      return
+    }
+
+    const fromIndex = Math.max(0, Math.floor(range.from))
+    const toIndex = Math.min(data.length - 1, Math.ceil(range.to))
+    const oldestVisibleCandle = data[Math.min(fromIndex, data.length - 1)]
+    if (!oldestVisibleCandle) {
+      return
+    }
+
+    lastHistoryRequestAtRef.current = now
+    onNeedOlderHistory({
+      oldestVisibleCandle,
+      visibleBarCount: Math.max(1, toIndex - fromIndex + 1),
+    })
   })
 
   useEffect(() => {
@@ -152,10 +202,21 @@ export function MarketPriceChart({
         volume: volume?.value ?? null,
       })
     })
+    chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+      handleNeedOlderHistory(range)
+    })
 
     chartRef.current = chart
     candleSeriesRef.current = candleSeries
     volumeSeriesRef.current = volumeSeries
+
+    const handleUserScrollIntent = () => {
+      hasUserScrollIntentRef.current = true
+    }
+
+    containerRef.current.addEventListener('pointerdown', handleUserScrollIntent, { passive: true })
+    containerRef.current.addEventListener('wheel', handleUserScrollIntent, { passive: true })
+    containerRef.current.addEventListener('touchstart', handleUserScrollIntent, { passive: true })
 
     const resizeObserver = new ResizeObserver(() => {
       chart.timeScale().applyOptions({ rightOffset: 8 })
@@ -164,35 +225,76 @@ export function MarketPriceChart({
 
     return () => {
       resizeObserver.disconnect()
+      containerRef.current?.removeEventListener('pointerdown', handleUserScrollIntent)
+      containerRef.current?.removeEventListener('wheel', handleUserScrollIntent)
+      containerRef.current?.removeEventListener('touchstart', handleUserScrollIntent)
       chart.remove()
       chartRef.current = null
       candleSeriesRef.current = null
       volumeSeriesRef.current = null
       previousDataLengthRef.current = 0
+      previousFirstTimeRef.current = null
+      previousLastTimeRef.current = null
+      hasUserScrollIntentRef.current = false
+      isAdjustingVisibleRangeRef.current = false
+      lastHistoryRequestAtRef.current = 0
     }
-  }, [handleCrosshairMove, height])
+  }, [handleCrosshairMove, handleNeedOlderHistory, height])
 
   useEffect(() => {
-    if (!candleSeriesRef.current || !volumeSeriesRef.current) return
+    if (!candleSeriesRef.current || !volumeSeriesRef.current || !chartRef.current) return
+    const previousRange = chartRef.current.timeScale().getVisibleLogicalRange()
+    const previousLength = previousDataLengthRef.current
+    const previousFirstTime = previousFirstTimeRef.current
+    const previousLastTime = previousLastTimeRef.current
+
     candleSeriesRef.current.setData(candleData)
     volumeSeriesRef.current.setData(histogramData)
 
-    const hadNoData = previousDataLengthRef.current === 0
+    const hadNoData = previousLength === 0
     previousDataLengthRef.current = data.length
+    previousFirstTimeRef.current = data[0]?.time ?? null
+    previousLastTimeRef.current = data[data.length - 1]?.time ?? null
 
     if (data.length > 0) {
       if (hadNoData) {
-        chartRef.current?.timeScale().fitContent()
+        isAdjustingVisibleRangeRef.current = true
+        chartRef.current.timeScale().fitContent()
+        isAdjustingVisibleRangeRef.current = false
+        return
+      }
+
+      const prependedHistory =
+        previousLength > 0 &&
+        data.length > previousLength &&
+        previousFirstTime !== null &&
+        previousLastTime !== null &&
+        data[0]?.time < previousFirstTime &&
+        data[data.length - 1]?.time === previousLastTime
+
+      if (prependedHistory && previousRange) {
+        const barsAdded = data.length - previousLength
+        isAdjustingVisibleRangeRef.current = true
+        chartRef.current.timeScale().setVisibleLogicalRange({
+          from: previousRange.from + barsAdded,
+          to: previousRange.to + barsAdded,
+        })
+        isAdjustingVisibleRangeRef.current = false
       }
       return
     }
 
+    previousFirstTimeRef.current = null
+    previousLastTimeRef.current = null
     handleCrosshairMove(null)
   }, [candleData, data.length, handleCrosshairMove, histogramData])
 
   useEffect(() => {
     if (resetSignal <= 0) return
-    chartRef.current?.timeScale().fitContent()
+    if (!chartRef.current) return
+    isAdjustingVisibleRangeRef.current = true
+    chartRef.current.timeScale().fitContent()
+    isAdjustingVisibleRangeRef.current = false
   }, [resetSignal])
 
   return <div ref={containerRef} className="h-full min-h-[420px] w-full" />

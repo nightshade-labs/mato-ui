@@ -10,6 +10,13 @@ export interface MiniPriceChartPoint {
   price: number
 }
 
+export interface MarketPriceRangeStats {
+  maxPrice: number | null
+  minPrice: number | null
+  observedPoints: number
+  uniquePrices: number
+}
+
 const MIN_SAMPLES = 24
 const MAX_SAMPLES = 640
 const SAMPLE_PADDING = 8
@@ -157,6 +164,44 @@ function countPointsInRange(points: MarketPricePoint[], startSlot: number, endSl
   if (endIndex < startIndex) return 0
 
   return endIndex - startIndex + 1
+}
+
+export function getMarketPriceRangeStats(
+  points: MarketPricePoint[],
+  startSlot: number | null,
+  endSlot: number | null,
+): MarketPriceRangeStats {
+  if (points.length === 0 || startSlot === null || endSlot === null || startSlot > endSlot) {
+    return { maxPrice: null, minPrice: null, observedPoints: 0, uniquePrices: 0 }
+  }
+
+  const startIndex = findFirstPointAtOrAfter(points, startSlot)
+  if (startIndex >= points.length) {
+    return { maxPrice: null, minPrice: null, observedPoints: 0, uniquePrices: 0 }
+  }
+
+  const endIndex = findLastPointAtOrBefore(points, endSlot)
+  if (endIndex < startIndex) {
+    return { maxPrice: null, minPrice: null, observedPoints: 0, uniquePrices: 0 }
+  }
+
+  let minPrice = Number.POSITIVE_INFINITY
+  let maxPrice = Number.NEGATIVE_INFINITY
+  const uniquePrices = new Set<number>()
+
+  for (let index = startIndex; index <= endIndex; index += 1) {
+    const price = points[index].price
+    minPrice = Math.min(minPrice, price)
+    maxPrice = Math.max(maxPrice, price)
+    uniquePrices.add(price)
+  }
+
+  return {
+    maxPrice: Number.isFinite(maxPrice) ? maxPrice : null,
+    minPrice: Number.isFinite(minPrice) ? minPrice : null,
+    observedPoints: endIndex - startIndex + 1,
+    uniquePrices: uniquePrices.size,
+  }
 }
 
 function createSampleSlots(startSlot: number, endSlot: number, sampleCount: number) {
