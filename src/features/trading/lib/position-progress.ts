@@ -26,16 +26,141 @@ export interface PositionProgressMetrics {
 
 const BOOKKEEPING_PRECISION_FACTOR = 1_000_000_000_000_000n
 const FLOW_PRECISION_FACTOR = 1_000_000_000n
-const lastSwappedEstimateByPosition = new Map<
-  string,
-  { amount: bigint; consumedAtoms: bigint; source: 'active' | 'fallback' | 'snapshot' }
->()
-const projectedEndEstimateByPosition = new Map<string, { amount: bigint; consumedAtoms: bigint }>()
+const POSITION_PROGRESS_STORAGE_KEY = 'twob:position-progress:v1'
+
+type CachedSwappedEstimate = {
+  amount: bigint
+  consumedAtoms: bigint
+  source: 'active' | 'fallback' | 'snapshot'
+}
+
+type CachedTerminalEstimate = {
+  amount: bigint
+  consumedAtoms: bigint
+}
+
+type PersistedPositionProgress = {
+  projectedEndEstimate?: {
+    amount: string
+    consumedAtoms: string
+  }
+  swappedEstimate?: {
+    amount: string
+    consumedAtoms: string
+    source: CachedSwappedEstimate['source']
+  }
+}
+
+const lastSwappedEstimateByPosition = new Map<string, CachedSwappedEstimate>()
+const projectedEndEstimateByPosition = new Map<string, CachedTerminalEstimate>()
+let persistedPositionProgressCache: Record<string, PersistedPositionProgress> | null = null
 
 function clampToRange(value: number, min: number, max: number) {
   if (value < min) return min
   if (value > max) return max
   return value
+}
+
+function getPositionProgressStorage() {
+  if (typeof globalThis === 'undefined' || !('sessionStorage' in globalThis)) {
+    return null
+  }
+
+  try {
+    return globalThis.sessionStorage
+  } catch {
+    return null
+  }
+}
+
+function getPersistedPositionProgressCache() {
+  if (persistedPositionProgressCache !== null) return persistedPositionProgressCache
+
+  const storage = getPositionProgressStorage()
+  if (!storage) {
+    persistedPositionProgressCache = {}
+    return persistedPositionProgressCache
+  }
+
+  try {
+    const raw = storage.getItem(POSITION_PROGRESS_STORAGE_KEY)
+    persistedPositionProgressCache = raw ? JSON.parse(raw) as Record<string, PersistedPositionProgress> : {}
+  } catch {
+    persistedPositionProgressCache = {}
+  }
+
+  return persistedPositionProgressCache
+}
+
+function persistPositionProgressCache() {
+  const storage = getPositionProgressStorage()
+  if (!storage || persistedPositionProgressCache === null) return
+
+  try {
+    storage.setItem(POSITION_PROGRESS_STORAGE_KEY, JSON.stringify(persistedPositionProgressCache))
+  } catch {
+    // Ignore transient storage failures; the in-memory cache still prevents regressions until reload.
+  }
+}
+
+function getCachedSwappedEstimate(positionKey: string) {
+  const cached = lastSwappedEstimateByPosition.get(positionKey)
+  if (cached) return cached
+
+  const persisted = getPersistedPositionProgressCache()[positionKey]?.swappedEstimate
+  if (!persisted) return null
+
+  const hydrated = {
+    amount: BigInt(persisted.amount),
+    consumedAtoms: BigInt(persisted.consumedAtoms),
+    source: persisted.source,
+  } satisfies CachedSwappedEstimate
+  lastSwappedEstimateByPosition.set(positionKey, hydrated)
+  return hydrated
+}
+
+function setCachedSwappedEstimate(positionKey: string, estimate: CachedSwappedEstimate) {
+  lastSwappedEstimateByPosition.set(positionKey, estimate)
+
+  const cache = getPersistedPositionProgressCache()
+  cache[positionKey] = {
+    ...cache[positionKey],
+    swappedEstimate: {
+      amount: estimate.amount.toString(),
+      consumedAtoms: estimate.consumedAtoms.toString(),
+      source: estimate.source,
+    },
+  }
+  persistPositionProgressCache()
+}
+
+function getProjectedEndEstimate(positionKey: string) {
+  const cached = projectedEndEstimateByPosition.get(positionKey)
+  if (cached) return cached
+
+  const persisted = getPersistedPositionProgressCache()[positionKey]?.projectedEndEstimate
+  if (!persisted) return null
+
+  const hydrated = {
+    amount: BigInt(persisted.amount),
+    consumedAtoms: BigInt(persisted.consumedAtoms),
+  } satisfies CachedTerminalEstimate
+  projectedEndEstimateByPosition.set(positionKey, hydrated)
+  return hydrated
+}
+
+function setProjectedEndEstimate(positionKey: string, estimate: CachedTerminalEstimate) {
+  projectedEndEstimateByPosition.set(positionKey, estimate)
+
+  const cache = getPersistedPositionProgressCache()
+  cache[positionKey] = {
+    ...cache[positionKey],
+    projectedEndEstimate: {
+      amount: estimate.amount.toString(),
+      consumedAtoms: estimate.consumedAtoms.toString(),
+    },
+  }
+  persistPositionProgressCache()
 }
 
 export function getActivePositionMetrics({
@@ -145,18 +270,18 @@ export function getActivePositionMetrics({
     if (!hasPositionEnded) {
       swappedAtoms = liveSwappedEstimate
       consumedAtomsForAverage = consumedAtoms
-      lastSwappedEstimateByPosition.set(positionKey, {
+      setCachedSwappedEstimate(positionKey, {
         amount: liveSwappedEstimate,
         consumedAtoms,
         source: 'active',
       })
-      projectedEndEstimateByPosition.set(positionKey, {
+      setProjectedEndEstimate(positionKey, {
         amount: projectedEndSwappedEstimate,
         consumedAtoms: consumedAtomsAtEnd,
       })
     } else {
-      const cachedEstimate = lastSwappedEstimateByPosition.get(positionKey) ?? null
-      const projectedTerminalEstimate = projectedEndEstimateByPosition.get(positionKey) ?? null
+      const cachedEstimate = getCachedSwappedEstimate(positionKey)
+      const projectedTerminalEstimate = getProjectedEndEstimate(positionKey)
       const snapshotDelta =
         endSlotBookkeepingSnapshot !== null && endSlotBookkeepingSnapshot > bookkeepingSnapshot
           ? endSlotBookkeepingSnapshot - bookkeepingSnapshot
@@ -166,8 +291,10 @@ export function getActivePositionMetrics({
           ? null
           : (scaledFlowAtomsPerSlot * snapshotDelta) / (FLOW_PRECISION_FACTOR * BOOKKEEPING_PRECISION_FACTOR)
 
-      let terminalFallbackAmount = cachedEstimate?.amount ?? null
-      let terminalFallbackConsumed = cachedEstimate?.consumedAtoms ?? consumedAtoms
+      const frozenAtEnd = cachedEstimate?.amount ?? null
+      const frozenConsumedAtEnd = cachedEstimate?.consumedAtoms ?? null
+      let terminalFallbackAmount = frozenAtEnd
+      let terminalFallbackConsumed = frozenConsumedAtEnd ?? consumedAtoms
       if (
         projectedTerminalEstimate !== null &&
         (terminalFallbackAmount === null || projectedTerminalEstimate.amount > terminalFallbackAmount)
@@ -183,35 +310,50 @@ export function getActivePositionMetrics({
         } else {
           swappedAtoms = liveSwappedEstimate
           consumedAtomsForAverage = consumedAtoms
-          lastSwappedEstimateByPosition.set(positionKey, {
+          setCachedSwappedEstimate(positionKey, {
             amount: liveSwappedEstimate,
             consumedAtoms,
             source: 'fallback',
           })
         }
-      } else if (terminalFallbackAmount !== null && snapshotSwappedEstimate <= terminalFallbackAmount) {
-        swappedAtoms = terminalFallbackAmount
-        consumedAtomsForAverage = terminalFallbackConsumed
-        lastSwappedEstimateByPosition.set(positionKey, {
-          amount: terminalFallbackAmount,
-          consumedAtoms: terminalFallbackConsumed,
-          source: projectedTerminalEstimate !== null ? 'fallback' : cachedEstimate?.source ?? 'active',
-        })
       } else {
-        swappedAtoms = snapshotSwappedEstimate
-        consumedAtomsForAverage = consumedAtoms
-        lastSwappedEstimateByPosition.set(positionKey, {
-          amount: swappedAtoms,
-          consumedAtoms,
-          source: 'snapshot',
-        })
+        const shouldClampDrop =
+          terminalFallbackAmount !== null &&
+          (cachedEstimate?.source === 'active' || projectedTerminalEstimate !== null)
+
+        if (shouldClampDrop && terminalFallbackAmount !== null && snapshotSwappedEstimate <= terminalFallbackAmount) {
+          swappedAtoms = terminalFallbackAmount
+          consumedAtomsForAverage = terminalFallbackConsumed
+          setCachedSwappedEstimate(positionKey, {
+            amount: terminalFallbackAmount,
+            consumedAtoms: consumedAtomsForAverage,
+            source: projectedTerminalEstimate !== null ? 'fallback' : cachedEstimate?.source ?? 'active',
+          })
+        } else {
+          swappedAtoms = snapshotSwappedEstimate
+          consumedAtomsForAverage = consumedAtoms
+          setCachedSwappedEstimate(positionKey, {
+            amount: swappedAtoms,
+            consumedAtoms,
+            source: 'snapshot',
+          })
+        }
       }
     }
 
-    const cachedMetrics = lastSwappedEstimateByPosition.get(positionKey) ?? null
+    const cachedMetrics = getCachedSwappedEstimate(positionKey)
     if (swappedAtoms !== null && cachedMetrics !== null && swappedAtoms < cachedMetrics.amount) {
       swappedAtoms = cachedMetrics.amount
       consumedAtomsForAverage = cachedMetrics.consumedAtoms
+    }
+
+    if (swappedAtoms !== null) {
+      const cachedSource = getCachedSwappedEstimate(positionKey)?.source
+      setCachedSwappedEstimate(positionKey, {
+        amount: swappedAtoms,
+        consumedAtoms: consumedAtomsForAverage,
+        source: cachedSource ?? (hasPositionEnded ? 'snapshot' : 'active'),
+      })
     }
   }
 
