@@ -15,7 +15,7 @@ import {
   type PositionPanelTab,
 } from '../constants'
 import { sanitizeAmountInput, parseTokenAmount, atomsFromPercent, durationToSlots, formatAtomsToInput, toSliderPercent } from '../lib/amounts'
-import { formatCompactNumber, formatExplorerTransactionUrl, formatPrice, formatSignedNumber, formatUiAmount, shortenAddress } from '../lib/format'
+import { formatCompactNumber, formatExplorerTransactionUrl, formatPrice, formatSignedNumber, shortenAddress } from '../lib/format'
 import type { TradePositionRecord } from '../domain/models'
 import { useMarketAddress } from '../hooks/use-market-address'
 import { useMarketConfig } from '../hooks/use-market-config'
@@ -490,9 +490,6 @@ export function TradingDashboard() {
               estimatedConversionText={estimatedConversionText}
               executionPriceDisplay={executionPriceDisplay}
               isConnected={walletConnection.connected}
-              nativeBalanceNote={
-                selectedBalance.isNative ? `Includes ${formatUiAmount(Number(selectedBalance.existingWrappedAtoms) / 1e9)} wrapped SOL` : null
-              }
               onAmountChange={(value) => {
                 setAmountInput(sanitizeAmountInput(value))
                 setValidationError(null)

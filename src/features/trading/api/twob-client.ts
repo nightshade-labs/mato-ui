@@ -518,9 +518,21 @@ export async function sendClosePosition({
     tradePosition: tradePositionAddress,
   })
 
+  const unwrapInstructions =
+    marketAccount.data.baseMint === WRAPPED_SOL_MINT ||
+    marketAccount.data.quoteMint === WRAPPED_SOL_MINT
+      ? (
+          await client.wsol.prepareUnwrap({
+            authority: walletSigner,
+            commitment: 'confirmed',
+            owner: session.account.address,
+          })
+        ).message.instructions
+      : []
+
   const signature = await sendTransaction.send({
     authority: walletSigner,
-    instructions: [instruction],
+    instructions: [instruction, ...unwrapInstructions],
   })
   const serializedSignature = signature.toString()
   await waitForConfirmedSignature(client.runtime.rpc, serializedSignature)

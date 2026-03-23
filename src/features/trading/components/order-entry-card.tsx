@@ -16,7 +16,6 @@ export function OrderEntryCard({
   estimatedConversionText,
   executionPriceDisplay,
   isConnected,
-  nativeBalanceNote,
   onAmountChange,
   onDurationChange,
   onMaxClick,
@@ -38,7 +37,6 @@ export function OrderEntryCard({
   estimatedConversionText: string
   executionPriceDisplay: string
   isConnected: boolean
-  nativeBalanceNote?: string | null
   onAmountChange: (value: string) => void
   onDurationChange: (seconds: number) => void
   onMaxClick: () => void
@@ -115,7 +113,6 @@ export function OrderEntryCard({
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm text-muted-foreground">{selectedPercent.toFixed(2)}% of available balance</span>
-            {nativeBalanceNote ? <Badge variant="muted">{nativeBalanceNote}</Badge> : null}
           </div>
         </div>
 
