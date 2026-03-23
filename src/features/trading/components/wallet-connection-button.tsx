@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useWalletConnection } from '@solana/react-hooks'
-import { ChevronDown, LogOut, Wallet } from 'lucide-react'
+import { Check, ChevronDown, Copy, LogOut, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,7 @@ export function WalletConnectionButton() {
   const { connect, connected, connectors, currentConnector, disconnect, isReady, status, wallet } =
     useWalletConnection()
   const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   if (!isReady) {
     return (
@@ -20,6 +21,14 @@ export function WalletConnectionButton() {
   }
 
   const address = wallet?.account.address.toString() ?? null
+
+  const handleCopyAddress = async () => {
+    if (!address || typeof navigator === 'undefined' || !navigator.clipboard) return
+
+    await navigator.clipboard.writeText(address)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1_500)
+  }
 
   return (
     <div className="relative z-[70]">
@@ -41,7 +50,7 @@ export function WalletConnectionButton() {
           <CardContent className="space-y-3 p-4">
             {connected ? (
               <>
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="max-w-full rounded-2xl border border-white/10 bg-black/20 p-4">
                   <div className="mb-2 flex items-center justify-between">
                     <Badge variant="accent">Connected</Badge>
                     {currentConnector ? (
@@ -50,7 +59,16 @@ export function WalletConnectionButton() {
                       </span>
                     ) : null}
                   </div>
-                  <p className="font-mono text-sm">{address}</p>
+                  <button
+                    className="flex max-w-full items-center gap-2 text-left font-mono text-sm leading-6 text-foreground transition-colors hover:text-[color:var(--color-accent-strong)]"
+                    onClick={() => {
+                      void handleCopyAddress()
+                    }}
+                    type="button"
+                  >
+                    {copied ? <Check className="size-4 shrink-0" /> : <Copy className="size-4 shrink-0" />}
+                    <span className="truncate">{shortenAddress(address, 4, 4)}</span>
+                  </button>
                 </div>
                 <Button
                   className="w-full justify-between rounded-xl"
