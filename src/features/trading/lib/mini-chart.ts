@@ -10,8 +10,10 @@ export interface MiniPriceChartPoint {
   price: number
 }
 
-const MIN_SAMPLES = 16
-const MAX_SAMPLES = 200
+const MIN_SAMPLES = 24
+const MAX_SAMPLES = 640
+const SAMPLE_PADDING = 8
+const SAMPLE_DENSITY_MULTIPLIER = 1.25
 
 function clamp(value: number, min: number, max: number) {
   if (value < min) return min
@@ -178,7 +180,11 @@ export function buildClosedPositionMiniChart(
   }
 
   const observedPoints = countPointsInRange(points, startSlot, endSlot)
-  const desiredSamples = clamp(observedPoints + 4, MIN_SAMPLES, MAX_SAMPLES)
+  const desiredSamples = clamp(
+    Math.round(observedPoints * SAMPLE_DENSITY_MULTIPLIER) + SAMPLE_PADDING,
+    MIN_SAMPLES,
+    MAX_SAMPLES,
+  )
   const maxSamplesForSpan = startSlot === endSlot ? 2 : Math.min(desiredSamples, endSlot - startSlot + 1)
   const sampleSlots = createSampleSlots(startSlot, endSlot, Math.max(2, maxSamplesForSpan))
 

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { useClosedPositionEvents } from '../hooks/use-closed-position-events'
 import { tradingQueries } from '../queries'
 import { buildClosedPositionMiniChart, normalizeMarketPricePoints, type MiniPriceChartPoint } from '../lib/mini-chart'
-import { formatAtoms, formatPrice, shortenAddress, formatExplorerTransactionUrl } from '../lib/format'
+import { formatAtoms, shortenAddress, formatExplorerTransactionUrl } from '../lib/format'
 import { buildClosedPositionSummary } from '../view-models/closed-position'
 import { MiniPriceChart } from './mini-price-chart'
 import { endpoint } from '@/integrations/solana'
@@ -313,20 +313,13 @@ const ClosedPositionRow = memo(function ClosedPositionRow({
       </button>
 
       {hasChart ? (
-        <div className="mt-4 space-y-2">
+        <div className="mt-4">
           <MiniPriceChart
             averageClassName="stroke-emerald-300/70"
             averagePrice={summary.averageFillPrice}
             lineClassName="stroke-[color:var(--color-accent-strong)]"
             points={chartPoints}
           />
-          <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            <span>Price path</span>
-            <span>
-              Avg fill{' '}
-              {summary.averageFillPrice === null ? '—' : formatPrice(summary.averageFillPrice)}
-            </span>
-          </div>
         </div>
       ) : null}
 
