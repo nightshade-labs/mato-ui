@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useWalletConnection, useWalletSession } from '@solana/react-hooks'
-import { ArrowUpRight, CandlestickChart, Clock3, RadioTower, RefreshCcw, Wallet } from 'lucide-react'
+import { ArrowUpRight, CandlestickChart, RadioTower, RefreshCcw, Wallet } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -164,6 +164,10 @@ export function TradingDashboard() {
             ? 'Submit buy order'
             : 'Submit sell order'
 
+  const refreshBalances = async () => {
+    await Promise.allSettled([baseBalance.refresh(), quoteBalance.refresh()])
+  }
+
   const handleSliderChange = (percent: number) => {
     if (availableAtoms <= 0n) {
       setAmountInput('')
@@ -203,6 +207,7 @@ export function TradingDashboard() {
 
     if (success) {
       setAmountInput('')
+      await refreshBalances()
     }
   }
 
@@ -443,8 +448,11 @@ export function TradingDashboard() {
                         baseTicker={baseTicker}
                         isClosing={closePosition.isClosing}
                         marketAddress={marketAddress}
-                        onClose={(tradePositionAddress) => {
-                          void closePosition.closePosition({ marketAddress, tradePositionAddress })
+                        onClose={async (tradePositionAddress) => {
+                          const success = await closePosition.closePosition({ marketAddress, tradePositionAddress })
+                          if (success) {
+                            await refreshBalances()
+                          }
                         }}
                         position={position}
                         quoteDecimals={quoteDecimals}
@@ -505,35 +513,6 @@ export function TradingDashboard() {
               statusLabel={submitStatusLabel}
               validationError={validationError}
             />
-
-            <Card className="border-white/10 bg-black/20">
-              <CardContent className="space-y-4 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Wallet state</div>
-                    <div className="mt-1 text-xl font-semibold">
-                      {walletConnection.connected ? 'Ready to trade' : 'Wallet required'}
-                    </div>
-                  </div>
-                  <Clock3 className="size-5 text-[color:var(--color-accent-strong)]" />
-                </div>
-
-                <div className="grid gap-3">
-                  <WalletMetric
-                    label={`${baseTicker} liquidity`}
-                    value={`${formatUiAmount(baseBalance.balanceUi)} ${baseTicker}`}
-                  />
-                  <WalletMetric
-                    label={`${quoteTicker} liquidity`}
-                    value={`${formatUiAmount(quoteBalance.balanceUi)} ${quoteTicker}`}
-                  />
-                  <WalletMetric
-                    label="Latest slot"
-                    value={streamingStateQuery.data ? streamingStateQuery.data.currentSlot.toLocaleString() : '—'}
-                  />
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
@@ -571,15 +550,6 @@ function MetricChip({ label, value }: { label: string; value: string }) {
     <div className="rounded-2xl border border-white/8 bg-black/20 p-3">
       <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
       <div className="mt-1 font-medium">{value}</div>
-    </div>
-  )
-}
-
-function WalletMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/8 bg-white/5 p-3">
-      <div className="mb-1 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
-      <div className="font-medium">{value}</div>
     </div>
   )
 }

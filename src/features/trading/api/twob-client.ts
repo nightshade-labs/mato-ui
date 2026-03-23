@@ -1,7 +1,11 @@
 import {
   WRAPPED_SOL_MINT,
+  confirmationMeetsCommitment,
   createWalletTransactionSigner,
+  deriveConfirmationStatus,
   detectTokenProgram,
+  normalizeSignature,
+  SIGNATURE_STATUS_TIMEOUT_MS,
   type SolanaClient,
   type WalletSession,
 } from '@solana/client'
@@ -42,6 +46,7 @@ import { decodeBase64 } from '../lib/bytes'
 
 const textEncoder = new TextEncoder()
 const BOOKKEEPING_DELAY_SLOTS = 20
+const SIGNATURE_POLL_INTERVAL_MS = 1_000
 
 export type TwobRpcClient = SolanaClient['runtime']['rpc']
 
@@ -49,6 +54,37 @@ type SendTransactionHelper = Pick<UseSendTransactionReturnType, 'send'>
 
 function seed(value: string) {
   return getBytesEncoder().encode(textEncoder.encode(value))
+}
+
+async function waitForConfirmedSignature(
+  rpcClient: TwobRpcClient,
+  signature: string,
+) {
+  const normalizedSignature = normalizeSignature(signature)
+  if (!normalizedSignature) {
+    throw new Error('Invalid transaction signature returned by wallet.')
+  }
+
+  const startTime = Date.now()
+
+  while (Date.now() - startTime < SIGNATURE_STATUS_TIMEOUT_MS) {
+    const response = await rpcClient
+      .getSignatureStatuses([normalizedSignature])
+      .send()
+    const status = response.value[0] ?? null
+
+    if (status?.err) {
+      throw new Error(`Transaction failed during confirmation: ${JSON.stringify(status.err)}`)
+    }
+
+    if (confirmationMeetsCommitment(deriveConfirmationStatus(status), 'confirmed')) {
+      return
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, SIGNATURE_POLL_INTERVAL_MS))
+  }
+
+  throw new Error('Transaction confirmation timed out.')
 }
 
 export async function deriveMarketAddress(marketId: bigint | number) {
@@ -391,7 +427,9 @@ export async function sendSubmitOrder({
     const signatureBytes = await signAndSendTransactionMessageWithSigners(
       transactionMessage,
     )
-    return getBase58Decoder().decode(signatureBytes)
+    const signature = getBase58Decoder().decode(signatureBytes)
+    await waitForConfirmedSignature(client.runtime.rpc, signature)
+    return signature
   }
 
   const signedTransaction = await signTransactionMessageWithSigners(
@@ -403,7 +441,9 @@ export async function sendSubmitOrder({
     blockhashBackedTransaction,
     'confirmed',
   )
-  return signature.toString()
+  const serializedSignature = signature.toString()
+  await waitForConfirmedSignature(client.runtime.rpc, serializedSignature)
+  return serializedSignature
 }
 
 export async function sendClosePosition({
@@ -482,6 +522,7 @@ export async function sendClosePosition({
     authority: walletSigner,
     instructions: [instruction],
   })
-
-  return signature.toString()
+  const serializedSignature = signature.toString()
+  await waitForConfirmedSignature(client.runtime.rpc, serializedSignature)
+  return serializedSignature
 }

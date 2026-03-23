@@ -26,12 +26,12 @@ export function WalletConnectionButton() {
       <Button
         size="lg"
         variant="outline"
-        className="min-w-[13rem] justify-between rounded-full border-white/10 bg-white/5 px-5 hover:bg-white/10"
+        className="max-w-full min-w-[13rem] justify-between rounded-full border-white/10 bg-white/5 px-5 hover:bg-white/10"
         onClick={() => setOpen((previous) => !previous)}
       >
-        <span className="flex items-center gap-2">
+        <span className="flex min-w-0 items-center gap-2">
           <Wallet className="size-4" />
-          {connected ? shortenAddress(address) : 'Connect wallet'}
+          <span className="truncate">{connected ? shortenAddress(address, 4, 4) : 'Connect wallet'}</span>
         </span>
         <ChevronDown className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`} />
       </Button>
