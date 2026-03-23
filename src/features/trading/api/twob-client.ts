@@ -399,7 +399,7 @@ export async function sendSubmitOrder({
       ? (
           await client.wsol.prepareWrap({
             amount: wrapShortfall,
-            authority: session,
+            authority: walletSigner,
             commitment: 'confirmed',
             owner: session.account.address,
           })
