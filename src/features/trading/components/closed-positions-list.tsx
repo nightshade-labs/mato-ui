@@ -5,6 +5,12 @@ import { Badge } from '@/components/ui/badge'
 import { useClosedPositionEvents } from '../hooks/use-closed-position-events'
 import type { EnsureHistoryOptions } from '../lib/market-history-store'
 import {
+  CLOSED_POSITION_BATCH_GAP_SLOTS,
+  CLOSED_POSITION_INITIAL_VISIBLE_ROW_COUNT,
+  CLOSED_POSITION_MAX_CONCURRENT_CHART_LOADS,
+  CLOSED_POSITION_VISIBLE_ROW_OVERSCAN_PX,
+} from '../constants'
+import {
   buildClosedPositionMiniChart,
   normalizeMarketPricePoints,
   type MiniPriceChartPoint,
@@ -26,11 +32,6 @@ interface ClosedPositionChartState {
   points: MiniPriceChartPoint[] | null
   status: 'loading' | 'ready' | 'unavailable' | 'error'
 }
-
-const MAX_CONCURRENT_CHART_LOADS = 12
-const MINI_CHART_BATCH_GAP_SLOTS = 600
-const INITIAL_VISIBLE_ROW_COUNT = 8
-const VISIBLE_ROW_OVERSCAN_PX = 320
 
 function hasValidChartRange(
   event: { start_slot: number | null; end_slot: number | null },
@@ -133,7 +134,9 @@ export function ClosedPositionsList({
   const [visibleEventIds, setVisibleEventIds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
-    setVisibleEventIds(new Set(events.slice(0, INITIAL_VISIBLE_ROW_COUNT).map((event) => event.id)))
+    setVisibleEventIds(
+      new Set(events.slice(0, CLOSED_POSITION_INITIAL_VISIBLE_ROW_COUNT).map((event) => event.id)),
+    )
   }, [events])
 
   useEffect(() => {
@@ -156,11 +159,6 @@ export function ClosedPositionsList({
                 next.add(id)
                 changed = true
               }
-              continue
-            }
-
-            if (next.delete(id)) {
-              changed = true
             }
           }
 
@@ -169,7 +167,7 @@ export function ClosedPositionsList({
       },
       {
         root: null,
-        rootMargin: `${VISIBLE_ROW_OVERSCAN_PX}px 0px`,
+        rootMargin: `${CLOSED_POSITION_VISIBLE_ROW_OVERSCAN_PX}px 0px`,
         threshold: 0,
       },
     )
@@ -201,7 +199,7 @@ export function ClosedPositionsList({
       }
 
       nextRanges.push(chartRange)
-      if (nextRanges.length >= MAX_CONCURRENT_CHART_LOADS) {
+      if (nextRanges.length >= CLOSED_POSITION_MAX_CONCURRENT_CHART_LOADS) {
         break
       }
     }
@@ -234,7 +232,7 @@ export function ClosedPositionsList({
 
     pendingEnsureKeyRef.current = requestKey
     void ensureMarketHistoryRanges(unresolvedRanges, {
-      maxGapSlots: MINI_CHART_BATCH_GAP_SLOTS,
+      maxGapSlots: CLOSED_POSITION_BATCH_GAP_SLOTS,
       reason: 'mini-chart',
     }).finally(() => {
       if (pendingEnsureKeyRef.current === requestKey) {

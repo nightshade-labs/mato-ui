@@ -15,6 +15,7 @@ import {
   subtractCoveredRanges,
   type SlotRange,
 } from '../lib/slot-ranges'
+import { buildOlderChartHistoryRange } from '../lib/chart-history'
 import { tradingQueries } from '../queries'
 
 interface UseMarketUpdatesOptions {
@@ -157,12 +158,14 @@ export function useMarketUpdates({ marketId, limit = 200 }: UseMarketUpdatesOpti
       if (!oldestLoadedEvent) return
 
       const normalizedSlotsPerBar = Math.max(1, Math.floor(slotsPerBar))
-      const bufferBars = Math.max(16, Math.ceil(visibleBarCount * 0.5))
-      const barsToLoad = Math.max(visibleBarCount + bufferBars, 48)
-      const startSlot = Math.max(0, oldestVisibleSlot - barsToLoad * normalizedSlotsPerBar)
-      const endSlot = oldestLoadedEvent.slot - 1
+      const requestedRange = buildOlderChartHistoryRange({
+        oldestLoadedSlot: oldestLoadedEvent.slot,
+        oldestVisibleSlot,
+        slotsPerBar: normalizedSlotsPerBar,
+        visibleBarCount,
+      })
 
-      if (startSlot > endSlot) {
+      if (requestedRange === null) {
         return
       }
 
@@ -173,15 +176,15 @@ export function useMarketUpdates({ marketId, limit = 200 }: UseMarketUpdatesOpti
       try {
         const marketHistory = await queryClient.fetchQuery(
           tradingQueries.marketUpdateRange({
-            endSlot,
+            endSlot: requestedRange.endSlot,
             marketId,
-            startSlot,
+            startSlot: requestedRange.startSlot,
           }),
         )
 
         setHistoricalEvents((previous) => mergeMarketEvents(previous, marketHistory))
 
-        const hasEarlierHistory = marketHistory.some((event) => event.slot < startSlot)
+        const hasEarlierHistory = marketHistory.some((event) => event.slot < requestedRange.startSlot)
         if (!hasEarlierHistory) {
           setHasMoreHistory(false)
         }

@@ -13,6 +13,11 @@ import {
 } from 'lightweight-charts'
 import { useEffect, useEffectEvent, useMemo, useRef } from 'react'
 import type { TradingViewAggregatedCandle } from '../lib/market'
+import {
+  buildOlderChartHistoryRequest,
+  computePrependedLogicalRange,
+} from '../lib/chart-history'
+import { CHART_HISTORY_REQUEST_DEBOUNCE_MS } from '../constants'
 
 export interface ChartCrosshairData {
   close: number
@@ -87,31 +92,22 @@ export function MarketPriceChart({
     if (!hasMoreHistory || isLoadingMoreHistory || !onNeedOlderHistory) {
       return
     }
-    if (range.from > 20) {
-      return
-    }
 
     const now = Date.now()
-    if (now - lastHistoryRequestAtRef.current < 600) {
+    if (now - lastHistoryRequestAtRef.current < CHART_HISTORY_REQUEST_DEBOUNCE_MS) {
       return
     }
 
-    if (data.length === 0) {
-      return
-    }
-
-    const fromIndex = Math.max(0, Math.floor(range.from))
-    const toIndex = Math.min(data.length - 1, Math.ceil(range.to))
-    const oldestVisibleCandle = data[Math.min(fromIndex, data.length - 1)]
-    if (!oldestVisibleCandle) {
+    const request = buildOlderChartHistoryRequest({
+      data,
+      logicalRange: range,
+    })
+    if (request === null) {
       return
     }
 
     lastHistoryRequestAtRef.current = now
-    onNeedOlderHistory({
-      oldestVisibleCandle,
-      visibleBarCount: Math.max(1, toIndex - fromIndex + 1),
-    })
+    onNeedOlderHistory(request)
   })
 
   useEffect(() => {
@@ -264,21 +260,19 @@ export function MarketPriceChart({
         return
       }
 
-      const prependedHistory =
-        previousLength > 0 &&
-        data.length > previousLength &&
-        previousFirstTime !== null &&
-        previousLastTime !== null &&
-        data[0]?.time < previousFirstTime &&
-        data[data.length - 1]?.time === previousLastTime
+      const nextRange = computePrependedLogicalRange({
+        nextFirstTime: data[0]?.time ?? null,
+        nextLastTime: data[data.length - 1]?.time ?? null,
+        nextLength: data.length,
+        previousFirstTime,
+        previousLastTime,
+        previousLength,
+        previousRange,
+      })
 
-      if (prependedHistory && previousRange) {
-        const barsAdded = data.length - previousLength
+      if (nextRange) {
         isAdjustingVisibleRangeRef.current = true
-        chartRef.current.timeScale().setVisibleLogicalRange({
-          from: previousRange.from + barsAdded,
-          to: previousRange.to + barsAdded,
-        })
+        chartRef.current.timeScale().setVisibleLogicalRange(nextRange)
         isAdjustingVisibleRangeRef.current = false
       }
       return
