@@ -18,9 +18,10 @@ interface SlotPricePoint {
   quoteVolume: number
 }
 
-interface SlotBucketCandle {
-  bucketEndSlot: number
-  bucketStartSlot: number
+interface TimeBucketCandle {
+  bucketStartMs: number
+  endSlot: number
+  startSlot: number
   open: number
   high: number
   low: number
@@ -89,9 +90,12 @@ function normalizePoints(
     }
   }
 
-  return Array.from(latestPerSlot.values()).sort(
-    (left, right) => left.slot - right.slot,
-  )
+  return Array.from(latestPerSlot.values()).sort((left, right) => {
+    if (left.createdAtMs === right.createdAtMs) {
+      return left.slot - right.slot
+    }
+    return left.createdAtMs - right.createdAtMs
+  })
 }
 
 function aggregateSparseSlotCandles(
@@ -99,85 +103,93 @@ function aggregateSparseSlotCandles(
   intervalMs: number,
   baseDecimals: number,
   quoteDecimals: number,
-  slotDurationMs: number,
-  timeAnchor?: MarketTimeAnchor,
+  _slotDurationMs: number,
+  _timeAnchor?: MarketTimeAnchor,
 ): Array<NormalizedCandle> {
-  if (intervalMs <= 0 || slotDurationMs <= 0) return []
+  if (intervalMs <= 0) return []
 
   const baseScale = 10 ** baseDecimals
   const quoteScale = 10 ** quoteDecimals
   const points = normalizePoints(events, baseScale, quoteScale)
   if (points.length === 0) return []
 
-  const bucketSizeSlots = Math.max(1, Math.round(intervalMs / slotDurationMs))
+  const firstPoint = points[0]
   const latestPoint = points[points.length - 1]
-  const anchorSlot = timeAnchor?.slot ?? latestPoint.slot
-  const anchorTimeMs = timeAnchor?.timeMs ?? latestPoint.createdAtMs
-  const buckets = new Map<number, SlotBucketCandle>()
+  const firstBucketStart =
+    Math.floor(firstPoint.createdAtMs / intervalMs) * intervalMs
+  const lastBucketStart =
+    Math.floor(latestPoint.createdAtMs / intervalMs) * intervalMs
+  const buckets: Array<TimeBucketCandle> = []
 
-  for (let index = 0; index < points.length; index += 1) {
-    const point = points[index]
-    const nextPoint = points.at(index + 1)
-    const segmentStart = point.slot
-    const segmentEnd = Math.max(
-      point.slot + 1,
-      nextPoint?.slot ?? point.slot + 1,
-    )
-    let bucketStart =
-      Math.floor(segmentStart / bucketSizeSlots) * bucketSizeSlots
+  let pointIndex = 0
+  let lastKnownPrice: number | null = null
+  let lastKnownSlot: number | null = null
 
-    while (bucketStart < segmentEnd) {
-      const bucketEnd = bucketStart + bucketSizeSlots
-      const overlapStart = Math.max(segmentStart, bucketStart)
-      const overlapEnd = Math.min(segmentEnd, bucketEnd)
+  for (
+    let bucketStart = firstBucketStart;
+    bucketStart <= lastBucketStart;
+    bucketStart += intervalMs
+  ) {
+    const bucketEnd = bucketStart + intervalMs
 
-      if (overlapStart < overlapEnd) {
-        const current = buckets.get(bucketStart)
-        if (current) {
-          current.high = Math.max(current.high, point.price)
-          current.low = Math.min(current.low, point.price)
-          current.close = point.price
-        } else {
-          buckets.set(bucketStart, {
-            bucketEndSlot: bucketEnd - 1,
-            bucketStartSlot: bucketStart,
-            open: point.price,
-            high: point.price,
-            low: point.price,
-            close: point.price,
-            volume: 0,
-          })
-        }
+    while (
+      pointIndex < points.length &&
+      points[pointIndex].createdAtMs < bucketStart
+    ) {
+      lastKnownPrice = points[pointIndex].price
+      lastKnownSlot = points[pointIndex].slot
+      pointIndex += 1
+    }
+
+    const nextPoint = points[pointIndex] ?? points[points.length - 1]
+    const bucketSeedPrice = lastKnownPrice ?? nextPoint.price
+    const bucketSeedSlot = lastKnownSlot ?? nextPoint.slot
+
+    const bucket: TimeBucketCandle = {
+      bucketStartMs: bucketStart,
+      endSlot: bucketSeedSlot,
+      startSlot: bucketSeedSlot,
+      close: bucketSeedPrice,
+      high: bucketSeedPrice,
+      low: bucketSeedPrice,
+      open: bucketSeedPrice,
+      volume: 0,
+    }
+
+    let bucketPointIndex = pointIndex
+    while (
+      bucketPointIndex < points.length &&
+      points[bucketPointIndex].createdAtMs < bucketEnd
+    ) {
+      const point = points[bucketPointIndex]
+
+      if (bucket.volume === 0 && bucketPointIndex === pointIndex) {
+        bucket.startSlot = point.slot
       }
-
-      bucketStart += bucketSizeSlots
+      bucket.high = Math.max(bucket.high, point.price)
+      bucket.low = Math.min(bucket.low, point.price)
+      bucket.close = point.price
+      bucket.volume += point.quoteVolume
+      bucket.endSlot = point.slot
+      lastKnownPrice = point.price
+      lastKnownSlot = point.slot
+      bucketPointIndex += 1
     }
 
-    const volumeBucketStart =
-      Math.floor(point.slot / bucketSizeSlots) * bucketSizeSlots
-    const volumeBucket = buckets.get(volumeBucketStart)
-    if (volumeBucket) {
-      volumeBucket.volume += point.quoteVolume
-    }
+    pointIndex = bucketPointIndex
+    buckets.push(bucket)
   }
 
-  return Array.from(buckets.values())
-    .sort((left, right) => left.bucketStartSlot - right.bucketStartSlot)
-    .map((bucket) => ({
-      endSlot: bucket.bucketEndSlot,
-      startSlot: bucket.bucketStartSlot,
-      timestampMs: Math.max(
-        0,
-        Math.round(
-          anchorTimeMs + (bucket.bucketStartSlot - anchorSlot) * slotDurationMs,
-        ),
-      ),
-      open: bucket.open,
-      high: bucket.high,
-      low: bucket.low,
-      close: bucket.close,
-      volume: bucket.volume,
-    }))
+  return buckets.map((bucket) => ({
+    endSlot: bucket.endSlot,
+    startSlot: bucket.startSlot,
+    timestampMs: bucket.bucketStartMs,
+    open: bucket.open,
+    high: bucket.high,
+    low: bucket.low,
+    close: bucket.close,
+    volume: bucket.volume,
+  }))
 }
 
 export function aggregateTradingViewCandles(

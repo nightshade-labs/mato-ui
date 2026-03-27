@@ -10,7 +10,6 @@ import { aggregateTradingViewCandles } from '../lib/market'
 import { tradingQueries } from '../queries'
 import type { OlderChartHistoryRequest } from '../lib/chart-history'
 import type { ChartTimeframe } from '../constants'
-import type { MarketTimeAnchor } from '../lib/market'
 import type { MarketUpdateEvent } from '@/integrations/supabase'
 
 interface UseMarketChartHistoryOptions {
@@ -44,42 +43,37 @@ export function useMarketChartHistory({
   timeframe,
 }: UseMarketChartHistoryOptions) {
   const queryClient = useQueryClient()
+  const [retainedLatestEvents, setRetainedLatestEvents] = useState<
+    Array<MarketUpdateEvent>
+  >([])
   const [historicalEvents, setHistoricalEvents] = useState<
     Array<MarketUpdateEvent>
   >([])
   const [hasMoreHistory, setHasMoreHistory] = useState(true)
   const [isLoadingMoreHistory, setIsLoadingMoreHistory] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [timeAnchor, setTimeAnchor] = useState<MarketTimeAnchor | null>(null)
 
   useEffect(() => {
+    setRetainedLatestEvents([])
     setHistoricalEvents([])
     setHasMoreHistory(true)
     setIsLoadingMoreHistory(false)
     setError(null)
-    setTimeAnchor(null)
   }, [marketId])
 
   useEffect(() => {
-    if (timeAnchor !== null) {
+    const nextLatestEvents = latestEvents.filter(
+      (event) => event.market_id === marketId,
+    )
+
+    if (nextLatestEvents.length === 0) {
       return
     }
 
-    const newestEvent = latestEvents.at(0)
-    if (!newestEvent) {
-      return
-    }
-
-    const timeMs = new Date(newestEvent.created_at).getTime()
-    if (!Number.isFinite(timeMs)) {
-      return
-    }
-
-    setTimeAnchor({
-      slot: newestEvent.slot,
-      timeMs,
-    })
-  }, [latestEvents, timeAnchor])
+    setRetainedLatestEvents((previous) =>
+      mergeMarketEvents(previous, nextLatestEvents),
+    )
+  }, [latestEvents, marketId])
 
   const chartIntervalMs = useMemo(
     () =>
@@ -88,8 +82,8 @@ export function useMarketChartHistory({
     [timeframe],
   )
   const events = useMemo(
-    () => mergeMarketEvents(latestEvents, historicalEvents),
-    [historicalEvents, latestEvents],
+    () => mergeMarketEvents(retainedLatestEvents, historicalEvents),
+    [historicalEvents, retainedLatestEvents],
   )
   const candles = useMemo(
     () =>
@@ -99,9 +93,8 @@ export function useMarketChartHistory({
         baseDecimals,
         quoteDecimals,
         SLOT_DURATION_MS,
-        timeAnchor ?? undefined,
       ),
-    [baseDecimals, chartIntervalMs, events, quoteDecimals, timeAnchor],
+    [baseDecimals, chartIntervalMs, events, quoteDecimals],
   )
 
   const loadOlderHistory = useCallback(

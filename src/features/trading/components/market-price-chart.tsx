@@ -20,6 +20,7 @@ import type {
   LogicalRange,
   UTCTimestamp,
 } from 'lightweight-charts'
+import type { LogicalRangeLike } from '../lib/chart-history'
 import type { TradingViewAggregatedCandle } from '../lib/market'
 
 export interface ChartCrosshairData {
@@ -192,6 +193,22 @@ export function MarketPriceChart({
 
       lastHistoryRequestAtRef.current = now
       onNeedOlderHistory(request)
+    },
+  )
+  const applyVisibleLogicalRange = useEffectEvent(
+    (range: LogicalRangeLike | null) => {
+      if (!chartRef.current || !range) {
+        return
+      }
+
+      isAdjustingVisibleRangeRef.current = true
+      chartRef.current
+        .timeScale()
+        .setVisibleLogicalRange(range as LogicalRange)
+      isAdjustingVisibleRangeRef.current = false
+      lastLogicalRangeRef.current = chartRef.current
+        .timeScale()
+        .getVisibleLogicalRange()
     },
   )
   const applyDefaultViewport = useEffectEvent(() => {
@@ -452,12 +469,7 @@ export function MarketPriceChart({
         candleSeriesRef.current.setData(candleData)
         volumeSeriesRef.current.setData(histogramData)
         if (hasUserInteractedRef.current) {
-          isAdjustingVisibleRangeRef.current = true
-          chartRef.current.timeScale().setVisibleLogicalRange(nextRange)
-          isAdjustingVisibleRangeRef.current = false
-          lastLogicalRangeRef.current = chartRef.current
-            .timeScale()
-            .getVisibleLogicalRange()
+          applyVisibleLogicalRange(nextRange)
         } else {
           applyDefaultViewport()
         }
@@ -483,11 +495,8 @@ export function MarketPriceChart({
 
         if (startIndex >= 0) {
           for (let index = startIndex; index < candleData.length; index += 1) {
-            const nextCandle = candleData[index]
-            const nextVolumeBar = histogramData[index]
-
-            candleSeriesRef.current.update(nextCandle)
-            volumeSeriesRef.current.update(nextVolumeBar)
+            candleSeriesRef.current.update(candleData[index])
+            volumeSeriesRef.current.update(histogramData[index])
           }
 
           lastLogicalRangeRef.current = chartRef.current
@@ -499,6 +508,17 @@ export function MarketPriceChart({
 
       candleSeriesRef.current.setData(candleData)
       volumeSeriesRef.current.setData(histogramData)
+
+      if (!hasUserInteractedRef.current) {
+        applyDefaultViewport()
+        return
+      }
+
+      if (previousRange) {
+        applyVisibleLogicalRange(previousRange)
+        return
+      }
+
       lastLogicalRangeRef.current = chartRef.current
         .timeScale()
         .getVisibleLogicalRange()

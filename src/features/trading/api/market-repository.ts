@@ -1,23 +1,28 @@
+import { marketPriceFromFlows } from '../lib/market'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-import { supabase } from '@/integrations/supabase'
+import type {
+  MarketConfigRow,
+  MarketUpdateEvent,
+  MarketUpdateEventRow,
+} from '@/integrations/supabase'
 import {
   parseClosePositionEvent,
   parseMarketUpdateEvent,
-  type MarketConfigRow,
-  type MarketUpdateEvent,
-  type MarketUpdateEventRow,
+  supabase,
 } from '@/integrations/supabase'
-import { marketPriceFromFlows } from '../lib/market'
 
-const MARKET_UPDATE_RANGE_PAGE_SIZE = 5_000
+// Supabase truncates range queries to 1000 rows on this project, so the
+// pagination loop must use the same page size or it will stop too early and
+// leave holes in the loaded event timeline.
+const MARKET_UPDATE_RANGE_PAGE_SIZE = 1_000
 
-export function sortMarketUpdatesDescending(events: MarketUpdateEvent[]) {
+export function sortMarketUpdatesDescending(events: Array<MarketUpdateEvent>) {
   return [...events].sort((left, right) => right.slot - left.slot)
 }
 
-export function dedupeMarketUpdatesById(events: MarketUpdateEvent[]) {
+export function dedupeMarketUpdatesById(events: Array<MarketUpdateEvent>) {
   const ids = new Set<number>()
-  const deduped: MarketUpdateEvent[] = []
+  const deduped: Array<MarketUpdateEvent> = []
 
   for (const event of events) {
     if (ids.has(event.id)) continue
@@ -68,7 +73,7 @@ export async function fetchMarketUpdatesPage({
     throw new Error(error.message)
   }
 
-  return (data ?? []).map(parseMarketUpdateEvent)
+  return data.map(parseMarketUpdateEvent)
 }
 
 export async function fetchLatestMarketUpdate(marketId: number) {
@@ -83,8 +88,11 @@ export async function fetchLatestMarketUpdate(marketId: number) {
     throw new Error(error.message)
   }
 
-  const row = data?.[0]
-  return row ? parseMarketUpdateEvent(row) : null
+  if (data.length === 0) {
+    return null
+  }
+
+  return parseMarketUpdateEvent(data[0])
 }
 
 export async function fetchMarketPrice({
@@ -106,7 +114,7 @@ export async function fetchMarketPrice({
             config.base_decimals,
             config.quote_decimals,
           ),
-    slot: latestUpdate?.slot ?? null,
+    slot: latestUpdate === null ? null : latestUpdate.slot,
   }
 }
 
@@ -121,7 +129,7 @@ export async function fetchMarketUpdateRange({
 }) {
   if (startSlot > endSlot) return []
 
-  const history: MarketUpdateEvent[] = []
+  const history: Array<MarketUpdateEvent> = []
   const { data: anchorData, error: anchorError } = await supabase
     .from('market_update_events')
     .select('*')
@@ -134,12 +142,12 @@ export async function fetchMarketUpdateRange({
     throw new Error(anchorError.message)
   }
 
-  if (anchorData && anchorData.length > 0) {
+  if (anchorData.length > 0) {
     history.push(parseMarketUpdateEvent(anchorData[0]))
   }
 
   let from = 0
-  while (true) {
+  for (;;) {
     const { data, error } = await supabase
       .from('market_update_events')
       .select('*')
@@ -153,7 +161,7 @@ export async function fetchMarketUpdateRange({
       throw new Error(error.message)
     }
 
-    const page = (data ?? []).map(parseMarketUpdateEvent)
+    const page = data.map(parseMarketUpdateEvent)
     history.push(...page)
 
     if (page.length < MARKET_UPDATE_RANGE_PAGE_SIZE) {
@@ -194,7 +202,7 @@ export async function fetchClosedPositionEvents({
     throw new Error(error.message)
   }
 
-  return (data ?? []).map(parseClosePositionEvent)
+  return data.map(parseClosePositionEvent)
 }
 
 export function subscribeToMarketUpdates({
