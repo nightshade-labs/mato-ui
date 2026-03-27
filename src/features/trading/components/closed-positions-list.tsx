@@ -1,9 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
-import type { ClosePositionEvent, MarketUpdateEvent } from '@/integrations/supabase'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { ArrowUpRight, ChevronDown } from 'lucide-react'
 import { useClosedPositionEvents } from '../hooks/use-closed-position-events'
-import type { EnsureHistoryOptions } from '../lib/market-history-store'
 import {
   CLOSED_POSITION_BATCH_GAP_SLOTS,
   CLOSED_POSITION_INITIAL_VISIBLE_ROW_COUNT,
@@ -11,27 +8,34 @@ import {
   CLOSED_POSITION_VISIBLE_ROW_OVERSCAN_PX,
 } from '../constants'
 import {
+  
   buildClosedPositionMiniChart,
-  normalizeMarketPricePoints,
-  type MiniPriceChartPoint,
+  normalizeMarketPricePoints
 } from '../lib/mini-chart'
-import { formatAtoms, shortenAddress, formatExplorerTransactionUrl } from '../lib/format'
+import { formatAtoms, formatExplorerTransactionUrl, shortenAddress } from '../lib/format'
 import {
+  
   hasFullCoverage,
   mergeAdjacentRanges,
-  selectPointsForRange,
-  type SlotRange,
+  selectPointsForRange
 } from '../lib/slot-ranges'
 import { buildClosedPositionSummary } from '../view-models/closed-position'
 import { MiniPriceChart } from './mini-price-chart'
+import type {SlotRange} from '../lib/slot-ranges';
+import type {MiniPriceChartPoint} from '../lib/mini-chart';
+import type { EnsureHistoryOptions } from '../lib/market-history-store'
+import type { ClosePositionEvent, MarketUpdateEvent } from '@/integrations/supabase'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { endpoint } from '@/integrations/solana'
-import { ArrowUpRight, ChevronDown } from 'lucide-react'
 
 interface ClosedPositionChartState {
   error: string | null
-  points: MiniPriceChartPoint[] | null
+  points: Array<MiniPriceChartPoint> | null
   status: 'loading' | 'ready' | 'unavailable' | 'error'
 }
+
+const EMPTY_CLOSED_POSITION_EVENTS: Array<ClosePositionEvent> = []
 
 function hasValidChartRange(
   event: { start_slot: number | null; end_slot: number | null },
@@ -46,6 +50,23 @@ function toChartRange(event: { start_slot: number; end_slot: number }): SlotRang
   }
 }
 
+function areSetsEqual(left: Set<number>, right: Set<number>) {
+  if (left === right) {
+    return true
+  }
+  if (left.size !== right.size) {
+    return false
+  }
+
+  for (const value of left) {
+    if (!right.has(value)) {
+      return false
+    }
+  }
+
+  return true
+}
+
 function buildChartStateFromSharedHistory({
   event,
   failedRanges,
@@ -53,8 +74,8 @@ function buildChartStateFromSharedHistory({
   normalizedHistory,
 }: {
   event: { end_slot: number | null; start_slot: number | null }
-  failedRanges: SlotRange[]
-  loadedRanges: SlotRange[]
+  failedRanges: Array<SlotRange>
+  loadedRanges: Array<SlotRange>
   normalizedHistory: ReturnType<typeof normalizeMarketPricePoints>
 }): ClosedPositionChartState {
   if (!hasValidChartRange(event)) {
@@ -103,20 +124,23 @@ export function ClosedPositionsList({
   baseDecimals: number
   baseTicker: string
   ensureMarketHistoryRanges?: (
-    ranges: SlotRange[],
+    ranges: Array<SlotRange>,
     options?: EnsureHistoryOptions,
   ) => Promise<void>
-  marketHistoryFailedRanges?: SlotRange[]
-  marketHistoryLoadedRanges?: SlotRange[]
-  marketHistoryPendingRanges?: SlotRange[]
-  marketHistorySeed?: MarketUpdateEvent[]
+  marketHistoryFailedRanges?: Array<SlotRange>
+  marketHistoryLoadedRanges?: Array<SlotRange>
+  marketHistoryPendingRanges?: Array<SlotRange>
+  marketHistorySeed?: Array<MarketUpdateEvent>
   marketId: number
   positionAuthority: string
   quoteDecimals: number
   quoteTicker: string
 }) {
   const eventsQuery = useClosedPositionEvents({ limit: 50, marketId, positionAuthority })
-  const events = eventsQuery.data ?? []
+  const events = useMemo(
+    () => eventsQuery.data ?? EMPTY_CLOSED_POSITION_EVENTS,
+    [eventsQuery.data],
+  )
   const normalizedSeedHistory = useMemo(
     () => normalizeMarketPricePoints(marketHistorySeed, baseDecimals, quoteDecimals),
     [baseDecimals, marketHistorySeed, quoteDecimals],
@@ -132,10 +156,20 @@ export function ClosedPositionsList({
   const pendingEnsureKeyRef = useRef<string | null>(null)
   const rowElementByIdRef = useRef(new Map<number, HTMLDivElement>())
   const [visibleEventIds, setVisibleEventIds] = useState<Set<number>>(new Set())
+  const eventIdsKey = useMemo(
+    () => events.map((event) => event.id).join('|'),
+    [events],
+  )
 
   useEffect(() => {
-    setVisibleEventIds(
-      new Set(events.slice(0, CLOSED_POSITION_INITIAL_VISIBLE_ROW_COUNT).map((event) => event.id)),
+    const nextVisibleIds = new Set(
+      events
+        .slice(0, CLOSED_POSITION_INITIAL_VISIBLE_ROW_COUNT)
+        .map((event) => event.id),
+    )
+
+    setVisibleEventIds((current) =>
+      areSetsEqual(current, nextVisibleIds) ? current : nextVisibleIds,
     )
   }, [events])
 
@@ -180,10 +214,10 @@ export function ClosedPositionsList({
     return () => {
       observer.disconnect()
     }
-  }, [events])
+  }, [eventIdsKey])
 
   const unresolvedRanges = useMemo(() => {
-    const nextRanges: SlotRange[] = []
+    const nextRanges: Array<SlotRange> = []
 
     for (const event of events) {
       if (!visibleEventIds.has(event.id)) continue
@@ -349,7 +383,7 @@ const ClosedPositionRow = memo(function ClosedPositionRow({
               href={formatExplorerTransactionUrl(event.signature, endpoint)}
               rel="noreferrer"
               target="_blank"
-              onClick={(event) => event.stopPropagation()}
+              onClick={(clickEvent) => clickEvent.stopPropagation()}
             >
               {shortenAddress(event.signature, 6, 4)}
               <ArrowUpRight className="size-3" />

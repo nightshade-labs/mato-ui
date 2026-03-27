@@ -1,4 +1,4 @@
-import { SolanaClientProvider } from '@solana/react-hooks'
+import { SolanaProvider as BaseSolanaProvider } from '@solana/react-hooks'
 import { autoDiscover, createClient } from '@solana/client'
 
 const endpoint =
@@ -17,8 +17,6 @@ export const solanaClient = createClient({
 
 export function SolanaProvider({ children }: { children: React.ReactNode }) {
   return (
-    <SolanaClientProvider client={solanaClient}>
-      {children}
-    </SolanaClientProvider>
+    <BaseSolanaProvider client={solanaClient}>{children}</BaseSolanaProvider>
   )
 }
