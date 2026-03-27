@@ -25,11 +25,11 @@ describe('buildOlderChartHistoryRequest', () => {
 
     expect(
       buildOlderChartHistoryRequest({
+        barsBefore: 5,
         data,
         logicalRange: { from: 5.2, to: 35.7 },
       }),
     ).toEqual({
-      oldestVisibleCandle: data[5],
       visibleBarCount: 32,
     })
   })
@@ -39,6 +39,7 @@ describe('buildOlderChartHistoryRequest', () => {
 
     expect(
       buildOlderChartHistoryRequest({
+        barsBefore: 45,
         data,
         logicalRange: { from: 45, to: 70 },
       }),
@@ -50,11 +51,11 @@ describe('buildOlderChartHistoryRequest', () => {
 
     expect(
       buildOlderChartHistoryRequest({
+        barsBefore: 26,
         data,
         logicalRange: { from: 26, to: 106 },
       }),
     ).toEqual({
-      oldestVisibleCandle: data[26],
       visibleBarCount: 81,
     })
   })
@@ -65,7 +66,6 @@ describe('buildOlderChartHistoryRange', () => {
     expect(
       buildOlderChartHistoryRange({
         oldestLoadedSlot: 4_000,
-        oldestVisibleSlot: 4_180,
         slotsPerBar: 150,
         visibleBarCount: 30,
       }),
@@ -79,26 +79,40 @@ describe('buildOlderChartHistoryRange', () => {
     expect(
       buildOlderChartHistoryRange({
         oldestLoadedSlot: 1_000,
-        oldestVisibleSlot: 1_010,
         slotsPerBar: 5,
         visibleBarCount: 1,
         bufferBars: 0,
         minimumRequestBars: 1,
       }),
-    ).toBeNull()
+    ).toEqual({
+      endSlot: 999,
+      startSlot: 990,
+    })
   })
 
   it('uses a larger default backfill window to reduce repeat edge requests', () => {
     expect(
       buildOlderChartHistoryRange({
         oldestLoadedSlot: 4_000,
-        oldestVisibleSlot: 4_140,
         slotsPerBar: 20,
         visibleBarCount: 5,
       }),
     ).toEqual({
       endSlot: 3_999,
-      startSlot: 2_700,
+      startSlot: 2_560,
+    })
+  })
+
+  it('pages backward from the oldest loaded slot instead of the visible slot', () => {
+    expect(
+      buildOlderChartHistoryRange({
+        oldestLoadedSlot: 90_000,
+        slotsPerBar: 9_000,
+        visibleBarCount: 8,
+      }),
+    ).toEqual({
+      endSlot: 89_999,
+      startSlot: 0,
     })
   })
 })

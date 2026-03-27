@@ -3,6 +3,7 @@ import {
   buildTradingDashboardViewModel,
   deriveMarketIdentity,
 } from './trading-dashboard'
+import type { TradingViewAggregatedCandle } from '../lib/market'
 
 describe('deriveMarketIdentity', () => {
   it('normalizes tickers from market config', () => {
@@ -25,12 +26,25 @@ describe('deriveMarketIdentity', () => {
 
 describe('buildTradingDashboardViewModel', () => {
   it('prefers the latest market price and derives execution preview', () => {
+    const chartCandles: Array<TradingViewAggregatedCandle> = [
+      {
+        close: 19,
+        endSlot: 11,
+        high: 19,
+        low: 18,
+        open: 18,
+        startSlot: 10,
+        time: 1_742_428_800,
+        volume: 20,
+      },
+    ]
+
     const viewModel = buildTradingDashboardViewModel({
       amountAtoms: 1_000_000_000n,
       amountUiValue: 1,
       baseDecimals: 9,
       baseTicker: 'SOL',
-      chartTimeframe: '1h',
+      chartCandles,
       crosshairData: null,
       durationSeconds: 60,
       marketPrice: { price: 20, slot: 11 },

@@ -1,24 +1,34 @@
 import { useMemo, useState } from 'react'
 import { useWalletConnection, useWalletSession } from '@solana/react-hooks'
-import { ArrowUpRight, CandlestickChart, RadioTower, RefreshCcw, Wallet } from 'lucide-react'
-import { Alert } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import {
+  ArrowUpRight,
+  CandlestickChart,
+  RadioTower,
+  RefreshCcw,
+  Wallet,
+} from 'lucide-react'
 import {
   CHART_TIMEFRAMES,
   DEFAULT_MARKET_UPDATES_LIMIT,
   MARKET_ID,
-  SLOT_DURATION_MS,
-  type ChartTimeframe,
-  type MarketPanelTab,
-  type OrderSide,
-  type PositionPanelTab,
 } from '../constants'
-import { sanitizeAmountInput, parseTokenAmount, atomsFromPercent, durationToSlots, formatAtomsToInput, toSliderPercent } from '../lib/amounts'
-import { formatCompactNumber, formatExplorerTransactionUrl, formatPrice, formatSignedNumber, shortenAddress } from '../lib/format'
-import type { TradePositionRecord } from '../domain/models'
+import {
+  atomsFromPercent,
+  durationToSlots,
+  formatAtomsToInput,
+  parseTokenAmount,
+  sanitizeAmountInput,
+  toSliderPercent,
+} from '../lib/amounts'
+import {
+  formatCompactNumber,
+  formatExplorerTransactionUrl,
+  formatPrice,
+  formatSignedNumber,
+  shortenAddress,
+} from '../lib/format'
 import { useMarketAddress } from '../hooks/use-market-address'
+import { useMarketChartHistory } from '../hooks/use-market-chart-history'
 import { useMarketConfig } from '../hooks/use-market-config'
 import { useMarketPrice } from '../hooks/use-market-price'
 import { useMarketUpdates } from '../hooks/use-market-updates'
@@ -27,17 +37,32 @@ import { useTradePositions } from '../hooks/use-trade-positions'
 import { useWalletTokenBalance } from '../hooks/use-wallet-token-balance'
 import { useSubmitOrder } from '../hooks/use-submit-order'
 import { useClosePosition } from '../hooks/use-close-position'
-import { MarketPriceChart, type ChartCrosshairData, type ChartHistoryRequest } from './market-price-chart'
-import { WalletConnectionButton } from './wallet-connection-button'
-import { OrderEntryCard } from './order-entry-card'
-import { ActivePositionCard } from './active-position-card'
-import { ClosedPositionsList } from './closed-positions-list'
-import { endpoint } from '@/integrations/solana'
 import {
   buildTradingDashboardViewModel,
   deriveMarketIdentity,
   formatDashboardPrice,
 } from '../view-models/trading-dashboard'
+import { MarketPriceChart } from './market-price-chart'
+import { WalletConnectionButton } from './wallet-connection-button'
+import { OrderEntryCard } from './order-entry-card'
+import { ActivePositionCard } from './active-position-card'
+import { ClosedPositionsList } from './closed-positions-list'
+import type {
+  ChartCrosshairData,
+  ChartHistoryRequest,
+} from './market-price-chart'
+import type {
+  ChartTimeframe,
+  MarketPanelTab,
+  OrderSide,
+  PositionPanelTab,
+} from '../constants'
+import type { TradePositionRecord } from '../domain/models'
+import { endpoint } from '@/integrations/solana'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Alert } from '@/components/ui/alert'
 
 export function TradingDashboard() {
   const session = useWalletSession()
@@ -60,10 +85,13 @@ export function TradingDashboard() {
   const [amountInput, setAmountInput] = useState('')
   const [durationSeconds, setDurationSeconds] = useState(30 * 60)
   const [marketPanelTab, setMarketPanelTab] = useState<MarketPanelTab>('chart')
-  const [positionPanelTab, setPositionPanelTab] = useState<PositionPanelTab>('active')
+  const [positionPanelTab, setPositionPanelTab] =
+    useState<PositionPanelTab>('active')
   const [chartTimeframe, setChartTimeframe] = useState<ChartTimeframe>('1h')
   const [chartResetSignal, setChartResetSignal] = useState(0)
-  const [crosshairData, setCrosshairData] = useState<ChartCrosshairData | null>(null)
+  const [crosshairData, setCrosshairData] = useState<ChartCrosshairData | null>(
+    null,
+  )
   const [validationError, setValidationError] = useState<string | null>(null)
 
   const submitOrder = useSubmitOrder()
@@ -77,6 +105,13 @@ export function TradingDashboard() {
     quoteMint,
     quoteTicker,
   } = useMemo(() => deriveMarketIdentity(marketConfig), [marketConfig])
+  const marketChartHistory = useMarketChartHistory({
+    baseDecimals,
+    latestEvents: marketUpdates.events,
+    marketId: MARKET_ID,
+    quoteDecimals,
+    timeframe: chartTimeframe,
+  })
 
   const baseBalance = useWalletTokenBalance(baseMint, baseDecimals || 9)
   const quoteBalance = useWalletTokenBalance(quoteMint, quoteDecimals || 9)
@@ -85,16 +120,23 @@ export function TradingDashboard() {
   const amountTokenTicker = side === 'sell' ? baseTicker : quoteTicker
   const amountDecimals = side === 'sell' ? baseDecimals : quoteDecimals
   const availableAtoms = selectedBalance.spendableAtoms
-  const amountAtoms = useMemo(() => parseTokenAmount(amountInput, amountDecimals), [amountDecimals, amountInput])
-  const sliderValue = useMemo(() => toSliderPercent(amountAtoms, availableAtoms), [amountAtoms, availableAtoms])
-  const amountExceedsAvailable = amountAtoms !== null && amountAtoms > availableAtoms
+  const amountAtoms = useMemo(
+    () => parseTokenAmount(amountInput, amountDecimals),
+    [amountDecimals, amountInput],
+  )
+  const sliderValue = useMemo(
+    () => toSliderPercent(amountAtoms, availableAtoms),
+    [amountAtoms, availableAtoms],
+  )
+  const amountExceedsAvailable =
+    amountAtoms !== null && amountAtoms > availableAtoms
 
   const amountUiValue = useMemo(() => {
     if (!amountAtoms || amountAtoms <= 0n) return null
     return Number(amountAtoms) / 10 ** amountDecimals
   }, [amountAtoms, amountDecimals])
 
-  const activePositions = useMemo<TradePositionRecord[]>(
+  const activePositions = useMemo<Array<TradePositionRecord>>(
     () => tradePositionsQuery.data ?? [],
     [tradePositionsQuery.data],
   )
@@ -105,7 +147,7 @@ export function TradingDashboard() {
         amountUiValue,
         baseDecimals,
         baseTicker,
-        chartTimeframe,
+        chartCandles: marketChartHistory.candles,
         crosshairData,
         durationSeconds,
         marketPrice: marketPriceQuery.data,
@@ -122,9 +164,9 @@ export function TradingDashboard() {
       amountUiValue,
       baseDecimals,
       baseTicker,
-      chartTimeframe,
       crosshairData,
       durationSeconds,
+      marketChartHistory.candles,
       marketPriceQuery.data,
       marketUpdates.events,
       quoteDecimals,
@@ -137,7 +179,6 @@ export function TradingDashboard() {
     activeOhlcv,
     activeOhlcvTimeLabel,
     chartCandles,
-    chartIntervalMs,
     displayPrice,
     estimatedConversionText,
     executionPriceDisplay,
@@ -170,10 +211,10 @@ export function TradingDashboard() {
     await Promise.allSettled([baseBalance.refresh(), quoteBalance.refresh()])
   }
 
-  const handleNeedOlderChartHistory = ({ oldestVisibleCandle, visibleBarCount }: ChartHistoryRequest) => {
-    void marketUpdates.ensureOlderChartHistory({
-      oldestVisibleSlot: oldestVisibleCandle.startSlot,
-      slotsPerBar: Math.max(1, Math.round(chartIntervalMs / SLOT_DURATION_MS)),
+  const handleNeedOlderChartHistory = ({
+    visibleBarCount,
+  }: ChartHistoryRequest) => {
+    void marketChartHistory.loadOlderHistory({
       visibleBarCount,
     })
   }
@@ -199,7 +240,9 @@ export function TradingDashboard() {
       return
     }
     if (amountAtoms > availableAtoms) {
-      setValidationError(`Amount exceeds available ${amountTokenTicker} balance.`)
+      setValidationError(
+        `Amount exceeds available ${amountTokenTicker} balance.`,
+      )
       return
     }
 
@@ -210,7 +253,7 @@ export function TradingDashboard() {
       durationSlots,
       existingWrappedAtoms: selectedBalance.existingWrappedAtoms,
       id: BigInt(Date.now()),
-      inputMintAddress: side === 'buy' ? quoteMint ?? '' : baseMint ?? '',
+      inputMintAddress: side === 'buy' ? (quoteMint ?? '') : (baseMint ?? ''),
       isBuy: side === 'buy',
       marketAddress,
     })
@@ -223,7 +266,11 @@ export function TradingDashboard() {
 
   const topAlert = validationError ?? submitOrder.error ?? closePosition.error
   const topAlertVariant =
-    submitOrder.status === 'success' || closePosition.status === 'success' ? 'success' : topAlert ? 'error' : null
+    submitOrder.status === 'success' || closePosition.status === 'success'
+      ? 'success'
+      : topAlert
+        ? 'error'
+        : null
   const txSignature = submitOrder.signature ?? closePosition.signature
 
   return (
@@ -239,15 +286,18 @@ export function TradingDashboard() {
                   {baseTicker}/{quoteTicker}
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-                  A cleaner desktop port of `mato-mobile`: wallet-standard connection, Codama-generated Twob client,
-                  Supabase market history, and direct `lightweight-charts` rendering.
+                  A cleaner desktop port of `mato-mobile`: wallet-standard
+                  connection, Codama-generated Twob client, Supabase market
+                  history, and direct `lightweight-charts` rendering.
                 </p>
               </div>
             </div>
 
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <div className="rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Wallet</div>
+                <div className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
+                  Wallet
+                </div>
                 <div className="mt-2 flex items-center gap-3">
                   <Wallet className="size-4 text-[color:var(--color-accent-strong)]" />
                   <span className="font-medium">
@@ -296,13 +346,31 @@ export function TradingDashboard() {
                 : 'Waiting for ticks'
             }
           />
-          <MetricPanel label="24h High" value={marketStats.high === null ? '—' : `$${formatPrice(marketStats.high)}`} />
-          <MetricPanel label="24h Low" value={marketStats.low === null ? '—' : `$${formatPrice(marketStats.low)}`} />
+          <MetricPanel
+            label="24h High"
+            value={
+              marketStats.high === null
+                ? '—'
+                : `$${formatPrice(marketStats.high)}`
+            }
+          />
+          <MetricPanel
+            label="24h Low"
+            value={
+              marketStats.low === null
+                ? '—'
+                : `$${formatPrice(marketStats.low)}`
+            }
+          />
           <MetricPanel
             icon={<RadioTower className="size-4" />}
             label={`24h Vol (${quoteTicker})`}
             value={formatCompactNumber(marketStats.volumeQuote)}
-            detail={streamingStateQuery.data ? 'Live stream active' : 'Polling on-chain state'}
+            detail={
+              streamingStateQuery.data
+                ? 'Live stream active'
+                : 'Polling on-chain state'
+            }
           />
         </section>
 
@@ -315,7 +383,9 @@ export function TradingDashboard() {
                     <div className="mb-2 flex items-center gap-2">
                       <Badge variant="muted">Spot</Badge>
                       {priceDelta !== null && priceDeltaPercent !== null ? (
-                        <Badge variant={priceDelta >= 0 ? 'positive' : 'negative'}>
+                        <Badge
+                          variant={priceDelta >= 0 ? 'positive' : 'negative'}
+                        >
                           {formatSignedNumber(priceDeltaPercent, 2)}%
                         </Badge>
                       ) : null}
@@ -342,7 +412,9 @@ export function TradingDashboard() {
                     ))}
                     <Button
                       className="rounded-full"
-                      onClick={() => setChartResetSignal((previous) => previous + 1)}
+                      onClick={() =>
+                        setChartResetSignal((previous) => previous + 1)
+                      }
                       size="xs"
                       variant="outline"
                     >
@@ -362,7 +434,11 @@ export function TradingDashboard() {
                             className="rounded-full"
                             onClick={() => setChartTimeframe(timeframe.label)}
                             size="xs"
-                            variant={chartTimeframe === timeframe.label ? 'default' : 'outline'}
+                            variant={
+                              chartTimeframe === timeframe.label
+                                ? 'default'
+                                : 'outline'
+                            }
                           >
                             {timeframe.label}
                           </Button>
@@ -372,11 +448,30 @@ export function TradingDashboard() {
 
                     {activeOhlcv ? (
                       <div className="grid gap-3 rounded-2xl border border-white/8 bg-white/5 p-4 sm:grid-cols-5">
-                        <MetricChip label="Open" value={formatPrice(activeOhlcv.open)} />
-                        <MetricChip label="High" value={formatPrice(activeOhlcv.high)} />
-                        <MetricChip label="Low" value={formatPrice(activeOhlcv.low)} />
-                        <MetricChip label="Close" value={formatPrice(activeOhlcv.close)} />
-                        <MetricChip label="Volume" value={activeOhlcv.volume === null ? '—' : formatCompactNumber(activeOhlcv.volume)} />
+                        <MetricChip
+                          label="Open"
+                          value={formatPrice(activeOhlcv.open)}
+                        />
+                        <MetricChip
+                          label="High"
+                          value={formatPrice(activeOhlcv.high)}
+                        />
+                        <MetricChip
+                          label="Low"
+                          value={formatPrice(activeOhlcv.low)}
+                        />
+                        <MetricChip
+                          label="Close"
+                          value={formatPrice(activeOhlcv.close)}
+                        />
+                        <MetricChip
+                          label="Volume"
+                          value={
+                            activeOhlcv.volume === null
+                              ? '—'
+                              : formatCompactNumber(activeOhlcv.volume)
+                          }
+                        />
                       </div>
                     ) : null}
 
@@ -392,8 +487,10 @@ export function TradingDashboard() {
                       <div className="overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),rgba(255,255,255,0)_55%)]">
                         <MarketPriceChart
                           data={chartCandles}
-                          hasMoreHistory={marketUpdates.hasMoreHistory}
-                          isLoadingMoreHistory={marketUpdates.loadingMoreHistory}
+                          hasMoreHistory={marketChartHistory.hasMoreHistory}
+                          isLoadingMoreHistory={
+                            marketChartHistory.isLoadingMoreHistory
+                          }
                           onCrosshairMove={setCrosshairData}
                           onNeedOlderHistory={handleNeedOlderChartHistory}
                           resetSignal={chartResetSignal}
@@ -423,9 +520,20 @@ export function TradingDashboard() {
                   <EmptyState copy="Order book snapshots are not in the available feed yet, so the web app mirrors the mobile placeholder here." />
                 )}
 
-                {marketUpdates.error ? <p className="text-sm text-destructive">{marketUpdates.error}</p> : null}
+                {marketUpdates.error ? (
+                  <p className="text-sm text-destructive">
+                    {marketUpdates.error}
+                  </p>
+                ) : null}
+                {marketChartHistory.error ? (
+                  <p className="text-sm text-destructive">
+                    {marketChartHistory.error}
+                  </p>
+                ) : null}
                 {marketAddressQuery.error instanceof Error ? (
-                  <p className="text-sm text-destructive">{marketAddressQuery.error.message}</p>
+                  <p className="text-sm text-destructive">
+                    {marketAddressQuery.error.message}
+                  </p>
                 ) : null}
               </CardContent>
             </Card>
@@ -456,7 +564,10 @@ export function TradingDashboard() {
                         isClosing={closePosition.isClosing}
                         marketAddress={marketAddress}
                         onClose={async (tradePositionAddress) => {
-                          const success = await closePosition.closePosition({ marketAddress, tradePositionAddress })
+                          const success = await closePosition.closePosition({
+                            marketAddress,
+                            tradePositionAddress,
+                          })
                           if (success) {
                             await refreshBalances()
                           }
@@ -495,7 +606,9 @@ export function TradingDashboard() {
             <OrderEntryCard
               amountInput={amountInput}
               amountTokenTicker={amountTokenTicker}
-              availableAmountDisplay={Number(availableAtoms) / 10 ** amountDecimals}
+              availableAmountDisplay={
+                Number(availableAtoms) / 10 ** amountDecimals
+              }
               canSubmit={!submitDisabled}
               durationSeconds={durationSeconds}
               estimatedConversionText={estimatedConversionText}
@@ -547,7 +660,9 @@ function MetricPanel({
           {icon}
         </div>
         <div className="text-2xl font-semibold tracking-[-0.04em]">{value}</div>
-        {detail ? <div className="text-sm text-muted-foreground">{detail}</div> : null}
+        {detail ? (
+          <div className="text-sm text-muted-foreground">{detail}</div>
+        ) : null}
       </CardContent>
     </Card>
   )
@@ -556,7 +671,9 @@ function MetricPanel({
 function MetricChip({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-black/20 p-3">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
+      <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+        {label}
+      </div>
       <div className="mt-1 font-medium">{value}</div>
     </div>
   )
@@ -565,7 +682,9 @@ function MetricChip({ label, value }: { label: string; value: string }) {
 function EmptyState({ copy }: { copy: string }) {
   return (
     <Card className="border-white/10 bg-black/20">
-      <CardContent className="p-8 text-center text-sm text-muted-foreground">{copy}</CardContent>
+      <CardContent className="p-8 text-center text-sm text-muted-foreground">
+        {copy}
+      </CardContent>
     </Card>
   )
 }

@@ -1,25 +1,21 @@
-import type { MarketConfigRow, MarketUpdateEvent } from '@/integrations/supabase'
-import type {
-  ChartTimeframe,
-  OrderSide,
-} from '../constants'
-import { CHART_TIMEFRAMES, SLOT_DURATION_MS } from '../constants'
 import { durationToSlots } from '../lib/amounts'
-import type {
-  StreamingMarketState,
-  TradePositionRecord,
-} from '../domain/models'
-import {
-  aggregateTradingViewCandles,
-  computeMarketStats,
-  marketPriceFromFlows,
-} from '../lib/market'
+import { computeMarketStats, marketPriceFromFlows } from '../lib/market'
 import {
   formatCrosshairTimeLabel,
   formatPrice,
   formatUiAmount,
   shortenAddress,
 } from '../lib/format'
+import type {
+  MarketConfigRow,
+  MarketUpdateEvent,
+} from '@/integrations/supabase'
+import type { OrderSide } from '../constants'
+import type { TradingViewAggregatedCandle } from '../lib/market'
+import type {
+  StreamingMarketState,
+  TradePositionRecord,
+} from '../domain/models'
 
 export interface DashboardChartFocus {
   close: number
@@ -71,7 +67,7 @@ export function buildTradingDashboardViewModel({
   amountUiValue,
   baseDecimals,
   baseTicker,
-  chartTimeframe,
+  chartCandles,
   crosshairData,
   durationSeconds,
   marketPrice,
@@ -86,30 +82,18 @@ export function buildTradingDashboardViewModel({
   amountUiValue: number | null
   baseDecimals: number
   baseTicker: string
-  chartTimeframe: ChartTimeframe
+  chartCandles: Array<TradingViewAggregatedCandle>
   crosshairData: DashboardChartFocus | null
   durationSeconds: number
   marketPrice?: { price: number | null; slot: number | null }
-  marketUpdates: MarketUpdateEvent[]
+  marketUpdates: Array<MarketUpdateEvent>
   quoteDecimals: number
   quoteTicker: string
   side: OrderSide
   streamingState: StreamingMarketState | null | undefined
-  tradePositions: TradePositionRecord[]
+  tradePositions: Array<TradePositionRecord>
 }) {
-  const chartIntervalMs =
-    CHART_TIMEFRAMES.find((option) => option.label === chartTimeframe)
-      ?.intervalMs ?? 60 * 60 * 1000
-
-  const chartCandles = aggregateTradingViewCandles(
-    marketUpdates,
-    chartIntervalMs,
-    baseDecimals,
-    quoteDecimals,
-    SLOT_DURATION_MS,
-  )
-
-  const latestChartCandle = chartCandles[chartCandles.length - 1] ?? null
+  const latestChartCandle = chartCandles.at(-1) ?? null
   const recentTickPrices = marketUpdates
     .slice(0, 2)
     .map((event) =>
@@ -122,8 +106,8 @@ export function buildTradingDashboardViewModel({
     )
     .filter((value): value is number => value !== null)
 
-  const latestTickPrice = recentTickPrices[0] ?? null
-  const previousTickPrice = recentTickPrices[1] ?? null
+  const latestTickPrice = recentTickPrices.at(0) ?? null
+  const previousTickPrice = recentTickPrices.at(1) ?? null
   const onChainIndicativePrice = streamingState
     ? marketPriceFromFlows(
         streamingState.marketBaseFlow,
@@ -215,10 +199,11 @@ export function buildTradingDashboardViewModel({
 
   return {
     activeOhlcv,
-    activeOhlcvTimeLabel: formatCrosshairTimeLabel(activeOhlcv?.time ?? null),
+    activeOhlcvTimeLabel: formatCrosshairTimeLabel(
+      activeOhlcv === null ? null : activeOhlcv.time,
+    ),
     activePositions: tradePositions,
     chartCandles,
-    chartIntervalMs,
     displayPrice,
     estimatedConversionText,
     executionPrice,

@@ -1,23 +1,25 @@
 import {
+  CandlestickSeries,
   ColorType,
   CrosshairMode,
   HistogramSeries,
-  CandlestickSeries,
-  type LogicalRange,
   createChart,
-  type IChartApi,
-  type ISeriesApi,
-  type CandlestickData,
-  type HistogramData,
-  type UTCTimestamp,
 } from 'lightweight-charts'
 import { useEffect, useEffectEvent, useMemo, useRef } from 'react'
-import type { TradingViewAggregatedCandle } from '../lib/market'
 import {
   buildOlderChartHistoryRequest,
   computePrependedLogicalRange,
 } from '../lib/chart-history'
 import { CHART_HISTORY_REQUEST_DEBOUNCE_MS } from '../constants'
+import type {
+  CandlestickData,
+  HistogramData,
+  IChartApi,
+  ISeriesApi,
+  LogicalRange,
+  UTCTimestamp,
+} from 'lightweight-charts'
+import type { TradingViewAggregatedCandle } from '../lib/market'
 
 export interface ChartCrosshairData {
   close: number
@@ -29,8 +31,29 @@ export interface ChartCrosshairData {
 }
 
 export interface ChartHistoryRequest {
-  oldestVisibleCandle: TradingViewAggregatedCandle
   visibleBarCount: number
+}
+
+function isSameCrosshairData(
+  left: ChartCrosshairData | null,
+  right: ChartCrosshairData | null,
+) {
+  if (left === right) {
+    return true
+  }
+
+  if (left === null || right === null) {
+    return false
+  }
+
+  return (
+    left.close === right.close &&
+    left.high === right.high &&
+    left.low === right.low &&
+    left.open === right.open &&
+    left.time === right.time &&
+    left.volume === right.volume
+  )
 }
 
 export function MarketPriceChart({
@@ -42,7 +65,7 @@ export function MarketPriceChart({
   onNeedOlderHistory,
   resetSignal = 0,
 }: {
-  data: TradingViewAggregatedCandle[]
+  data: Array<TradingViewAggregatedCandle>
   height?: number
   hasMoreHistory?: boolean
   isLoadingMoreHistory?: boolean
@@ -57,9 +80,12 @@ export function MarketPriceChart({
   const previousDataLengthRef = useRef(0)
   const previousFirstTimeRef = useRef<number | null>(null)
   const previousLastTimeRef = useRef<number | null>(null)
-  const hasUserScrollIntentRef = useRef(false)
+  const activePanGestureRef = useRef(false)
   const isAdjustingVisibleRangeRef = useRef(false)
   const lastHistoryRequestAtRef = useRef(0)
+  const lastLogicalRangeRef = useRef<LogicalRange | null>(null)
+  const wheelGestureTimeoutRef = useRef<number | null>(null)
+  const lastCrosshairDataRef = useRef<ChartCrosshairData | null>(null)
 
   const histogramData = useMemo(
     () =>
@@ -82,33 +108,67 @@ export function MarketPriceChart({
     [data],
   )
 
-  const handleCrosshairMove = useEffectEvent((payload: ChartCrosshairData | null) => {
-    onCrosshairMove?.(payload)
-  })
-  const handleNeedOlderHistory = useEffectEvent((range: LogicalRange | null) => {
-    if (!range || !hasUserScrollIntentRef.current || isAdjustingVisibleRangeRef.current) {
-      return
-    }
-    if (!hasMoreHistory || isLoadingMoreHistory || !onNeedOlderHistory) {
-      return
-    }
+  const handleCrosshairMove = useEffectEvent(
+    (payload: ChartCrosshairData | null) => {
+      if (isSameCrosshairData(lastCrosshairDataRef.current, payload)) {
+        return
+      }
 
-    const now = Date.now()
-    if (now - lastHistoryRequestAtRef.current < CHART_HISTORY_REQUEST_DEBOUNCE_MS) {
-      return
-    }
+      lastCrosshairDataRef.current = payload
+      onCrosshairMove?.(payload)
+    },
+  )
+  const handleNeedOlderHistory = useEffectEvent(
+    (range: LogicalRange | null) => {
+      if (
+        !range ||
+        !activePanGestureRef.current ||
+        isAdjustingVisibleRangeRef.current
+      ) {
+        return
+      }
+      if (!hasMoreHistory || isLoadingMoreHistory || !onNeedOlderHistory) {
+        return
+      }
 
-    const request = buildOlderChartHistoryRequest({
-      data,
-      logicalRange: range,
-    })
-    if (request === null) {
-      return
-    }
+      const previousRange = lastLogicalRangeRef.current
+      lastLogicalRangeRef.current = range
 
-    lastHistoryRequestAtRef.current = now
-    onNeedOlderHistory(request)
-  })
+      if (!previousRange) {
+        return
+      }
+
+      const previousSpan = previousRange.to - previousRange.from
+      const nextSpan = range.to - range.from
+      const isScaleChange = Math.abs(nextSpan - previousSpan) > 0.01
+      const movedLeft = range.from < previousRange.from - 0.25
+
+      if (isScaleChange || !movedLeft || !candleSeriesRef.current) {
+        return
+      }
+
+      const now = Date.now()
+      if (
+        now - lastHistoryRequestAtRef.current <
+        CHART_HISTORY_REQUEST_DEBOUNCE_MS
+      ) {
+        return
+      }
+
+      const barsInfo = candleSeriesRef.current.barsInLogicalRange(range)
+      const request = buildOlderChartHistoryRequest({
+        barsBefore: barsInfo?.barsBefore ?? null,
+        data,
+        logicalRange: range,
+      })
+      if (request === null) {
+        return
+      }
+
+      lastHistoryRequestAtRef.current = now
+      onNeedOlderHistory(request)
+    },
+  )
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -123,6 +183,7 @@ export function MarketPriceChart({
         vertLines: { color: 'rgba(255,255,255,0.04)' },
       },
       handleScroll: {
+        horzTouchDrag: true,
         mouseWheel: true,
         pressedMouseMove: true,
         vertTouchDrag: false,
@@ -145,6 +206,7 @@ export function MarketPriceChart({
       },
       timeScale: {
         borderColor: 'rgba(255,255,255,0.12)',
+        fixLeftEdge: true,
         timeVisible: true,
       },
     })
@@ -181,7 +243,9 @@ export function MarketPriceChart({
         | { close: number; high: number; low: number; open: number }
         | undefined
       const volume = volumeSeriesRef.current
-        ? (param.seriesData.get(volumeSeriesRef.current) as { value: number } | undefined)
+        ? (param.seriesData.get(volumeSeriesRef.current) as
+            | { value: number }
+            | undefined)
         : undefined
 
       if (!candle || param.time === undefined) {
@@ -206,13 +270,55 @@ export function MarketPriceChart({
     candleSeriesRef.current = candleSeries
     volumeSeriesRef.current = volumeSeries
 
-    const handleUserScrollIntent = () => {
-      hasUserScrollIntentRef.current = true
+    const clearPanGesture = () => {
+      activePanGestureRef.current = false
+      if (wheelGestureTimeoutRef.current !== null) {
+        window.clearTimeout(wheelGestureTimeoutRef.current)
+        wheelGestureTimeoutRef.current = null
+      }
     }
 
-    containerRef.current.addEventListener('pointerdown', handleUserScrollIntent, { passive: true })
-    containerRef.current.addEventListener('wheel', handleUserScrollIntent, { passive: true })
-    containerRef.current.addEventListener('touchstart', handleUserScrollIntent, { passive: true })
+    const handlePointerDown = () => {
+      activePanGestureRef.current = true
+    }
+    const handleTouchStart = (event: TouchEvent) => {
+      activePanGestureRef.current = event.touches.length === 1
+    }
+    const handleTouchEnd = () => {
+      activePanGestureRef.current = false
+    }
+    const handleWheel = (event: WheelEvent) => {
+      activePanGestureRef.current =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+      if (!activePanGestureRef.current) {
+        return
+      }
+      if (wheelGestureTimeoutRef.current !== null) {
+        window.clearTimeout(wheelGestureTimeoutRef.current)
+      }
+      wheelGestureTimeoutRef.current = window.setTimeout(() => {
+        activePanGestureRef.current = false
+        wheelGestureTimeoutRef.current = null
+      }, 120)
+    }
+
+    containerRef.current.addEventListener('pointerdown', handlePointerDown, {
+      passive: true,
+    })
+    window.addEventListener('pointerup', clearPanGesture)
+    window.addEventListener('pointercancel', clearPanGesture)
+    containerRef.current.addEventListener('wheel', handleWheel, {
+      passive: true,
+    })
+    containerRef.current.addEventListener('touchstart', handleTouchStart, {
+      passive: true,
+    })
+    containerRef.current.addEventListener('touchend', handleTouchEnd, {
+      passive: true,
+    })
+    containerRef.current.addEventListener('touchcancel', handleTouchEnd, {
+      passive: true,
+    })
 
     const resizeObserver = new ResizeObserver(() => {
       chart.timeScale().applyOptions({ rightOffset: 8 })
@@ -221,9 +327,16 @@ export function MarketPriceChart({
 
     return () => {
       resizeObserver.disconnect()
-      containerRef.current?.removeEventListener('pointerdown', handleUserScrollIntent)
-      containerRef.current?.removeEventListener('wheel', handleUserScrollIntent)
-      containerRef.current?.removeEventListener('touchstart', handleUserScrollIntent)
+      containerRef.current?.removeEventListener(
+        'pointerdown',
+        handlePointerDown,
+      )
+      window.removeEventListener('pointerup', clearPanGesture)
+      window.removeEventListener('pointercancel', clearPanGesture)
+      containerRef.current?.removeEventListener('wheel', handleWheel)
+      containerRef.current?.removeEventListener('touchstart', handleTouchStart)
+      containerRef.current?.removeEventListener('touchend', handleTouchEnd)
+      containerRef.current?.removeEventListener('touchcancel', handleTouchEnd)
       chart.remove()
       chartRef.current = null
       candleSeriesRef.current = null
@@ -231,38 +344,54 @@ export function MarketPriceChart({
       previousDataLengthRef.current = 0
       previousFirstTimeRef.current = null
       previousLastTimeRef.current = null
-      hasUserScrollIntentRef.current = false
+      activePanGestureRef.current = false
       isAdjustingVisibleRangeRef.current = false
       lastHistoryRequestAtRef.current = 0
+      lastLogicalRangeRef.current = null
+      lastCrosshairDataRef.current = null
+      if (wheelGestureTimeoutRef.current !== null) {
+        window.clearTimeout(wheelGestureTimeoutRef.current)
+        wheelGestureTimeoutRef.current = null
+      }
     }
-  }, [handleCrosshairMove, handleNeedOlderHistory, height])
+  }, [height])
 
   useEffect(() => {
-    if (!candleSeriesRef.current || !volumeSeriesRef.current || !chartRef.current) return
+    if (
+      !candleSeriesRef.current ||
+      !volumeSeriesRef.current ||
+      !chartRef.current
+    )
+      return
     const previousRange = chartRef.current.timeScale().getVisibleLogicalRange()
     const previousLength = previousDataLengthRef.current
     const previousFirstTime = previousFirstTimeRef.current
     const previousLastTime = previousLastTimeRef.current
 
-    candleSeriesRef.current.setData(candleData)
-    volumeSeriesRef.current.setData(histogramData)
-
     const hadNoData = previousLength === 0
+    const nextFirstTime = data[0]?.time ?? null
+    const nextLastTime = data[data.length - 1]?.time ?? null
+
     previousDataLengthRef.current = data.length
-    previousFirstTimeRef.current = data[0]?.time ?? null
-    previousLastTimeRef.current = data[data.length - 1]?.time ?? null
+    previousFirstTimeRef.current = nextFirstTime
+    previousLastTimeRef.current = nextLastTime
 
     if (data.length > 0) {
       if (hadNoData) {
+        candleSeriesRef.current.setData(candleData)
+        volumeSeriesRef.current.setData(histogramData)
         isAdjustingVisibleRangeRef.current = true
         chartRef.current.timeScale().fitContent()
         isAdjustingVisibleRangeRef.current = false
+        lastLogicalRangeRef.current = chartRef.current
+          .timeScale()
+          .getVisibleLogicalRange()
         return
       }
 
       const nextRange = computePrependedLogicalRange({
-        nextFirstTime: data[0]?.time ?? null,
-        nextLastTime: data[data.length - 1]?.time ?? null,
+        nextFirstTime,
+        nextLastTime,
         nextLength: data.length,
         previousFirstTime,
         previousLastTime,
@@ -271,17 +400,58 @@ export function MarketPriceChart({
       })
 
       if (nextRange) {
+        candleSeriesRef.current.setData(candleData)
+        volumeSeriesRef.current.setData(histogramData)
         isAdjustingVisibleRangeRef.current = true
         chartRef.current.timeScale().setVisibleLogicalRange(nextRange)
         isAdjustingVisibleRangeRef.current = false
+        lastLogicalRangeRef.current = chartRef.current
+          .timeScale()
+          .getVisibleLogicalRange()
+        return
       }
+
+      const canApplyIncrementalUpdate =
+        previousFirstTime === nextFirstTime &&
+        previousLastTime !== null &&
+        nextLastTime >= previousLastTime
+
+      if (canApplyIncrementalUpdate) {
+        const startIndex = data.findIndex(
+          (candle) => candle.time >= previousLastTime,
+        )
+
+        if (startIndex >= 0) {
+          for (let index = startIndex; index < candleData.length; index += 1) {
+            const nextCandle = candleData[index]
+            const nextVolumeBar = histogramData[index]
+
+            candleSeriesRef.current.update(nextCandle)
+            volumeSeriesRef.current.update(nextVolumeBar)
+          }
+
+          lastLogicalRangeRef.current = chartRef.current
+            .timeScale()
+            .getVisibleLogicalRange()
+          return
+        }
+      }
+
+      candleSeriesRef.current.setData(candleData)
+      volumeSeriesRef.current.setData(histogramData)
+      lastLogicalRangeRef.current = chartRef.current
+        .timeScale()
+        .getVisibleLogicalRange()
       return
     }
 
+    candleSeriesRef.current.setData(candleData)
+    volumeSeriesRef.current.setData(histogramData)
     previousFirstTimeRef.current = null
     previousLastTimeRef.current = null
+    lastLogicalRangeRef.current = null
     handleCrosshairMove(null)
-  }, [candleData, data.length, handleCrosshairMove, histogramData])
+  }, [candleData, data.length, histogramData])
 
   useEffect(() => {
     if (resetSignal <= 0) return
@@ -289,7 +459,19 @@ export function MarketPriceChart({
     isAdjustingVisibleRangeRef.current = true
     chartRef.current.timeScale().fitContent()
     isAdjustingVisibleRangeRef.current = false
+    lastLogicalRangeRef.current = chartRef.current
+      .timeScale()
+      .getVisibleLogicalRange()
   }, [resetSignal])
 
-  return <div ref={containerRef} className="h-full min-h-[420px] w-full" />
+  return (
+    <div className="relative h-full min-h-[420px] w-full">
+      <div ref={containerRef} className="h-full min-h-[420px] w-full" />
+      {isLoadingMoreHistory ? (
+        <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+          Loading older history...
+        </div>
+      ) : null}
+    </div>
+  )
 }

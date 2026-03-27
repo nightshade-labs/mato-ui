@@ -39,6 +39,11 @@ interface NormalizedCandle {
   volume: number
 }
 
+export interface MarketTimeAnchor {
+  slot: number
+  timeMs: number
+}
+
 export function marketPriceFromFlows(
   baseFlow: bigint,
   quoteFlow: bigint,
@@ -55,21 +60,23 @@ export function marketPriceFromFlows(
 }
 
 function normalizePoints(
-  events: MarketUpdateEvent[],
+  events: Array<MarketUpdateEvent>,
   baseScale: number,
   quoteScale: number,
-): SlotPricePoint[] {
+): Array<SlotPricePoint> {
   const latestPerSlot = new Map<number, SlotPricePoint>()
 
   for (const event of events) {
     if (event.base_flow === 0n) continue
     const base = Number(event.base_flow) / baseScale
     const quote = Number(event.quote_flow) / quoteScale
-    if (!Number.isFinite(base) || !Number.isFinite(quote) || base === 0) continue
+    if (!Number.isFinite(base) || !Number.isFinite(quote) || base === 0)
+      continue
     const price = Math.abs(quote) / Math.abs(base)
     const quoteVolume = Math.abs(Number(event.quote_flow) / quoteScale)
     const createdAtMs = new Date(event.created_at).getTime()
-    if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(createdAtMs)) continue
+    if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(createdAtMs))
+      continue
 
     const previous = latestPerSlot.get(event.slot)
     if (!previous || createdAtMs >= previous.createdAtMs) {
@@ -82,16 +89,19 @@ function normalizePoints(
     }
   }
 
-  return Array.from(latestPerSlot.values()).sort((left, right) => left.slot - right.slot)
+  return Array.from(latestPerSlot.values()).sort(
+    (left, right) => left.slot - right.slot,
+  )
 }
 
 function aggregateSparseSlotCandles(
-  events: MarketUpdateEvent[],
+  events: Array<MarketUpdateEvent>,
   intervalMs: number,
   baseDecimals: number,
   quoteDecimals: number,
   slotDurationMs: number,
-): NormalizedCandle[] {
+  timeAnchor?: MarketTimeAnchor,
+): Array<NormalizedCandle> {
   if (intervalMs <= 0 || slotDurationMs <= 0) return []
 
   const baseScale = 10 ** baseDecimals
@@ -101,15 +111,20 @@ function aggregateSparseSlotCandles(
 
   const bucketSizeSlots = Math.max(1, Math.round(intervalMs / slotDurationMs))
   const latestPoint = points[points.length - 1]
-  const anchorMs = latestPoint.createdAtMs - latestPoint.slot * slotDurationMs
+  const anchorSlot = timeAnchor?.slot ?? latestPoint.slot
+  const anchorTimeMs = timeAnchor?.timeMs ?? latestPoint.createdAtMs
   const buckets = new Map<number, SlotBucketCandle>()
 
   for (let index = 0; index < points.length; index += 1) {
     const point = points[index]
-    const nextPoint = points[index + 1]
+    const nextPoint = points.at(index + 1)
     const segmentStart = point.slot
-    const segmentEnd = Math.max(point.slot + 1, nextPoint ? nextPoint.slot : point.slot + 1)
-    let bucketStart = Math.floor(segmentStart / bucketSizeSlots) * bucketSizeSlots
+    const segmentEnd = Math.max(
+      point.slot + 1,
+      nextPoint?.slot ?? point.slot + 1,
+    )
+    let bucketStart =
+      Math.floor(segmentStart / bucketSizeSlots) * bucketSizeSlots
 
     while (bucketStart < segmentEnd) {
       const bucketEnd = bucketStart + bucketSizeSlots
@@ -138,7 +153,8 @@ function aggregateSparseSlotCandles(
       bucketStart += bucketSizeSlots
     }
 
-    const volumeBucketStart = Math.floor(point.slot / bucketSizeSlots) * bucketSizeSlots
+    const volumeBucketStart =
+      Math.floor(point.slot / bucketSizeSlots) * bucketSizeSlots
     const volumeBucket = buckets.get(volumeBucketStart)
     if (volumeBucket) {
       volumeBucket.volume += point.quoteVolume
@@ -150,7 +166,12 @@ function aggregateSparseSlotCandles(
     .map((bucket) => ({
       endSlot: bucket.bucketEndSlot,
       startSlot: bucket.bucketStartSlot,
-      timestampMs: Math.max(0, Math.round(anchorMs + bucket.bucketStartSlot * slotDurationMs)),
+      timestampMs: Math.max(
+        0,
+        Math.round(
+          anchorTimeMs + (bucket.bucketStartSlot - anchorSlot) * slotDurationMs,
+        ),
+      ),
       open: bucket.open,
       high: bucket.high,
       low: bucket.low,
@@ -160,13 +181,21 @@ function aggregateSparseSlotCandles(
 }
 
 export function aggregateTradingViewCandles(
-  events: MarketUpdateEvent[],
+  events: Array<MarketUpdateEvent>,
   intervalMs: number,
   baseDecimals: number,
   quoteDecimals: number,
   slotDurationMs: number,
+  timeAnchor?: MarketTimeAnchor,
 ) {
-  const candles = aggregateSparseSlotCandles(events, intervalMs, baseDecimals, quoteDecimals, slotDurationMs)
+  const candles = aggregateSparseSlotCandles(
+    events,
+    intervalMs,
+    baseDecimals,
+    quoteDecimals,
+    slotDurationMs,
+    timeAnchor,
+  )
   return candles.map<TradingViewAggregatedCandle>((candle) => ({
     endSlot: candle.endSlot,
     time: Math.floor(candle.timestampMs / 1000),
@@ -180,19 +209,26 @@ export function aggregateTradingViewCandles(
 }
 
 export function computeMarketStats(
-  events: MarketUpdateEvent[],
+  events: Array<MarketUpdateEvent>,
   baseDecimals: number,
   quoteDecimals: number,
 ) {
   const threshold = Date.now() - 24 * 60 * 60 * 1000
-  const recentEvents = events.filter((event) => new Date(event.created_at).getTime() >= threshold)
+  const recentEvents = events.filter(
+    (event) => new Date(event.created_at).getTime() >= threshold,
+  )
   if (recentEvents.length === 0) {
     return { high: null, low: null, volumeQuote: null }
   }
 
   const prices = recentEvents
     .map((event) =>
-      marketPriceFromFlows(event.base_flow, event.quote_flow, baseDecimals, quoteDecimals),
+      marketPriceFromFlows(
+        event.base_flow,
+        event.quote_flow,
+        baseDecimals,
+        quoteDecimals,
+      ),
     )
     .filter((value): value is number => value !== null)
 
@@ -220,7 +256,8 @@ export function computeAveragePrice(
   if (baseAtoms <= 0n) return null
   const quoteUi = Number(quoteAtoms) / 10 ** quoteDecimals
   const baseUi = Number(baseAtoms) / 10 ** baseDecimals
-  if (!Number.isFinite(quoteUi) || !Number.isFinite(baseUi) || baseUi === 0) return null
+  if (!Number.isFinite(quoteUi) || !Number.isFinite(baseUi) || baseUi === 0)
+    return null
 
   const price = quoteUi / baseUi
   if (!Number.isFinite(price) || price <= 0) return null
