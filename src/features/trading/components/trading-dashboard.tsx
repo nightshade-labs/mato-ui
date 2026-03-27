@@ -64,6 +64,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert } from '@/components/ui/alert'
 
+const DEFAULT_VISIBLE_BARS_BY_TIMEFRAME: Record<ChartTimeframe, number> = {
+  '1m': 120,
+  '5m': 96,
+  '1h': 72,
+}
+
 export function TradingDashboard() {
   const session = useWalletSession()
   const walletConnection = useWalletConnection()
@@ -87,7 +93,7 @@ export function TradingDashboard() {
   const [marketPanelTab, setMarketPanelTab] = useState<MarketPanelTab>('chart')
   const [positionPanelTab, setPositionPanelTab] =
     useState<PositionPanelTab>('active')
-  const [chartTimeframe, setChartTimeframe] = useState<ChartTimeframe>('1h')
+  const [chartTimeframe, setChartTimeframe] = useState<ChartTimeframe>('1m')
   const [chartResetSignal, setChartResetSignal] = useState(0)
   const [crosshairData, setCrosshairData] = useState<ChartCrosshairData | null>(
     null,
@@ -486,6 +492,9 @@ export function TradingDashboard() {
                     ) : (
                       <div className="overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),rgba(255,255,255,0)_55%)]">
                         <MarketPriceChart
+                          defaultVisibleBars={
+                            DEFAULT_VISIBLE_BARS_BY_TIMEFRAME[chartTimeframe]
+                          }
                           data={chartCandles}
                           hasMoreHistory={marketChartHistory.hasMoreHistory}
                           isLoadingMoreHistory={
@@ -494,6 +503,7 @@ export function TradingDashboard() {
                           onCrosshairMove={setCrosshairData}
                           onNeedOlderHistory={handleNeedOlderChartHistory}
                           resetSignal={chartResetSignal}
+                          viewportPresetKey={chartTimeframe}
                         />
                       </div>
                     )}

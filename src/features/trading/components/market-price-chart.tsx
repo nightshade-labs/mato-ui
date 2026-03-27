@@ -16,6 +16,7 @@ import type {
   HistogramData,
   IChartApi,
   ISeriesApi,
+  Logical,
   LogicalRange,
   UTCTimestamp,
 } from 'lightweight-charts'
@@ -32,6 +33,24 @@ export interface ChartCrosshairData {
 
 export interface ChartHistoryRequest {
   visibleBarCount: number
+}
+
+function buildDefaultLogicalRange(
+  dataLength: number,
+  visibleBars: number,
+): LogicalRange | null {
+  if (dataLength <= 0 || visibleBars <= 0) {
+    return null
+  }
+
+  if (dataLength <= visibleBars) {
+    return null
+  }
+
+  return {
+    from: Math.max(-0.5, dataLength - visibleBars) as Logical,
+    to: (dataLength - 1 + 8) as Logical,
+  }
 }
 
 function isSameCrosshairData(
@@ -57,6 +76,7 @@ function isSameCrosshairData(
 }
 
 export function MarketPriceChart({
+  defaultVisibleBars = 120,
   data,
   height = 420,
   hasMoreHistory = false,
@@ -64,7 +84,9 @@ export function MarketPriceChart({
   onCrosshairMove,
   onNeedOlderHistory,
   resetSignal = 0,
+  viewportPresetKey = 'default',
 }: {
+  defaultVisibleBars?: number
   data: Array<TradingViewAggregatedCandle>
   height?: number
   hasMoreHistory?: boolean
@@ -72,6 +94,7 @@ export function MarketPriceChart({
   onCrosshairMove?: (value: ChartCrosshairData | null) => void
   onNeedOlderHistory?: (request: ChartHistoryRequest) => void
   resetSignal?: number
+  viewportPresetKey?: string
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -81,11 +104,13 @@ export function MarketPriceChart({
   const previousFirstTimeRef = useRef<number | null>(null)
   const previousLastTimeRef = useRef<number | null>(null)
   const activePanGestureRef = useRef(false)
+  const hasUserInteractedRef = useRef(false)
   const isAdjustingVisibleRangeRef = useRef(false)
   const lastHistoryRequestAtRef = useRef(0)
   const lastLogicalRangeRef = useRef<LogicalRange | null>(null)
   const wheelGestureTimeoutRef = useRef<number | null>(null)
   const lastCrosshairDataRef = useRef<ChartCrosshairData | null>(null)
+  const previousViewportPresetKeyRef = useRef(viewportPresetKey)
 
   const histogramData = useMemo(
     () =>
@@ -169,6 +194,26 @@ export function MarketPriceChart({
       onNeedOlderHistory(request)
     },
   )
+  const applyDefaultViewport = useEffectEvent(() => {
+    if (!chartRef.current || data.length === 0) {
+      return
+    }
+
+    const nextRange = buildDefaultLogicalRange(data.length, defaultVisibleBars)
+
+    isAdjustingVisibleRangeRef.current = true
+
+    if (nextRange) {
+      chartRef.current.timeScale().setVisibleLogicalRange(nextRange)
+    } else {
+      chartRef.current.timeScale().fitContent()
+    }
+
+    isAdjustingVisibleRangeRef.current = false
+    lastLogicalRangeRef.current = chartRef.current
+      .timeScale()
+      .getVisibleLogicalRange()
+  })
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -280,14 +325,19 @@ export function MarketPriceChart({
 
     const handlePointerDown = () => {
       activePanGestureRef.current = true
+      hasUserInteractedRef.current = true
     }
     const handleTouchStart = (event: TouchEvent) => {
       activePanGestureRef.current = event.touches.length === 1
+      if (event.touches.length > 0) {
+        hasUserInteractedRef.current = true
+      }
     }
     const handleTouchEnd = () => {
       activePanGestureRef.current = false
     }
     const handleWheel = (event: WheelEvent) => {
+      hasUserInteractedRef.current = true
       activePanGestureRef.current =
         Math.abs(event.deltaX) > Math.abs(event.deltaY)
       if (!activePanGestureRef.current) {
@@ -345,6 +395,7 @@ export function MarketPriceChart({
       previousFirstTimeRef.current = null
       previousLastTimeRef.current = null
       activePanGestureRef.current = false
+      hasUserInteractedRef.current = false
       isAdjustingVisibleRangeRef.current = false
       lastHistoryRequestAtRef.current = 0
       lastLogicalRangeRef.current = null
@@ -367,11 +418,14 @@ export function MarketPriceChart({
     const previousLength = previousDataLengthRef.current
     const previousFirstTime = previousFirstTimeRef.current
     const previousLastTime = previousLastTimeRef.current
+    const viewportPresetChanged =
+      previousViewportPresetKeyRef.current !== viewportPresetKey
 
     const hadNoData = previousLength === 0
     const nextFirstTime = data[0]?.time ?? null
     const nextLastTime = data[data.length - 1]?.time ?? null
 
+    previousViewportPresetKeyRef.current = viewportPresetKey
     previousDataLengthRef.current = data.length
     previousFirstTimeRef.current = nextFirstTime
     previousLastTimeRef.current = nextLastTime
@@ -380,12 +434,7 @@ export function MarketPriceChart({
       if (hadNoData) {
         candleSeriesRef.current.setData(candleData)
         volumeSeriesRef.current.setData(histogramData)
-        isAdjustingVisibleRangeRef.current = true
-        chartRef.current.timeScale().fitContent()
-        isAdjustingVisibleRangeRef.current = false
-        lastLogicalRangeRef.current = chartRef.current
-          .timeScale()
-          .getVisibleLogicalRange()
+        applyDefaultViewport()
         return
       }
 
@@ -402,12 +451,23 @@ export function MarketPriceChart({
       if (nextRange) {
         candleSeriesRef.current.setData(candleData)
         volumeSeriesRef.current.setData(histogramData)
-        isAdjustingVisibleRangeRef.current = true
-        chartRef.current.timeScale().setVisibleLogicalRange(nextRange)
-        isAdjustingVisibleRangeRef.current = false
-        lastLogicalRangeRef.current = chartRef.current
-          .timeScale()
-          .getVisibleLogicalRange()
+        if (hasUserInteractedRef.current) {
+          isAdjustingVisibleRangeRef.current = true
+          chartRef.current.timeScale().setVisibleLogicalRange(nextRange)
+          isAdjustingVisibleRangeRef.current = false
+          lastLogicalRangeRef.current = chartRef.current
+            .timeScale()
+            .getVisibleLogicalRange()
+        } else {
+          applyDefaultViewport()
+        }
+        return
+      }
+
+      if (viewportPresetChanged) {
+        candleSeriesRef.current.setData(candleData)
+        volumeSeriesRef.current.setData(histogramData)
+        applyDefaultViewport()
         return
       }
 
@@ -451,18 +511,18 @@ export function MarketPriceChart({
     previousLastTimeRef.current = null
     lastLogicalRangeRef.current = null
     handleCrosshairMove(null)
-  }, [candleData, data.length, histogramData])
+  }, [candleData, data.length, histogramData, viewportPresetKey])
 
   useEffect(() => {
     if (resetSignal <= 0) return
     if (!chartRef.current) return
-    isAdjustingVisibleRangeRef.current = true
-    chartRef.current.timeScale().fitContent()
-    isAdjustingVisibleRangeRef.current = false
-    lastLogicalRangeRef.current = chartRef.current
-      .timeScale()
-      .getVisibleLogicalRange()
+    hasUserInteractedRef.current = false
+    applyDefaultViewport()
   }, [resetSignal])
+
+  useEffect(() => {
+    hasUserInteractedRef.current = false
+  }, [viewportPresetKey])
 
   return (
     <div className="relative h-full min-h-[420px] w-full">
