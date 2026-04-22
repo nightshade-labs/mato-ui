@@ -16,32 +16,17 @@ function range(startSlot: number, endSlot: number): SlotRange {
 describe('slot-ranges', () => {
   it('merges overlapping ranges without merging separated ranges', () => {
     expect(
-      mergeOverlappingRanges([
-        range(10, 20),
-        range(15, 25),
-        range(26, 30),
-      ]),
+      mergeOverlappingRanges([range(10, 20), range(15, 25), range(26, 30)]),
     ).toEqual([range(10, 25), range(26, 30)])
   })
 
   it('merges adjacent ranges when the configured gap allows it', () => {
     expect(
-      mergeAdjacentRanges([
-        range(10, 20),
-        range(21, 30),
-        range(33, 40),
-      ]),
+      mergeAdjacentRanges([range(10, 20), range(21, 30), range(33, 40)]),
     ).toEqual([range(10, 30), range(33, 40)])
 
     expect(
-      mergeAdjacentRanges(
-        [
-          range(10, 20),
-          range(21, 30),
-          range(33, 40),
-        ],
-        2,
-      ),
+      mergeAdjacentRanges([range(10, 20), range(21, 30), range(33, 40)], 2),
     ).toEqual([range(10, 40)])
   })
 
@@ -53,20 +38,13 @@ describe('slot-ranges', () => {
         range(120, 130),
         range(140, 170),
       ]),
-    ).toEqual([
-      range(106, 109),
-      range(131, 139),
-    ])
+    ).toEqual([range(106, 109), range(131, 139)])
   })
 
   it('detects full coverage across touching ranges', () => {
     expect(
       hasFullCoverage(
-        [
-          range(90, 99),
-          range(100, 120),
-          range(121, 150),
-        ],
+        [range(90, 99), range(100, 120), range(121, 150)],
         range(100, 150),
       ),
     ).toBe(true)

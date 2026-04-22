@@ -11,7 +11,9 @@ function isFiniteSlot(value: number) {
   return Number.isFinite(value) && Number.isInteger(value)
 }
 
-export function isValidSlotRange(range: SlotRange | null | undefined): range is SlotRange {
+export function isValidSlotRange(
+  range: SlotRange | null | undefined,
+): range is SlotRange {
   if (!range) return false
   return (
     isFiniteSlot(range.startSlot) &&
@@ -72,7 +74,10 @@ export function mergeAdjacentRanges(ranges: SlotRange[], maxGapSlots = 0) {
   return merged
 }
 
-function clipRangeToRequest(range: SlotRange, requestedRange: SlotRange): SlotRange | null {
+function clipRangeToRequest(
+  range: SlotRange,
+  requestedRange: SlotRange,
+): SlotRange | null {
   const startSlot = Math.max(range.startSlot, requestedRange.startSlot)
   const endSlot = Math.min(range.endSlot, requestedRange.endSlot)
 
@@ -83,7 +88,10 @@ function clipRangeToRequest(range: SlotRange, requestedRange: SlotRange): SlotRa
   return { endSlot, startSlot }
 }
 
-export function subtractCoveredRanges(requestedRange: SlotRange, loadedRanges: SlotRange[]) {
+export function subtractCoveredRanges(
+  requestedRange: SlotRange,
+  loadedRanges: SlotRange[],
+) {
   if (!isValidSlotRange(requestedRange)) {
     return []
   }
@@ -127,11 +135,17 @@ export function subtractCoveredRanges(requestedRange: SlotRange, loadedRanges: S
   return missing
 }
 
-export function hasFullCoverage(loadedRanges: SlotRange[], requestedRange: SlotRange) {
+export function hasFullCoverage(
+  loadedRanges: SlotRange[],
+  requestedRange: SlotRange,
+) {
   return subtractCoveredRanges(requestedRange, loadedRanges).length === 0
 }
 
-export function insertNormalizedHistory<T extends SlotPointLike>(points: T[], incomingPoints: T[]) {
+export function insertNormalizedHistory<T extends SlotPointLike>(
+  points: T[],
+  incomingPoints: T[],
+) {
   const mergedBySlot = new Map<number, T>()
 
   for (const point of points) {
@@ -142,10 +156,15 @@ export function insertNormalizedHistory<T extends SlotPointLike>(points: T[], in
     mergedBySlot.set(point.slot, point)
   }
 
-  return Array.from(mergedBySlot.values()).sort((left, right) => left.slot - right.slot)
+  return Array.from(mergedBySlot.values()).sort(
+    (left, right) => left.slot - right.slot,
+  )
 }
 
-export function selectPointsForRange<T extends SlotPointLike>(points: T[], requestedRange: SlotRange) {
+export function selectPointsForRange<T extends SlotPointLike>(
+  points: T[],
+  requestedRange: SlotRange,
+) {
   if (!isValidSlotRange(requestedRange) || points.length === 0) {
     return []
   }
@@ -161,7 +180,10 @@ export function selectPointsForRange<T extends SlotPointLike>(points: T[], reque
       anchorIndex = index
     }
 
-    if (point.slot >= requestedRange.startSlot && point.slot <= requestedRange.endSlot) {
+    if (
+      point.slot >= requestedRange.startSlot &&
+      point.slot <= requestedRange.endSlot
+    ) {
       if (firstIncludedIndex === -1) {
         firstIncludedIndex = index
       }
@@ -177,6 +199,9 @@ export function selectPointsForRange<T extends SlotPointLike>(points: T[], reque
     return anchorIndex >= 0 ? points.slice(anchorIndex, anchorIndex + 1) : []
   }
 
-  const sliceStart = anchorIndex >= 0 ? Math.min(anchorIndex, firstIncludedIndex) : firstIncludedIndex
+  const sliceStart =
+    anchorIndex >= 0
+      ? Math.min(anchorIndex, firstIncludedIndex)
+      : firstIncludedIndex
   return points.slice(sliceStart, lastIncludedIndex + 1)
 }

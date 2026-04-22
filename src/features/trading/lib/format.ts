@@ -1,10 +1,18 @@
-export function shortenAddress(value: string | null | undefined, start = 4, end = 4) {
+export function shortenAddress(
+  value: string | null | undefined,
+  start = 4,
+  end = 4,
+) {
   if (!value) return 'N/A'
   if (value.length <= start + end + 3) return value
   return `${value.slice(0, start)}...${value.slice(-end)}`
 }
 
-export function formatAtoms(amountAtoms: bigint, decimals: number, maxDecimals = 6) {
+export function formatAtoms(
+  amountAtoms: bigint,
+  decimals: number,
+  maxDecimals = 6,
+) {
   if (amountAtoms <= 0n) return '0'
   if (decimals <= 0) return amountAtoms.toString()
 
@@ -47,15 +55,17 @@ export function formatPrice(value: number) {
   return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
 }
 
-export function formatExplorerTransactionUrl(signature: string, endpoint: string) {
-  const cluster =
-    endpoint.includes('mainnet')
-      ? 'mainnet-beta'
-      : endpoint.includes('testnet')
-        ? 'testnet'
-        : endpoint.includes('localhost') || endpoint.includes('127.0.0.1')
-          ? 'custom'
-          : 'devnet'
+export function formatExplorerTransactionUrl(
+  signature: string,
+  endpoint: string,
+) {
+  const cluster = endpoint.includes('mainnet')
+    ? 'mainnet-beta'
+    : endpoint.includes('testnet')
+      ? 'testnet'
+      : endpoint.includes('localhost') || endpoint.includes('127.0.0.1')
+        ? 'custom'
+        : 'devnet'
 
   if (cluster === 'custom') {
     return `https://explorer.solana.com/tx/${encodeURIComponent(signature)}?cluster=custom`

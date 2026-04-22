@@ -26,14 +26,22 @@ export interface MarketHistoryStoreSnapshot extends MarketHistoryStoreState {
 }
 
 export interface MarketHistoryStore {
-  ensureRange: (range: SlotRange, options: EnsureHistoryOptions) => Promise<void>
-  ensureRanges: (ranges: SlotRange[], options: EnsureHistoryOptions) => Promise<void>
+  ensureRange: (
+    range: SlotRange,
+    options: EnsureHistoryOptions,
+  ) => Promise<void>
+  ensureRanges: (
+    ranges: SlotRange[],
+    options: EnsureHistoryOptions,
+  ) => Promise<void>
   getPointsForRange: (range: SlotRange) => MarketPricePoint[]
   getSnapshot: () => MarketHistoryStoreSnapshot
   hasCoverage: (range: SlotRange) => boolean
 }
 
-export function createEmptyMarketHistoryState(marketId: number): MarketHistoryStoreState {
+export function createEmptyMarketHistoryState(
+  marketId: number,
+): MarketHistoryStoreState {
   return {
     failedRanges: [],
     loadedRanges: [],

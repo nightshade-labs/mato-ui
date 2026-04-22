@@ -49,9 +49,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <SolanaProvider>
-          {children}
-        </SolanaProvider>
+        <SolanaProvider>{children}</SolanaProvider>
         <TanStackDevtools
           config={{
             position: 'bottom-right',

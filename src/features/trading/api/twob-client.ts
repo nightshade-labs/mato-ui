@@ -40,7 +40,10 @@ import {
 } from '@/lib/generated/twob/src/generated/instructions'
 import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '@/lib/generated/twob/src/generated/programs'
 import { ARRAY_LENGTH } from '../constants'
-import type { StreamingMarketState, TradePositionRecord } from '../domain/models'
+import type {
+  StreamingMarketState,
+  TradePositionRecord,
+} from '../domain/models'
 import { encodeBase58 } from '../lib/base58'
 import { decodeBase64 } from '../lib/bytes'
 
@@ -74,14 +77,20 @@ async function waitForConfirmedSignature(
     const status = response.value[0] ?? null
 
     if (status?.err) {
-      throw new Error(`Transaction failed during confirmation: ${JSON.stringify(status.err)}`)
+      throw new Error(
+        `Transaction failed during confirmation: ${JSON.stringify(status.err)}`,
+      )
     }
 
-    if (confirmationMeetsCommitment(deriveConfirmationStatus(status), 'confirmed')) {
+    if (
+      confirmationMeetsCommitment(deriveConfirmationStatus(status), 'confirmed')
+    ) {
       return
     }
 
-    await new Promise((resolve) => setTimeout(resolve, SIGNATURE_POLL_INTERVAL_MS))
+    await new Promise((resolve) =>
+      setTimeout(resolve, SIGNATURE_POLL_INTERVAL_MS),
+    )
   }
 
   throw new Error('Transaction confirmation timed out.')
@@ -103,7 +112,10 @@ export async function deriveBookkeepingAddress(marketAddress: Address) {
   return address
 }
 
-export async function deriveExitsAddress(marketAddress: Address, index: bigint | number) {
+export async function deriveExitsAddress(
+  marketAddress: Address,
+  index: bigint | number,
+) {
   const [address] = await getProgramDerivedAddress({
     programAddress: TWOB_ANCHOR_PROGRAM_ADDRESS,
     seeds: [
@@ -115,7 +127,10 @@ export async function deriveExitsAddress(marketAddress: Address, index: bigint |
   return address
 }
 
-export async function derivePricesAddress(marketAddress: Address, index: bigint | number) {
+export async function derivePricesAddress(
+  marketAddress: Address,
+  index: bigint | number,
+) {
   const [address] = await getProgramDerivedAddress({
     programAddress: TWOB_ANCHOR_PROGRAM_ADDRESS,
     seeds: [
@@ -127,7 +142,10 @@ export async function derivePricesAddress(marketAddress: Address, index: bigint 
   return address
 }
 
-export function getReferenceIndex(currentSlot: number, endSlotInterval: bigint) {
+export function getReferenceIndex(
+  currentSlot: number,
+  endSlotInterval: bigint,
+) {
   return BigInt(
     Math.floor(
       (currentSlot + BOOKKEEPING_DELAY_SLOTS) /
@@ -151,7 +169,8 @@ export function alignEndSlot(
 ) {
   const interval = Number(endSlotInterval)
   return BigInt(
-    Math.floor((currentSlot + durationSlots + interval / 2) / interval) * interval,
+    Math.floor((currentSlot + durationSlots + interval / 2) / interval) *
+      interval,
   )
 }
 
@@ -174,7 +193,9 @@ export async function fetchStreamingMarketState(
   const [currentSlot, marketAccount, bookkeepingAccount] = await Promise.all([
     rpcClient.getSlot({ commitment: 'confirmed' }).send(),
     fetchMarket(rpcClient, marketAddress, { commitment: 'confirmed' }),
-    fetchBookkeeping(rpcClient, bookkeepingAddress, { commitment: 'confirmed' }),
+    fetchBookkeeping(rpcClient, bookkeepingAddress, {
+      commitment: 'confirmed',
+    }),
   ])
 
   return {
@@ -217,7 +238,9 @@ export async function fetchTradePositions(
     })
     .send()) as any
 
-  const accounts = (Array.isArray(response) ? response : response.value) as Array<{
+  const accounts = (
+    Array.isArray(response) ? response : response.value
+  ) as Array<{
     account: { data: [string, string] }
     pubkey: Address
   }>
@@ -279,12 +302,18 @@ export async function fetchEndSlotBookkeepingSnapshot({
   const uniquePricesIndices = Array.from(
     new Set(candidateLocations.map((location) => location.pricesAccountIndex)),
   )
-  const fetchedByIndex = new Map<number, Awaited<ReturnType<typeof fetchPrices>> | null>()
+  const fetchedByIndex = new Map<
+    number,
+    Awaited<ReturnType<typeof fetchPrices>> | null
+  >()
 
   await Promise.all(
     uniquePricesIndices.map(async (index) => {
       try {
-        const pricesAddress = await derivePricesAddress(marketAddress, BigInt(index))
+        const pricesAddress = await derivePricesAddress(
+          marketAddress,
+          BigInt(index),
+        )
         const account = await fetchPrices(rpcClient, pricesAddress, {
           commitment: 'confirmed',
         })
@@ -305,11 +334,15 @@ export async function fetchEndSlotBookkeepingSnapshot({
   }
 
   const primarySnapshot = readSnapshot(snapshotLocation)
-  const fallbackSnapshot = fallbackLocation ? readSnapshot(fallbackLocation) : null
+  const fallbackSnapshot = fallbackLocation
+    ? readSnapshot(fallbackLocation)
+    : null
 
   if (primarySnapshot === null) return fallbackSnapshot
   if (fallbackSnapshot === null) return primarySnapshot
-  return primarySnapshot >= fallbackSnapshot ? primarySnapshot : fallbackSnapshot
+  return primarySnapshot >= fallbackSnapshot
+    ? primarySnapshot
+    : fallbackSnapshot
 }
 
 export async function sendSubmitOrder({
@@ -352,7 +385,9 @@ export async function sendSubmitOrder({
   const currentSlot = Number(
     await client.runtime.rpc.getSlot({ commitment: 'confirmed' }).send(),
   )
-  const mint = isBuy ? marketAccount.data.quoteMint : marketAccount.data.baseMint
+  const mint = isBuy
+    ? marketAccount.data.quoteMint
+    : marketAccount.data.baseMint
   const tokenProgram = await detectTokenProgram(
     client.runtime,
     mint,
@@ -368,7 +403,10 @@ export async function sendSubmitOrder({
     durationSlots,
     marketAccount.data.endSlotInterval,
   )
-  const futureIndex = getFutureIndex(endSlot, marketAccount.data.endSlotInterval)
+  const futureIndex = getFutureIndex(
+    endSlot,
+    marketAccount.data.endSlotInterval,
+  )
 
   const [currentExits, previousExits, currentPrices, previousPrices] =
     await Promise.all([
@@ -424,19 +462,18 @@ export async function sendSubmitOrder({
   )
 
   if (isTransactionMessageWithSingleSendingSigner(transactionMessage)) {
-    const signatureBytes = await signAndSendTransactionMessageWithSigners(
-      transactionMessage,
-    )
+    const signatureBytes =
+      await signAndSendTransactionMessageWithSigners(transactionMessage)
     const signature = getBase58Decoder().decode(signatureBytes)
     await waitForConfirmedSignature(client.runtime.rpc, signature)
     return signature
   }
 
-  const signedTransaction = await signTransactionMessageWithSigners(
-    transactionMessage,
-  )
-  const blockhashBackedTransaction =
-    signedTransaction as Parameters<typeof client.actions.sendTransaction>[0]
+  const signedTransaction =
+    await signTransactionMessageWithSigners(transactionMessage)
+  const blockhashBackedTransaction = signedTransaction as Parameters<
+    typeof client.actions.sendTransaction
+  >[0]
   const signature = await client.actions.sendTransaction(
     blockhashBackedTransaction,
     'confirmed',
@@ -471,8 +508,16 @@ export async function sendClosePosition({
   ])
 
   const [baseTokenProgram, quoteTokenProgram] = await Promise.all([
-    detectTokenProgram(client.runtime, marketAccount.data.baseMint, 'confirmed'),
-    detectTokenProgram(client.runtime, marketAccount.data.quoteMint, 'confirmed'),
+    detectTokenProgram(
+      client.runtime,
+      marketAccount.data.baseMint,
+      'confirmed',
+    ),
+    detectTokenProgram(
+      client.runtime,
+      marketAccount.data.quoteMint,
+      'confirmed',
+    ),
   ])
 
   const referenceIndex = getReferenceIndex(

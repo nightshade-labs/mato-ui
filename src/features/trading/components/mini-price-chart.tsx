@@ -2,7 +2,12 @@ import { useMemo } from 'react'
 import { formatPrice } from '../lib/format'
 import type { MiniPriceChartPoint } from '../lib/mini-chart'
 
-function buildPoints(points: MiniPriceChartPoint[], width: number, height: number, averagePrice: number | null) {
+function buildPoints(
+  points: MiniPriceChartPoint[],
+  width: number,
+  height: number,
+  averagePrice: number | null,
+) {
   if (points.length < 2) return null
 
   const values = points.map((point) => point.price)
@@ -27,7 +32,8 @@ function buildPoints(points: MiniPriceChartPoint[], width: number, height: numbe
 
   const path = points
     .map((point, index) => {
-      const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * width
+      const x =
+        points.length === 1 ? width / 2 : (index / (points.length - 1)) * width
       const y = toY(point.price)
       return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`
     })
@@ -72,10 +78,15 @@ export function MiniPriceChart({
   lineClassName?: string
   points: MiniPriceChartPoint[]
 }) {
-  const geometry = useMemo(() => buildPoints(points, 240, 60, averagePrice), [averagePrice, points])
+  const geometry = useMemo(
+    () => buildPoints(points, 240, 60, averagePrice),
+    [averagePrice, points],
+  )
 
   if (!geometry) {
-    return <div className="h-[96px] rounded-xl border border-border/50 bg-background/50" />
+    return (
+      <div className="h-[96px] rounded-xl border border-border/50 bg-background/50" />
+    )
   }
 
   const midpoint = geometry.min + (geometry.max - geometry.min) / 2

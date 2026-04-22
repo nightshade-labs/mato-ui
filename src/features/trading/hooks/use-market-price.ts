@@ -1,6 +1,9 @@
 import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { subscribeToMarketUpdates, unsubscribeFromChannel } from '../api/market-repository'
+import {
+  subscribeToMarketUpdates,
+  unsubscribeFromChannel,
+} from '../api/market-repository'
 import { marketPriceFromFlows } from '../lib/market'
 import { tradingQueries } from '../queries'
 import { useMarketConfig } from './use-market-config'

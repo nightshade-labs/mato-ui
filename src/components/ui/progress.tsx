@@ -13,14 +13,20 @@ export function Progress({
 
   return (
     <div
-      className={cn('h-2 overflow-hidden rounded-full bg-secondary/75', className)}
+      className={cn(
+        'h-2 overflow-hidden rounded-full bg-secondary/75',
+        className,
+      )}
       aria-valuemax={100}
       aria-valuemin={0}
       aria-valuenow={clampedValue}
       role="progressbar"
     >
       <div
-        className={cn('h-full rounded-full bg-primary transition-[width] duration-500', indicatorClassName)}
+        className={cn(
+          'h-full rounded-full bg-primary transition-[width] duration-500',
+          indicatorClassName,
+        )}
         style={{ width: `${clampedValue}%` }}
       />
     </div>

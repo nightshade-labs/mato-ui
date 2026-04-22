@@ -696,9 +696,13 @@
       "discriminator": [241, 198, 24, 114, 18, 89, 131, 244],
       "accounts": [
         {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
           "name": "owner",
           "writable": true,
-          "signer": true,
           "relations": ["exits"]
         },
         {
@@ -925,9 +929,13 @@
       "discriminator": [244, 43, 217, 128, 151, 50, 171, 17],
       "accounts": [
         {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
           "name": "owner",
           "writable": true,
-          "signer": true,
           "relations": ["prices"]
         },
         {

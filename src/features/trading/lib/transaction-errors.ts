@@ -8,12 +8,16 @@ function isRecord(value: unknown): value is UnknownRecord {
 }
 
 function readString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null
+  return typeof value === 'string' && value.trim().length > 0
+    ? value.trim()
+    : null
 }
 
 function readLogs(value: unknown) {
   if (!Array.isArray(value)) return null
-  const logs = value.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0)
+  const logs = value.filter(
+    (entry): entry is string => typeof entry === 'string' && entry.length > 0,
+  )
   return logs.length > 0 ? logs : null
 }
 
@@ -69,17 +73,15 @@ function extractLogs(error: unknown): string[] | null {
 
 export function formatTransactionError(error: unknown, fallback: string) {
   const transactionPlanResult = isRecord(error)
-    ? error.transactionPlanResult ??
-      (isRecord(error.context) ? error.context.transactionPlanResult : null)
+    ? (error.transactionPlanResult ??
+      (isRecord(error.context) ? error.context.transactionPlanResult : null))
     : null
 
   const failedPlan = findFirstFailedPlanResult(transactionPlanResult)
   const nestedError = failedPlan?.error ?? unwrapCause(error)
 
   const message =
-    extractMessage(nestedError) ??
-    extractMessage(error) ??
-    fallback
+    extractMessage(nestedError) ?? extractMessage(error) ?? fallback
 
   const logs = extractLogs(nestedError) ?? extractLogs(error)
   if (!logs || logs.length === 0) return message

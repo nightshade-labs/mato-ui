@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { buildClosedPositionMiniChart, type MarketPricePoint } from './mini-chart'
+import {
+  buildClosedPositionMiniChart,
+  type MarketPricePoint,
+} from './mini-chart'
 
 function createPoints(count: number): MarketPricePoint[] {
   return Array.from({ length: count }, (_, index) => ({

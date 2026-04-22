@@ -25,14 +25,17 @@ describe('formatTransactionError', () => {
   })
 
   it('uses the direct error message when the error is already specific', () => {
-    expect(formatTransactionError(new Error('Insufficient funds'), 'fallback')).toBe(
-      'Insufficient funds',
-    )
+    expect(
+      formatTransactionError(new Error('Insufficient funds'), 'fallback'),
+    ).toBe('Insufficient funds')
   })
 
   it('falls back when there is no readable detail', () => {
-    expect(formatTransactionError({ message: 'The provided transaction plan failed to execute.' }, 'fallback')).toBe(
-      'fallback',
-    )
+    expect(
+      formatTransactionError(
+        { message: 'The provided transaction plan failed to execute.' },
+        'fallback',
+      ),
+    ).toBe('fallback')
   })
 })

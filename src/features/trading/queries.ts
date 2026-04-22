@@ -33,13 +33,7 @@ export const tradingQueries = {
       queryFn: () => fetchMarketConfig(marketId),
       staleTime: Infinity,
     }),
-  marketUpdates: ({
-    limit,
-    marketId,
-  }: {
-    limit: number
-    marketId: number
-  }) =>
+  marketUpdates: ({ limit, marketId }: { limit: number; marketId: number }) =>
     queryOptions({
       queryKey: tradingQueryKeys.marketUpdates(marketId, limit),
       queryFn: () => fetchMarketUpdatesPage({ limit, marketId }),
@@ -56,7 +50,11 @@ export const tradingQueries = {
     startSlot: number | null
   }) =>
     queryOptions({
-      queryKey: tradingQueryKeys.marketUpdateRange(marketId, startSlot, endSlot),
+      queryKey: tradingQueryKeys.marketUpdateRange(
+        marketId,
+        startSlot,
+        endSlot,
+      ),
       queryFn: async () => {
         if (startSlot === null || endSlot === null || startSlot > endSlot) {
           return []
@@ -100,7 +98,11 @@ export const tradingQueries = {
     positionAuthority: string
   }) =>
     queryOptions({
-      queryKey: tradingQueryKeys.closedPositions(positionAuthority, marketId, limit),
+      queryKey: tradingQueryKeys.closedPositions(
+        positionAuthority,
+        marketId,
+        limit,
+      ),
       queryFn: () =>
         fetchClosedPositionEvents({ limit, marketId, positionAuthority }),
     }),

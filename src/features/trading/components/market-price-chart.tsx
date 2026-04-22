@@ -202,9 +202,7 @@ export function MarketPriceChart({
       }
 
       isAdjustingVisibleRangeRef.current = true
-      chartRef.current
-        .timeScale()
-        .setVisibleLogicalRange(range as LogicalRange)
+      chartRef.current.timeScale().setVisibleLogicalRange(range as LogicalRange)
       isAdjustingVisibleRangeRef.current = false
       lastLogicalRangeRef.current = chartRef.current
         .timeScale()

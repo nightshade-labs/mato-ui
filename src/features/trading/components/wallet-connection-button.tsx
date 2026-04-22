@@ -7,14 +7,26 @@ import { Badge } from '@/components/ui/badge'
 import { shortenAddress } from '../lib/format'
 
 export function WalletConnectionButton() {
-  const { connect, connected, connectors, currentConnector, disconnect, isReady, status, wallet } =
-    useWalletConnection()
+  const {
+    connect,
+    connected,
+    connectors,
+    currentConnector,
+    disconnect,
+    isReady,
+    status,
+    wallet,
+  } = useWalletConnection()
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
 
   if (!isReady) {
     return (
-      <Button size="lg" variant="outline" className="min-w-[13rem] justify-between rounded-full px-5">
+      <Button
+        size="lg"
+        variant="outline"
+        className="min-w-[13rem] justify-between rounded-full px-5"
+      >
         <span className="text-sm text-muted-foreground">Loading wallets</span>
       </Button>
     )
@@ -23,7 +35,8 @@ export function WalletConnectionButton() {
   const address = wallet?.account.address.toString() ?? null
 
   const handleCopyAddress = async () => {
-    if (!address || typeof navigator === 'undefined' || !navigator.clipboard) return
+    if (!address || typeof navigator === 'undefined' || !navigator.clipboard)
+      return
 
     await navigator.clipboard.writeText(address)
     setCopied(true)
@@ -40,9 +53,13 @@ export function WalletConnectionButton() {
       >
         <span className="flex min-w-0 items-center gap-2">
           <Wallet className="size-4" />
-          <span className="truncate">{connected ? shortenAddress(address, 4, 4) : 'Connect wallet'}</span>
+          <span className="truncate">
+            {connected ? shortenAddress(address, 4, 4) : 'Connect wallet'}
+          </span>
         </span>
-        <ChevronDown className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
       </Button>
 
       {open ? (
@@ -66,8 +83,14 @@ export function WalletConnectionButton() {
                     }}
                     type="button"
                   >
-                    {copied ? <Check className="size-4 shrink-0" /> : <Copy className="size-4 shrink-0" />}
-                    <span className="truncate">{shortenAddress(address, 4, 4)}</span>
+                    {copied ? (
+                      <Check className="size-4 shrink-0" />
+                    ) : (
+                      <Copy className="size-4 shrink-0" />
+                    )}
+                    <span className="truncate">
+                      {shortenAddress(address, 4, 4)}
+                    </span>
                   </button>
                 </div>
                 <Button
@@ -89,7 +112,8 @@ export function WalletConnectionButton() {
                     Wallet Standard
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Choose a desktop wallet. The web app uses Wallet Standard instead of the mobile adapter.
+                    Choose a desktop wallet. The web app uses Wallet Standard
+                    instead of the mobile adapter.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -114,7 +138,9 @@ export function WalletConnectionButton() {
             )}
 
             {status === 'error' ? (
-              <p className="text-sm text-destructive">Wallet connection failed. Try another connector.</p>
+              <p className="text-sm text-destructive">
+                Wallet connection failed. Try another connector.
+              </p>
             ) : null}
           </CardContent>
         </Card>

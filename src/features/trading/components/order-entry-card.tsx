@@ -1,6 +1,12 @@
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import type { OrderSide } from '../constants'
@@ -55,7 +61,8 @@ export function OrderEntryCard({
       <CardHeader>
         <CardTitle>Create order</CardTitle>
         <CardDescription>
-          Submit time-weighted TWOB orders with the same execution model as the mobile app.
+          Submit time-weighted TWOB orders with the same execution model as the
+          mobile app.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -86,10 +93,16 @@ export function OrderEntryCard({
                 Order size
               </label>
               <div className="mt-1 text-sm text-muted-foreground">
-                Available {formatUiAmount(availableAmountDisplay)} {amountTokenTicker}
+                Available {formatUiAmount(availableAmountDisplay)}{' '}
+                {amountTokenTicker}
               </div>
             </div>
-            <Button className="rounded-full px-3" onClick={onMaxClick} size="xs" variant="outline">
+            <Button
+              className="rounded-full px-3"
+              onClick={onMaxClick}
+              size="xs"
+              variant="outline"
+            >
               Use max
             </Button>
           </div>
@@ -105,14 +118,19 @@ export function OrderEntryCard({
                 placeholder="0.00"
                 value={amountInput}
               />
-              <Badge className="shrink-0 rounded-full px-3 py-2 text-sm" variant="muted">
+              <Badge
+                className="shrink-0 rounded-full px-3 py-2 text-sm"
+                variant="muted"
+              >
                 {amountTokenTicker}
               </Badge>
             </div>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm text-muted-foreground">{selectedPercent.toFixed(2)}% of available balance</span>
+            <span className="text-sm text-muted-foreground">
+              {selectedPercent.toFixed(2)}% of available balance
+            </span>
           </div>
         </div>
 
@@ -133,7 +151,11 @@ export function OrderEntryCard({
                 className="rounded-full px-3"
                 onClick={() => onPercentSelect(percent)}
                 size="xs"
-                variant={Math.abs(selectedPercent - percent) < 0.01 ? 'default' : 'outline'}
+                variant={
+                  Math.abs(selectedPercent - percent) < 0.01
+                    ? 'default'
+                    : 'outline'
+                }
               >
                 {percent}%
               </Button>
@@ -142,12 +164,20 @@ export function OrderEntryCard({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <DetailMetric label="Estimated receive" value={estimatedConversionText} />
-          <DetailMetric label="Price impact" value={`${priceImpactDisplay} (${executionPriceDisplay})`} />
+          <DetailMetric
+            label="Estimated receive"
+            value={estimatedConversionText}
+          />
+          <DetailMetric
+            label="Price impact"
+            value={`${priceImpactDisplay} (${executionPriceDisplay})`}
+          />
         </div>
 
         <div className="space-y-3">
-          <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Duration</div>
+          <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+            Duration
+          </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {DURATION_OPTIONS.map((option) => (
               <Button
@@ -155,7 +185,9 @@ export function OrderEntryCard({
                 className="rounded-full whitespace-nowrap"
                 onClick={() => onDurationChange(option.seconds)}
                 size="xs"
-                variant={durationSeconds === option.seconds ? 'default' : 'outline'}
+                variant={
+                  durationSeconds === option.seconds ? 'default' : 'outline'
+                }
               >
                 {option.label}
               </Button>
@@ -169,7 +201,11 @@ export function OrderEntryCard({
           </Alert>
         ) : null}
 
-        <Button className="h-12 w-full rounded-2xl text-base" disabled={!isConnected || !canSubmit} onClick={onSubmit}>
+        <Button
+          className="h-12 w-full rounded-2xl text-base"
+          disabled={!isConnected || !canSubmit}
+          onClick={onSubmit}
+        >
           {statusLabel}
         </Button>
       </CardContent>
@@ -180,7 +216,9 @@ export function OrderEntryCard({
 function DetailMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-      <div className="mb-1 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
+      <div className="mb-1 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+        {label}
+      </div>
       <div className="font-medium">{value}</div>
     </div>
   )

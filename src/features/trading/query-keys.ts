@@ -4,8 +4,10 @@ function normalizeKeyPart(value: bigint | number | string | null | undefined) {
 }
 
 export const tradingQueryKeys = {
-  marketAddress: (marketId: number) => ['trading', 'market-address', marketId] as const,
-  marketConfig: (marketId: number) => ['trading', 'market-config', marketId] as const,
+  marketAddress: (marketId: number) =>
+    ['trading', 'market-address', marketId] as const,
+  marketConfig: (marketId: number) =>
+    ['trading', 'market-config', marketId] as const,
   marketUpdates: (marketId: number, limit: number) =>
     ['trading', 'market-updates', marketId, limit] as const,
   marketUpdateRange: (
@@ -13,8 +15,16 @@ export const tradingQueryKeys = {
     startSlot: number | null,
     endSlot: number | null,
   ) =>
-    ['trading', 'market-updates', 'range', marketId, normalizeKeyPart(startSlot), normalizeKeyPart(endSlot)] as const,
-  marketPrice: (marketId: number) => ['trading', 'market-price', marketId] as const,
+    [
+      'trading',
+      'market-updates',
+      'range',
+      marketId,
+      normalizeKeyPart(startSlot),
+      normalizeKeyPart(endSlot),
+    ] as const,
+  marketPrice: (marketId: number) =>
+    ['trading', 'market-price', marketId] as const,
   tradePositions: (authority: string | null | undefined) =>
     ['trading', 'trade-positions', normalizeKeyPart(authority)] as const,
   closedPositions: (
@@ -22,7 +32,13 @@ export const tradingQueryKeys = {
     marketId: number | undefined,
     limit: number,
   ) =>
-    ['trading', 'closed-positions', normalizeKeyPart(authority), normalizeKeyPart(marketId), limit] as const,
+    [
+      'trading',
+      'closed-positions',
+      normalizeKeyPart(authority),
+      normalizeKeyPart(marketId),
+      limit,
+    ] as const,
   streamingMarket: (marketAddress: string | null | undefined) =>
     ['trading', 'streaming-market', normalizeKeyPart(marketAddress)] as const,
   endSlotSnapshot: (

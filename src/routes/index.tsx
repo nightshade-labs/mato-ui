@@ -13,7 +13,9 @@ export const Route = createFileRoute('/')({
     )
 
     await Promise.all([
-      context.queryClient.ensureQueryData(tradingQueries.marketAddress(MARKET_ID)),
+      context.queryClient.ensureQueryData(
+        tradingQueries.marketAddress(MARKET_ID),
+      ),
       context.queryClient.ensureQueryData(
         tradingQueries.marketUpdates({
           limit: DEFAULT_MARKET_UPDATES_LIMIT,

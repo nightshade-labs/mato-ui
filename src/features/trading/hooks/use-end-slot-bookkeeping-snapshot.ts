@@ -49,7 +49,8 @@ export function useEndSlotBookkeepingSnapshot({
     }),
     enabled: enabled && snapshotLocation !== null && isSnapshotLikelyReady,
     refetchInterval: ({ state }) => {
-      if (!enabled || snapshotLocation === null || !isSnapshotLikelyReady) return false
+      if (!enabled || snapshotLocation === null || !isSnapshotLikelyReady)
+        return false
       return state.data === null ? 2_000 : false
     },
   })

@@ -12,7 +12,8 @@ export function useMarketUpdateRange({
   endSlot: number | null
   enabled?: boolean
 }) {
-  const isEnabled = enabled && startSlot !== null && endSlot !== null && startSlot <= endSlot
+  const isEnabled =
+    enabled && startSlot !== null && endSlot !== null && startSlot <= endSlot
 
   return useQuery({
     ...tradingQueries.marketUpdateRange({ endSlot, marketId, startSlot }),

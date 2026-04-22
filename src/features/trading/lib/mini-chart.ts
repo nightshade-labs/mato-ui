@@ -37,7 +37,8 @@ function toFinitePositivePrice(
 
   const base = Number(event.base_flow) / baseScale
   const quote = Number(event.quote_flow) / quoteScale
-  if (!Number.isFinite(base) || !Number.isFinite(quote) || base === 0) return null
+  if (!Number.isFinite(base) || !Number.isFinite(quote) || base === 0)
+    return null
 
   const price = Math.abs(quote) / Math.abs(base)
   if (!Number.isFinite(price) || price <= 0) return null
@@ -52,7 +53,10 @@ export function normalizeMarketPricePoints(
 ) {
   const baseScale = 10 ** baseDecimals
   const quoteScale = 10 ** quoteDecimals
-  const latestPerSlot = new Map<number, { slot: number; price: number; createdAtMs: number }>()
+  const latestPerSlot = new Map<
+    number,
+    { slot: number; price: number; createdAtMs: number }
+  >()
 
   for (const event of events) {
     const price = toFinitePositivePrice(event, baseScale, quoteScale)
@@ -127,7 +131,11 @@ function getPriceAtSlot(points: MarketPricePoint[], slot: number) {
   return index >= 0 ? points[index].price : points[0].price
 }
 
-function getAveragePriceBetween(points: MarketPricePoint[], startSlot: number, endSlot: number) {
+function getAveragePriceBetween(
+  points: MarketPricePoint[],
+  startSlot: number,
+  endSlot: number,
+) {
   const initialPrice = getPriceAtSlot(points, startSlot)
   if (initialPrice === null) return null
   if (endSlot <= startSlot) return initialPrice
@@ -138,7 +146,10 @@ function getAveragePriceBetween(points: MarketPricePoint[], startSlot: number, e
   let nextIndex = findFirstPointAfter(points, startSlot)
 
   while (cursor < endSlot) {
-    const nextSlot = nextIndex < points.length ? Math.min(endSlot, points[nextIndex].slot) : endSlot
+    const nextSlot =
+      nextIndex < points.length
+        ? Math.min(endSlot, points[nextIndex].slot)
+        : endSlot
 
     if (nextSlot > cursor) {
       weightedPrice += (nextSlot - cursor) * currentPrice
@@ -154,7 +165,11 @@ function getAveragePriceBetween(points: MarketPricePoint[], startSlot: number, e
   return span > 0 ? weightedPrice / span : currentPrice
 }
 
-function countPointsInRange(points: MarketPricePoint[], startSlot: number, endSlot: number) {
+function countPointsInRange(
+  points: MarketPricePoint[],
+  startSlot: number,
+  endSlot: number,
+) {
   if (points.length === 0) return 0
 
   const startIndex = findFirstPointAtOrAfter(points, startSlot)
@@ -171,18 +186,38 @@ export function getMarketPriceRangeStats(
   startSlot: number | null,
   endSlot: number | null,
 ): MarketPriceRangeStats {
-  if (points.length === 0 || startSlot === null || endSlot === null || startSlot > endSlot) {
-    return { maxPrice: null, minPrice: null, observedPoints: 0, uniquePrices: 0 }
+  if (
+    points.length === 0 ||
+    startSlot === null ||
+    endSlot === null ||
+    startSlot > endSlot
+  ) {
+    return {
+      maxPrice: null,
+      minPrice: null,
+      observedPoints: 0,
+      uniquePrices: 0,
+    }
   }
 
   const startIndex = findFirstPointAtOrAfter(points, startSlot)
   if (startIndex >= points.length) {
-    return { maxPrice: null, minPrice: null, observedPoints: 0, uniquePrices: 0 }
+    return {
+      maxPrice: null,
+      minPrice: null,
+      observedPoints: 0,
+      uniquePrices: 0,
+    }
   }
 
   const endIndex = findLastPointAtOrBefore(points, endSlot)
   if (endIndex < startIndex) {
-    return { maxPrice: null, minPrice: null, observedPoints: 0, uniquePrices: 0 }
+    return {
+      maxPrice: null,
+      minPrice: null,
+      observedPoints: 0,
+      uniquePrices: 0,
+    }
   }
 
   let minPrice = Number.POSITIVE_INFINITY
@@ -204,7 +239,11 @@ export function getMarketPriceRangeStats(
   }
 }
 
-function createSampleSlots(startSlot: number, endSlot: number, sampleCount: number) {
+function createSampleSlots(
+  startSlot: number,
+  endSlot: number,
+  sampleCount: number,
+) {
   if (sampleCount <= 1) return [startSlot]
 
   const span = Math.max(0, endSlot - startSlot)
@@ -220,7 +259,12 @@ export function buildClosedPositionMiniChart(
   startSlot: number | null,
   endSlot: number | null,
 ) {
-  if (points.length === 0 || startSlot === null || endSlot === null || startSlot > endSlot) {
+  if (
+    points.length === 0 ||
+    startSlot === null ||
+    endSlot === null ||
+    startSlot > endSlot
+  ) {
     return null
   }
 
@@ -230,8 +274,15 @@ export function buildClosedPositionMiniChart(
     MIN_SAMPLES,
     MAX_SAMPLES,
   )
-  const maxSamplesForSpan = startSlot === endSlot ? 2 : Math.min(desiredSamples, endSlot - startSlot + 1)
-  const sampleSlots = createSampleSlots(startSlot, endSlot, Math.max(2, maxSamplesForSpan))
+  const maxSamplesForSpan =
+    startSlot === endSlot
+      ? 2
+      : Math.min(desiredSamples, endSlot - startSlot + 1)
+  const sampleSlots = createSampleSlots(
+    startSlot,
+    endSlot,
+    Math.max(2, maxSamplesForSpan),
+  )
 
   const chartPoints: MiniPriceChartPoint[] = []
   for (let index = 0; index < sampleSlots.length; index += 1) {

@@ -35,7 +35,10 @@ export function ActivePositionCard({
   const [expanded, setExpanded] = useState(false)
   const snapshotQuery = useEndSlotBookkeepingSnapshot({
     currentSlot: streamingState?.currentSlot ?? null,
-    enabled: Boolean(streamingState && streamingState.currentSlot > Number(position.data.endSlot)),
+    enabled: Boolean(
+      streamingState &&
+      streamingState.currentSlot > Number(position.data.endSlot),
+    ),
     endSlot: Number(position.data.endSlot),
     endSlotInterval: streamingState?.endSlotInterval ?? null,
     isBuy: position.data.isBuy === 1,
@@ -76,7 +79,9 @@ export function ActivePositionCard({
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Badge variant={position.data.isBuy === 1 ? 'positive' : 'negative'}>
+              <Badge
+                variant={position.data.isBuy === 1 ? 'positive' : 'negative'}
+              >
                 {metrics.sideLabel}
               </Badge>
               <div>
@@ -85,16 +90,23 @@ export function ActivePositionCard({
                   <span>{metrics.flowLabel}</span>
                 </div>
                 <p className="mt-1 text-lg font-semibold">
-                  {formatAtoms(metrics.amountAtoms, metrics.depositedDecimals)} {metrics.depositedToken}
+                  {formatAtoms(metrics.amountAtoms, metrics.depositedDecimals)}{' '}
+                  {metrics.depositedToken}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3 text-right">
               <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Remaining</p>
-                <p className="font-medium">{metrics.remainingPercent.toFixed(1)}%</p>
+                <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                  Remaining
+                </p>
+                <p className="font-medium">
+                  {metrics.remainingPercent.toFixed(1)}%
+                </p>
               </div>
-              <ChevronDown className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              />
             </div>
           </div>
         </button>

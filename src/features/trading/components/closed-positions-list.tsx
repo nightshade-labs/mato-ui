@@ -8,23 +8,28 @@ import {
   CLOSED_POSITION_VISIBLE_ROW_OVERSCAN_PX,
 } from '../constants'
 import {
-  
   buildClosedPositionMiniChart,
-  normalizeMarketPricePoints
+  normalizeMarketPricePoints,
 } from '../lib/mini-chart'
-import { formatAtoms, formatExplorerTransactionUrl, shortenAddress } from '../lib/format'
 import {
-  
+  formatAtoms,
+  formatExplorerTransactionUrl,
+  shortenAddress,
+} from '../lib/format'
+import {
   hasFullCoverage,
   mergeAdjacentRanges,
-  selectPointsForRange
+  selectPointsForRange,
 } from '../lib/slot-ranges'
 import { buildClosedPositionSummary } from '../view-models/closed-position'
 import { MiniPriceChart } from './mini-price-chart'
-import type {SlotRange} from '../lib/slot-ranges';
-import type {MiniPriceChartPoint} from '../lib/mini-chart';
+import type { SlotRange } from '../lib/slot-ranges'
+import type { MiniPriceChartPoint } from '../lib/mini-chart'
 import type { EnsureHistoryOptions } from '../lib/market-history-store'
-import type { ClosePositionEvent, MarketUpdateEvent } from '@/integrations/supabase'
+import type {
+  ClosePositionEvent,
+  MarketUpdateEvent,
+} from '@/integrations/supabase'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { endpoint } from '@/integrations/solana'
@@ -37,13 +42,21 @@ interface ClosedPositionChartState {
 
 const EMPTY_CLOSED_POSITION_EVENTS: Array<ClosePositionEvent> = []
 
-function hasValidChartRange(
-  event: { start_slot: number | null; end_slot: number | null },
-): event is { start_slot: number; end_slot: number } {
-  return event.start_slot !== null && event.end_slot !== null && event.start_slot <= event.end_slot
+function hasValidChartRange(event: {
+  start_slot: number | null
+  end_slot: number | null
+}): event is { start_slot: number; end_slot: number } {
+  return (
+    event.start_slot !== null &&
+    event.end_slot !== null &&
+    event.start_slot <= event.end_slot
+  )
 }
 
-function toChartRange(event: { start_slot: number; end_slot: number }): SlotRange {
+function toChartRange(event: {
+  start_slot: number
+  end_slot: number
+}): SlotRange {
   return {
     endSlot: event.end_slot,
     startSlot: event.start_slot,
@@ -102,7 +115,11 @@ function buildChartStateFromSharedHistory({
   }
 
   if (hasFullCoverage(failedRanges, chartRange)) {
-    return { error: 'Price history unavailable.', points: null, status: 'error' }
+    return {
+      error: 'Price history unavailable.',
+      points: null,
+      status: 'error',
+    }
   }
 
   return { error: null, points: null, status: 'loading' }
@@ -136,22 +153,39 @@ export function ClosedPositionsList({
   quoteDecimals: number
   quoteTicker: string
 }) {
-  const eventsQuery = useClosedPositionEvents({ limit: 50, marketId, positionAuthority })
+  const eventsQuery = useClosedPositionEvents({
+    limit: 50,
+    marketId,
+    positionAuthority,
+  })
   const events = useMemo(
     () => eventsQuery.data ?? EMPTY_CLOSED_POSITION_EVENTS,
     [eventsQuery.data],
   )
   const normalizedSeedHistory = useMemo(
-    () => normalizeMarketPricePoints(marketHistorySeed, baseDecimals, quoteDecimals),
+    () =>
+      normalizeMarketPricePoints(
+        marketHistorySeed,
+        baseDecimals,
+        quoteDecimals,
+      ),
     [baseDecimals, marketHistorySeed, quoteDecimals],
   )
   const requestedRanges = useMemo(
     () =>
       mergeAdjacentRanges(
-        [...marketHistoryLoadedRanges, ...marketHistoryPendingRanges, ...marketHistoryFailedRanges],
+        [
+          ...marketHistoryLoadedRanges,
+          ...marketHistoryPendingRanges,
+          ...marketHistoryFailedRanges,
+        ],
         0,
       ),
-    [marketHistoryFailedRanges, marketHistoryLoadedRanges, marketHistoryPendingRanges],
+    [
+      marketHistoryFailedRanges,
+      marketHistoryLoadedRanges,
+      marketHistoryPendingRanges,
+    ],
   )
   const pendingEnsureKeyRef = useRef<string | null>(null)
   const rowElementByIdRef = useRef(new Map<number, HTMLDivElement>())
@@ -241,15 +275,16 @@ export function ClosedPositionsList({
     return nextRanges
   }, [events, requestedRanges, visibleEventIds])
 
-  const registerRowElement = (eventId: number) => (element: HTMLDivElement | null) => {
-    if (element) {
-      element.dataset.eventId = String(eventId)
-      rowElementByIdRef.current.set(eventId, element)
-      return
-    }
+  const registerRowElement =
+    (eventId: number) => (element: HTMLDivElement | null) => {
+      if (element) {
+        element.dataset.eventId = String(eventId)
+        rowElementByIdRef.current.set(eventId, element)
+        return
+      }
 
-    rowElementByIdRef.current.delete(eventId)
-  }
+      rowElementByIdRef.current.delete(eventId)
+    }
 
   useEffect(() => {
     if (!ensureMarketHistoryRanges || unresolvedRanges.length === 0) {
@@ -291,7 +326,12 @@ export function ClosedPositionsList({
     }
 
     return next
-  }, [events, marketHistoryFailedRanges, marketHistoryLoadedRanges, normalizedSeedHistory])
+  }, [
+    events,
+    marketHistoryFailedRanges,
+    marketHistoryLoadedRanges,
+    normalizedSeedHistory,
+  ])
 
   return (
     <Card className="border-white/10 bg-black/15">
@@ -300,16 +340,26 @@ export function ClosedPositionsList({
       </CardHeader>
       <CardContent className="space-y-3">
         {eventsQuery.isPending ? (
-          <p className="text-sm text-muted-foreground">Loading recent closes...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading recent closes...
+          </p>
         ) : events.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No closed positions yet.</p>
+          <p className="text-sm text-muted-foreground">
+            No closed positions yet.
+          </p>
         ) : (
           events.map((event) => (
             <div key={event.id} ref={registerRowElement(event.id)}>
               <ClosedPositionRow
                 baseDecimals={baseDecimals}
                 baseTicker={baseTicker}
-                chartState={chartStatesByEventId.get(event.id) ?? { error: null, points: null, status: 'loading' }}
+                chartState={
+                  chartStatesByEventId.get(event.id) ?? {
+                    error: null,
+                    points: null,
+                    status: 'loading',
+                  }
+                }
                 event={event}
                 quoteDecimals={quoteDecimals}
                 quoteTicker={quoteTicker}
@@ -319,7 +369,9 @@ export function ClosedPositionsList({
         )}
 
         {eventsQuery.error instanceof Error ? (
-          <p className="text-sm text-destructive">{eventsQuery.error.message}</p>
+          <p className="text-sm text-destructive">
+            {eventsQuery.error.message}
+          </p>
         ) : null}
       </CardContent>
     </Card>
@@ -354,24 +406,35 @@ const ClosedPositionRow = memo(function ClosedPositionRow({
     [baseDecimals, baseTicker, event, quoteDecimals, quoteTicker],
   )
   const chartPoints = chartState.points
-  const hasChart = chartState.status === 'ready' && chartPoints && chartPoints.length >= 2
+  const hasChart =
+    chartState.status === 'ready' && chartPoints && chartPoints.length >= 2
   const showChartSkeleton = chartState.status === 'loading'
 
   return (
     <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
-      <button className="w-full text-left" onClick={() => setExpanded((previous) => !previous)} type="button">
+      <button
+        className="w-full text-left"
+        onClick={() => setExpanded((previous) => !previous)}
+        type="button"
+      >
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Badge variant={summary.isBuy ? 'positive' : 'negative'}>{summary.sideLabel}</Badge>
+            <Badge variant={summary.isBuy ? 'positive' : 'negative'}>
+              {summary.sideLabel}
+            </Badge>
             <div>
-              <div className="text-sm text-muted-foreground">{summary.flowLabel}</div>
+              <div className="text-sm text-muted-foreground">
+                {summary.flowLabel}
+              </div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
                 <span className="font-medium">
-                  {formatAtoms(summary.consumedAtoms, summary.depositDecimals)} {summary.depositToken}
+                  {formatAtoms(summary.consumedAtoms, summary.depositDecimals)}{' '}
+                  {summary.depositToken}
                 </span>
                 <span className="text-muted-foreground">→</span>
                 <span className="font-medium">
-                  {formatAtoms(summary.receivedAtoms, summary.swappedDecimals)} {summary.swappedToken}
+                  {formatAtoms(summary.receivedAtoms, summary.swappedDecimals)}{' '}
+                  {summary.swappedToken}
                 </span>
               </div>
             </div>
@@ -388,7 +451,9 @@ const ClosedPositionRow = memo(function ClosedPositionRow({
               {shortenAddress(event.signature, 6, 4)}
               <ArrowUpRight className="size-3" />
             </a>
-            <ChevronDown className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            />
           </div>
         </div>
       </button>
@@ -456,7 +521,9 @@ function MiniChartSkeleton() {
 function DetailCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-black/20 p-3">
-      <div className="mb-1 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
+      <div className="mb-1 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+        {label}
+      </div>
       <div className="font-medium">{value}</div>
     </div>
   )

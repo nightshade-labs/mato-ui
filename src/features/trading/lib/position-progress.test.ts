@@ -46,7 +46,10 @@ function createPosition(): TradePosition {
   }
 }
 
-function createStreamingState(currentSlot: number, bookkeepingBasePerQuote: bigint): StreamingMarketState {
+function createStreamingState(
+  currentSlot: number,
+  bookkeepingBasePerQuote: bigint,
+): StreamingMarketState {
   return {
     bookkeepingBasePerQuote,
     bookkeepingLastUpdateSlot: currentSlot,
@@ -61,7 +64,8 @@ function createStreamingState(currentSlot: number, bookkeepingBasePerQuote: bigi
 describe('getActivePositionMetrics', () => {
   afterEach(() => {
     vi.resetModules()
-    delete (globalThis as unknown as { sessionStorage?: Storage }).sessionStorage
+    delete (globalThis as unknown as { sessionStorage?: Storage })
+      .sessionStorage
   })
 
   it('keeps the projected terminal swapped amount stable across module reloads', async () => {

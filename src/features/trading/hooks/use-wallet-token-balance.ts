@@ -1,8 +1,16 @@
-import { useBalance, useSplToken, useWalletSession, useWrapSol } from '@solana/react-hooks'
+import {
+  useBalance,
+  useSplToken,
+  useWalletSession,
+  useWrapSol,
+} from '@solana/react-hooks'
 import { WRAPPED_SOL_MINT } from '@solana/client'
 import { getSpendableNativeAtoms, getSpendableTokenAtoms } from '../lib/amounts'
 
-export function useWalletTokenBalance(mintAddress: string | null | undefined, decimals: number) {
+export function useWalletTokenBalance(
+  mintAddress: string | null | undefined,
+  decimals: number,
+) {
   const session = useWalletSession()
   const owner = session?.account.address ?? null
   const nativeBalance = useBalance(owner ?? undefined)
@@ -25,11 +33,17 @@ export function useWalletTokenBalance(mintAddress: string | null | undefined, de
 
   const balanceAtoms = isNative ? lamports + wrappedAtoms : tokenAtoms
   const spendableAtoms = isNative
-    ? getSpendableNativeAtoms(nativeBalance.lamports ?? null, wrappedSol.balance?.amount ?? null)
+    ? getSpendableNativeAtoms(
+        nativeBalance.lamports ?? null,
+        wrappedSol.balance?.amount ?? null,
+      )
     : getSpendableTokenAtoms(splToken.balance?.amount ?? null)
   const refresh = async () => {
     if (isNative) {
-      await Promise.allSettled([nativeBalanceWithRefresh.refresh?.() ?? Promise.resolve(), wrappedSol.refresh()])
+      await Promise.allSettled([
+        nativeBalanceWithRefresh.refresh?.() ?? Promise.resolve(),
+        wrappedSol.refresh(),
+      ])
       return
     }
 

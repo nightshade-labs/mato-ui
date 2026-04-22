@@ -7,7 +7,13 @@ import { sendSubmitOrder } from '../api/twob-client'
 import { formatTransactionError } from '../lib/transaction-errors'
 import { tradingQueryKeys } from '../query-keys'
 
-type SubmitOrderStatus = 'idle' | 'building' | 'wrapping' | 'submitting' | 'success' | 'error'
+type SubmitOrderStatus =
+  | 'idle'
+  | 'building'
+  | 'wrapping'
+  | 'submitting'
+  | 'success'
+  | 'error'
 
 export function useSubmitOrder() {
   const client = useSolanaClient()
@@ -46,7 +52,10 @@ export function useSubmitOrder() {
       setSignature(null)
 
       try {
-        if (inputMintAddress === WRAPPED_SOL_MINT && amount > existingWrappedAtoms) {
+        if (
+          inputMintAddress === WRAPPED_SOL_MINT &&
+          amount > existingWrappedAtoms
+        ) {
           setStatus('wrapping')
         }
 
@@ -67,7 +76,9 @@ export function useSubmitOrder() {
         setStatus('success')
         setSignature(serializedSignature)
         void queryClient.invalidateQueries({
-          queryKey: tradingQueryKeys.tradePositions(session.account.address.toString()),
+          queryKey: tradingQueryKeys.tradePositions(
+            session.account.address.toString(),
+          ),
         })
         return true
       } catch (error) {
@@ -87,7 +98,8 @@ export function useSubmitOrder() {
 
   return {
     error,
-    isSubmitting: status === 'building' || status === 'wrapping' || status === 'submitting',
+    isSubmitting:
+      status === 'building' || status === 'wrapping' || status === 'submitting',
     reset,
     signature,
     status,

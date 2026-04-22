@@ -1,12 +1,21 @@
 import { useCallback, useState } from 'react'
 import type { Address } from '@solana/kit'
-import { useSendTransaction, useSolanaClient, useWalletSession } from '@solana/react-hooks'
+import {
+  useSendTransaction,
+  useSolanaClient,
+  useWalletSession,
+} from '@solana/react-hooks'
 import { useQueryClient } from '@tanstack/react-query'
 import { sendClosePosition } from '../api/twob-client'
 import { formatTransactionError } from '../lib/transaction-errors'
 import { tradingQueryKeys } from '../query-keys'
 
-type ClosePositionStatus = 'idle' | 'building' | 'submitting' | 'success' | 'error'
+type ClosePositionStatus =
+  | 'idle'
+  | 'building'
+  | 'submitting'
+  | 'success'
+  | 'error'
 
 export function useClosePosition() {
   const client = useSolanaClient()
@@ -50,10 +59,16 @@ export function useClosePosition() {
         setSignature(serializedSignature)
         void Promise.all([
           queryClient.invalidateQueries({
-            queryKey: tradingQueryKeys.tradePositions(session.account.address.toString()),
+            queryKey: tradingQueryKeys.tradePositions(
+              session.account.address.toString(),
+            ),
           }),
           queryClient.invalidateQueries({
-            queryKey: tradingQueryKeys.closedPositions(session.account.address.toString(), undefined, 50),
+            queryKey: tradingQueryKeys.closedPositions(
+              session.account.address.toString(),
+              undefined,
+              50,
+            ),
           }),
         ])
         return true

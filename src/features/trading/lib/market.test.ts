@@ -88,10 +88,6 @@ describe('aggregateTradingViewCandles', () => {
     expect(candles.map((candle) => candle.close)).toEqual([100, 100, 200])
     expect(candles.map((candle) => candle.high)).toEqual([100, 100, 200])
     expect(candles.map((candle) => candle.low)).toEqual([100, 100, 100])
-    expect(candles.map((candle) => candle.volume)).toEqual([
-      100,
-      0,
-      200,
-    ])
+    expect(candles.map((candle) => candle.volume)).toEqual([100, 0, 200])
   })
 })

@@ -53,7 +53,10 @@ type PersistedPositionProgress = {
 
 const lastSwappedEstimateByPosition = new Map<string, CachedSwappedEstimate>()
 const projectedEndEstimateByPosition = new Map<string, CachedTerminalEstimate>()
-let persistedPositionProgressCache: Record<string, PersistedPositionProgress> | null = null
+let persistedPositionProgressCache: Record<
+  string,
+  PersistedPositionProgress
+> | null = null
 
 function clampToRange(value: number, min: number, max: number) {
   if (value < min) return min
@@ -74,7 +77,8 @@ function getPositionProgressStorage() {
 }
 
 function getPersistedPositionProgressCache() {
-  if (persistedPositionProgressCache !== null) return persistedPositionProgressCache
+  if (persistedPositionProgressCache !== null)
+    return persistedPositionProgressCache
 
   const storage = getPositionProgressStorage()
   if (!storage) {
@@ -84,7 +88,9 @@ function getPersistedPositionProgressCache() {
 
   try {
     const raw = storage.getItem(POSITION_PROGRESS_STORAGE_KEY)
-    persistedPositionProgressCache = raw ? JSON.parse(raw) as Record<string, PersistedPositionProgress> : {}
+    persistedPositionProgressCache = raw
+      ? (JSON.parse(raw) as Record<string, PersistedPositionProgress>)
+      : {}
   } catch {
     persistedPositionProgressCache = {}
   }
@@ -97,7 +103,10 @@ function persistPositionProgressCache() {
   if (!storage || persistedPositionProgressCache === null) return
 
   try {
-    storage.setItem(POSITION_PROGRESS_STORAGE_KEY, JSON.stringify(persistedPositionProgressCache))
+    storage.setItem(
+      POSITION_PROGRESS_STORAGE_KEY,
+      JSON.stringify(persistedPositionProgressCache),
+    )
   } catch {
     // Ignore transient storage failures; the in-memory cache still prevents regressions until reload.
   }
@@ -107,7 +116,8 @@ function getCachedSwappedEstimate(positionKey: string) {
   const cached = lastSwappedEstimateByPosition.get(positionKey)
   if (cached) return cached
 
-  const persisted = getPersistedPositionProgressCache()[positionKey]?.swappedEstimate
+  const persisted =
+    getPersistedPositionProgressCache()[positionKey]?.swappedEstimate
   if (!persisted) return null
 
   const hydrated = {
@@ -119,7 +129,10 @@ function getCachedSwappedEstimate(positionKey: string) {
   return hydrated
 }
 
-function setCachedSwappedEstimate(positionKey: string, estimate: CachedSwappedEstimate) {
+function setCachedSwappedEstimate(
+  positionKey: string,
+  estimate: CachedSwappedEstimate,
+) {
   lastSwappedEstimateByPosition.set(positionKey, estimate)
 
   const cache = getPersistedPositionProgressCache()
@@ -138,7 +151,8 @@ function getProjectedEndEstimate(positionKey: string) {
   const cached = projectedEndEstimateByPosition.get(positionKey)
   if (cached) return cached
 
-  const persisted = getPersistedPositionProgressCache()[positionKey]?.projectedEndEstimate
+  const persisted =
+    getPersistedPositionProgressCache()[positionKey]?.projectedEndEstimate
   if (!persisted) return null
 
   const hydrated = {
@@ -149,7 +163,10 @@ function getProjectedEndEstimate(positionKey: string) {
   return hydrated
 }
 
-function setProjectedEndEstimate(positionKey: string, estimate: CachedTerminalEstimate) {
+function setProjectedEndEstimate(
+  positionKey: string,
+  estimate: CachedTerminalEstimate,
+) {
   projectedEndEstimateByPosition.set(positionKey, estimate)
 
   const cache = getPersistedPositionProgressCache()
@@ -188,34 +205,59 @@ export function getActivePositionMetrics({
   const swappedToken = isBuy ? baseTicker : quoteTicker
   const swappedDecimals = isBuy ? baseDecimals : quoteDecimals
   const sideLabel = isBuy ? 'Buy' : 'Sell'
-  const flowLabel = isBuy ? `${quoteTicker} → ${baseTicker}` : `${baseTicker} → ${quoteTicker}`
+  const flowLabel = isBuy
+    ? `${quoteTicker} → ${baseTicker}`
+    : `${baseTicker} → ${quoteTicker}`
   const positionKey = `${position.authority}:${position.id.toString()}`
 
   const amountAtoms = position.amount
   const startSlot = Number(position.startSlot)
   const endSlot = Number(position.endSlot)
   const durationSlots = Math.max(1, endSlot - startSlot)
-  const scaledFlowAtomsPerSlot = (amountAtoms * FLOW_PRECISION_FACTOR) / BigInt(durationSlots)
+  const scaledFlowAtomsPerSlot =
+    (amountAtoms * FLOW_PRECISION_FACTOR) / BigInt(durationSlots)
   const flowAtomsPerSlot = scaledFlowAtomsPerSlot / FLOW_PRECISION_FACTOR
 
-  const currentSlot = streamingState ? clampToRange(streamingState.currentSlot, startSlot, endSlot) : startSlot
-  const hasPositionEnded = streamingState ? streamingState.currentSlot > endSlot : false
+  const currentSlot = streamingState
+    ? clampToRange(streamingState.currentSlot, startSlot, endSlot)
+    : startSlot
+  const hasPositionEnded = streamingState
+    ? streamingState.currentSlot > endSlot
+    : false
   const elapsedSlots = clampToRange(currentSlot - startSlot, 0, durationSlots)
   const scaledDepositAtoms = amountAtoms * FLOW_PRECISION_FACTOR
   const scaledSpentAtomsUncapped = BigInt(elapsedSlots) * scaledFlowAtomsPerSlot
-  const scaledSpentAtoms = scaledSpentAtomsUncapped > scaledDepositAtoms ? scaledDepositAtoms : scaledSpentAtomsUncapped
-  const scaledRemainingAtoms = scaledDepositAtoms > scaledSpentAtoms ? scaledDepositAtoms - scaledSpentAtoms : 0n
+  const scaledSpentAtoms =
+    scaledSpentAtomsUncapped > scaledDepositAtoms
+      ? scaledDepositAtoms
+      : scaledSpentAtomsUncapped
+  const scaledRemainingAtoms =
+    scaledDepositAtoms > scaledSpentAtoms
+      ? scaledDepositAtoms - scaledSpentAtoms
+      : 0n
   const remainingAtoms = scaledRemainingAtoms / FLOW_PRECISION_FACTOR
-  const consumedAtoms = amountAtoms > remainingAtoms ? amountAtoms - remainingAtoms : 0n
+  const consumedAtoms =
+    amountAtoms > remainingAtoms ? amountAtoms - remainingAtoms : 0n
 
-  const scaledSpentAtEndUncapped = BigInt(durationSlots) * scaledFlowAtomsPerSlot
-  const scaledSpentAtEnd = scaledSpentAtEndUncapped > scaledDepositAtoms ? scaledDepositAtoms : scaledSpentAtEndUncapped
-  const scaledRemainingAtEnd = scaledDepositAtoms > scaledSpentAtEnd ? scaledDepositAtoms - scaledSpentAtEnd : 0n
-  const consumedAtomsAtEnd = amountAtoms > scaledRemainingAtEnd / FLOW_PRECISION_FACTOR
-    ? amountAtoms - scaledRemainingAtEnd / FLOW_PRECISION_FACTOR
-    : 0n
+  const scaledSpentAtEndUncapped =
+    BigInt(durationSlots) * scaledFlowAtomsPerSlot
+  const scaledSpentAtEnd =
+    scaledSpentAtEndUncapped > scaledDepositAtoms
+      ? scaledDepositAtoms
+      : scaledSpentAtEndUncapped
+  const scaledRemainingAtEnd =
+    scaledDepositAtoms > scaledSpentAtEnd
+      ? scaledDepositAtoms - scaledSpentAtEnd
+      : 0n
+  const consumedAtomsAtEnd =
+    amountAtoms > scaledRemainingAtEnd / FLOW_PRECISION_FACTOR
+      ? amountAtoms - scaledRemainingAtEnd / FLOW_PRECISION_FACTOR
+      : 0n
 
-  const remainingPercent = amountAtoms > 0n ? Number((remainingAtoms * 10_000n) / amountAtoms) / 100 : 0
+  const remainingPercent =
+    amountAtoms > 0n
+      ? Number((remainingAtoms * 10_000n) / amountAtoms) / 100
+      : 0
   const progressPercent = Math.max(0, 100 - remainingPercent)
 
   let swappedAtoms: bigint | null = null
@@ -226,22 +268,32 @@ export function getActivePositionMetrics({
     const liveBookkeeping = isBuy
       ? streamingState.bookkeepingBasePerQuote
       : streamingState.bookkeepingQuotePerBase
-    const liveBookkeepingDelta = liveBookkeeping > bookkeepingSnapshot ? liveBookkeeping - bookkeepingSnapshot : 0n
+    const liveBookkeepingDelta =
+      liveBookkeeping > bookkeepingSnapshot
+        ? liveBookkeeping - bookkeepingSnapshot
+        : 0n
 
     let staleAccumulator = 0n
     if (!hasPositionEnded) {
-      const staleSlots = Math.max(0, currentSlot - streamingState.bookkeepingLastUpdateSlot)
+      const staleSlots = Math.max(
+        0,
+        currentSlot - streamingState.bookkeepingLastUpdateSlot,
+      )
       if (staleSlots > 0) {
         const staleSlotCount = BigInt(staleSlots)
         if (isBuy) {
           if (streamingState.marketQuoteFlow > 0n) {
             staleAccumulator =
-              (BOOKKEEPING_PRECISION_FACTOR * streamingState.marketBaseFlow * staleSlotCount) /
+              (BOOKKEEPING_PRECISION_FACTOR *
+                streamingState.marketBaseFlow *
+                staleSlotCount) /
               streamingState.marketQuoteFlow
           }
         } else if (streamingState.marketBaseFlow > 0n) {
           staleAccumulator =
-            (BOOKKEEPING_PRECISION_FACTOR * streamingState.marketQuoteFlow * staleSlotCount) /
+            (BOOKKEEPING_PRECISION_FACTOR *
+              streamingState.marketQuoteFlow *
+              staleSlotCount) /
             streamingState.marketBaseFlow
         }
       }
@@ -249,23 +301,28 @@ export function getActivePositionMetrics({
 
     const liveAccumulatedPrice = liveBookkeepingDelta + staleAccumulator
     const liveSwappedEstimate =
-      (scaledFlowAtomsPerSlot * liveAccumulatedPrice) / (FLOW_PRECISION_FACTOR * BOOKKEEPING_PRECISION_FACTOR)
+      (scaledFlowAtomsPerSlot * liveAccumulatedPrice) /
+      (FLOW_PRECISION_FACTOR * BOOKKEEPING_PRECISION_FACTOR)
 
     let perSlotBookkeepingAccumulator = 0n
     if (isBuy) {
       if (streamingState.marketQuoteFlow > 0n) {
         perSlotBookkeepingAccumulator =
-          (BOOKKEEPING_PRECISION_FACTOR * streamingState.marketBaseFlow) / streamingState.marketQuoteFlow
+          (BOOKKEEPING_PRECISION_FACTOR * streamingState.marketBaseFlow) /
+          streamingState.marketQuoteFlow
       }
     } else if (streamingState.marketBaseFlow > 0n) {
       perSlotBookkeepingAccumulator =
-        (BOOKKEEPING_PRECISION_FACTOR * streamingState.marketQuoteFlow) / streamingState.marketBaseFlow
+        (BOOKKEEPING_PRECISION_FACTOR * streamingState.marketQuoteFlow) /
+        streamingState.marketBaseFlow
     }
 
     const slotsToEnd = Math.max(0, endSlot - currentSlot)
-    const projectedAccumulatedAtEnd = liveAccumulatedPrice + perSlotBookkeepingAccumulator * BigInt(slotsToEnd)
+    const projectedAccumulatedAtEnd =
+      liveAccumulatedPrice + perSlotBookkeepingAccumulator * BigInt(slotsToEnd)
     const projectedEndSwappedEstimate =
-      (scaledFlowAtomsPerSlot * projectedAccumulatedAtEnd) / (FLOW_PRECISION_FACTOR * BOOKKEEPING_PRECISION_FACTOR)
+      (scaledFlowAtomsPerSlot * projectedAccumulatedAtEnd) /
+      (FLOW_PRECISION_FACTOR * BOOKKEEPING_PRECISION_FACTOR)
 
     if (!hasPositionEnded) {
       swappedAtoms = liveSwappedEstimate
@@ -283,13 +340,15 @@ export function getActivePositionMetrics({
       const cachedEstimate = getCachedSwappedEstimate(positionKey)
       const projectedTerminalEstimate = getProjectedEndEstimate(positionKey)
       const snapshotDelta =
-        endSlotBookkeepingSnapshot !== null && endSlotBookkeepingSnapshot > bookkeepingSnapshot
+        endSlotBookkeepingSnapshot !== null &&
+        endSlotBookkeepingSnapshot > bookkeepingSnapshot
           ? endSlotBookkeepingSnapshot - bookkeepingSnapshot
           : null
       const snapshotSwappedEstimate =
         snapshotDelta === null
           ? null
-          : (scaledFlowAtomsPerSlot * snapshotDelta) / (FLOW_PRECISION_FACTOR * BOOKKEEPING_PRECISION_FACTOR)
+          : (scaledFlowAtomsPerSlot * snapshotDelta) /
+            (FLOW_PRECISION_FACTOR * BOOKKEEPING_PRECISION_FACTOR)
 
       const frozenAtEnd = cachedEstimate?.amount ?? null
       const frozenConsumedAtEnd = cachedEstimate?.consumedAtoms ?? null
@@ -297,7 +356,8 @@ export function getActivePositionMetrics({
       let terminalFallbackConsumed = frozenConsumedAtEnd ?? consumedAtoms
       if (
         projectedTerminalEstimate !== null &&
-        (terminalFallbackAmount === null || projectedTerminalEstimate.amount > terminalFallbackAmount)
+        (terminalFallbackAmount === null ||
+          projectedTerminalEstimate.amount > terminalFallbackAmount)
       ) {
         terminalFallbackAmount = projectedTerminalEstimate.amount
         terminalFallbackConsumed = projectedTerminalEstimate.consumedAtoms
@@ -319,15 +379,23 @@ export function getActivePositionMetrics({
       } else {
         const shouldClampDrop =
           terminalFallbackAmount !== null &&
-          (cachedEstimate?.source === 'active' || projectedTerminalEstimate !== null)
+          (cachedEstimate?.source === 'active' ||
+            projectedTerminalEstimate !== null)
 
-        if (shouldClampDrop && terminalFallbackAmount !== null && snapshotSwappedEstimate <= terminalFallbackAmount) {
+        if (
+          shouldClampDrop &&
+          terminalFallbackAmount !== null &&
+          snapshotSwappedEstimate <= terminalFallbackAmount
+        ) {
           swappedAtoms = terminalFallbackAmount
           consumedAtomsForAverage = terminalFallbackConsumed
           setCachedSwappedEstimate(positionKey, {
             amount: terminalFallbackAmount,
             consumedAtoms: consumedAtomsForAverage,
-            source: projectedTerminalEstimate !== null ? 'fallback' : cachedEstimate?.source ?? 'active',
+            source:
+              projectedTerminalEstimate !== null
+                ? 'fallback'
+                : (cachedEstimate?.source ?? 'active'),
           })
         } else {
           swappedAtoms = snapshotSwappedEstimate
@@ -342,7 +410,11 @@ export function getActivePositionMetrics({
     }
 
     const cachedMetrics = getCachedSwappedEstimate(positionKey)
-    if (swappedAtoms !== null && cachedMetrics !== null && swappedAtoms < cachedMetrics.amount) {
+    if (
+      swappedAtoms !== null &&
+      cachedMetrics !== null &&
+      swappedAtoms < cachedMetrics.amount
+    ) {
       swappedAtoms = cachedMetrics.amount
       consumedAtomsForAverage = cachedMetrics.consumedAtoms
     }
@@ -361,7 +433,12 @@ export function getActivePositionMetrics({
     if (swappedAtoms === null) return null
     const quoteAtoms = isBuy ? consumedAtomsForAverage : swappedAtoms
     const baseAtoms = isBuy ? swappedAtoms : consumedAtomsForAverage
-    return computeAveragePrice(quoteAtoms, quoteDecimals, baseAtoms, baseDecimals)
+    return computeAveragePrice(
+      quoteAtoms,
+      quoteDecimals,
+      baseAtoms,
+      baseDecimals,
+    )
   })()
 
   return {
