@@ -1,8 +1,6 @@
-import type { RealtimeChannel } from '@supabase/supabase-js'
 import type {
   MarketConfigRow,
   MarketUpdateEvent,
-  MarketUpdateEventRow,
 } from '@/integrations/supabase'
 import {
   parseClosePositionEvent,
@@ -11,13 +9,13 @@ import {
 } from '@/integrations/supabase'
 import { readApiUrl } from './read-api'
 
-// Supabase truncates range queries to 1000 rows on this project, so the
-// pagination loop must use the same page size or it will stop too early and
-// leave holes in the loaded event timeline.
-const MARKET_UPDATE_RANGE_PAGE_SIZE = 1_000
-
 export type CandleInterval = '1m' | '5m' | '1h'
 const MAX_LIGHTWEIGHT_CHART_ABS_VALUE = 90_071_992_547_409.91
+const DEFAULT_MARKET_HISTORY_MAX_ROWS = 100_000
+const FNV64_OFFSET_BASIS = 0xcbf29ce484222325n
+const FNV64_PRIME = 0x100000001b3n
+const FNV64_MASK = 0xffffffffffffffffn
+const MAX_SAFE_INTEGER_BIGINT = BigInt(Number.MAX_SAFE_INTEGER)
 
 interface ReadApiPriceResponse {
   market_id: number
@@ -46,6 +44,47 @@ interface ReadApiCandleResponse {
   items: Array<ReadApiCandleItem>
 }
 
+interface ReadApiMarketHistoryItem {
+  event_uid: string
+  signature: string
+  event_index: number
+  slot: number
+  market_id: number
+  base_flow: string
+  quote_flow: string
+  created_at: string
+}
+
+interface ReadApiMarketHistoryResponse {
+  market_id: number
+  start_slot: number
+  end_slot: number
+  points: number
+  items: Array<ReadApiMarketHistoryItem>
+}
+
+interface ReadApiMarketUpdatesResponse {
+  market_id: number
+  before_slot: number | null
+  has_more: boolean
+  limit: number
+  points: number
+  items: Array<ReadApiMarketHistoryItem>
+}
+
+interface ReadApiClosedPositionMiniChartItem {
+  slot: number
+  price: number
+}
+
+interface ReadApiClosedPositionMiniChartResponse {
+  market_id: number
+  start_slot: number
+  end_slot: number
+  points: number
+  items: Array<ReadApiClosedPositionMiniChartItem>
+}
+
 export interface MarketCandle {
   time: number
   startSlot: number
@@ -55,6 +94,11 @@ export interface MarketCandle {
   low: number
   close: number
   volume: number
+}
+
+export interface ClosedPositionMiniChartPoint {
+  slot: number
+  price: number
 }
 
 const MIN_VALID_UNIX_TIME_SECONDS = 946684800 // 2000-01-01T00:00:00Z
@@ -84,6 +128,18 @@ function isSafeChartNumber(value: number) {
     Number.isFinite(value) &&
     Math.abs(value) <= MAX_LIGHTWEIGHT_CHART_ABS_VALUE
   )
+}
+
+function stableEventIdFromUid(eventUid: string) {
+  let hash = FNV64_OFFSET_BASIS
+
+  for (let index = 0; index < eventUid.length; index += 1) {
+    hash ^= BigInt(eventUid.charCodeAt(index))
+    hash = (hash * FNV64_PRIME) & FNV64_MASK
+  }
+
+  const normalized = hash % MAX_SAFE_INTEGER_BIGINT
+  return Number(normalized === 0n ? 1n : normalized)
 }
 
 export function sortMarketUpdatesDescending(events: Array<MarketUpdateEvent>) {
@@ -126,43 +182,39 @@ export async function fetchMarketUpdatesPage({
   limit: number
   marketId: number
 }) {
-  let request = supabase
-    .from('market_update_events')
-    .select('*')
-    .eq('market_id', marketId)
-    .order('slot', { ascending: false })
-    .limit(limit)
-
+  const query = new URLSearchParams({
+    limit: String(limit),
+  })
   if (beforeSlot !== undefined) {
-    request = request.lt('slot', beforeSlot)
+    query.set('before_slot', String(beforeSlot))
   }
 
-  const { data, error } = await request
+  const response = await fetch(
+    readApiUrl(`/v1/markets/${marketId}/updates?${query.toString()}`),
+    {
+      headers: {
+        Accept: 'application/json',
+      },
+    },
+  )
 
-  if (error) {
-    throw new Error(error.message)
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(
+      `Failed to fetch market updates (${response.status}): ${body || response.statusText}`,
+    )
   }
 
-  return data.map(parseMarketUpdateEvent)
+  const payload = (await response.json()) as ReadApiMarketUpdatesResponse
+  return parseReadApiMarketUpdateItems(payload.items)
 }
 
 export async function fetchLatestMarketUpdate(marketId: number) {
-  const { data, error } = await supabase
-    .from('market_update_events')
-    .select('*')
-    .eq('market_id', marketId)
-    .order('slot', { ascending: false })
-    .limit(1)
-
-  if (error) {
-    throw new Error(error.message)
-  }
-
-  if (data.length === 0) {
-    return null
-  }
-
-  return parseMarketUpdateEvent(data[0])
+  const rows = await fetchMarketUpdatesPage({
+    limit: 1,
+    marketId,
+  })
+  return rows[0] ?? null
 }
 
 export async function fetchMarketPrice({
@@ -297,52 +349,111 @@ export async function fetchMarketUpdateRange({
 }) {
   if (startSlot > endSlot) return []
 
-  const history: Array<MarketUpdateEvent> = []
-  const { data: anchorData, error: anchorError } = await supabase
-    .from('market_update_events')
-    .select('*')
-    .eq('market_id', marketId)
-    .lt('slot', startSlot)
-    .order('slot', { ascending: false })
-    .limit(1)
-
-  if (anchorError) {
-    throw new Error(anchorError.message)
-  }
-
-  if (anchorData.length > 0) {
-    history.push(parseMarketUpdateEvent(anchorData[0]))
-  }
-
-  let from = 0
-  for (;;) {
-    const { data, error } = await supabase
-      .from('market_update_events')
-      .select('*')
-      .eq('market_id', marketId)
-      .gte('slot', startSlot)
-      .lte('slot', endSlot)
-      .order('slot', { ascending: true })
-      .range(from, from + MARKET_UPDATE_RANGE_PAGE_SIZE - 1)
-
-    if (error) {
-      throw new Error(error.message)
-    }
-
-    const page = data.map(parseMarketUpdateEvent)
-    history.push(...page)
-
-    if (page.length < MARKET_UPDATE_RANGE_PAGE_SIZE) {
-      break
-    }
-
-    from += MARKET_UPDATE_RANGE_PAGE_SIZE
-  }
-
-  return history.sort((left, right) => {
-    if (left.slot === right.slot) return left.id - right.id
-    return left.slot - right.slot
+  return fetchMarketUpdateRangeFromReadApi({
+    endSlot,
+    marketId,
+    startSlot,
   })
+}
+
+export async function fetchClosedPositionMiniChart({
+  endSlot,
+  marketId,
+  maxPoints = 240,
+  startSlot,
+}: {
+  endSlot: number
+  marketId: number
+  maxPoints?: number
+  startSlot: number
+}) {
+  if (startSlot > endSlot) return []
+
+  const query = new URLSearchParams({
+    end_slot: String(endSlot),
+    max_points: String(maxPoints),
+    start_slot: String(startSlot),
+  })
+  const response = await fetch(
+    readApiUrl(
+      `/v1/markets/${marketId}/closed-position-mini-chart?${query.toString()}`,
+    ),
+    {
+      headers: {
+        Accept: 'application/json',
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(
+      `Failed to fetch closed-position mini chart (${response.status}): ${body || response.statusText}`,
+    )
+  }
+
+  const payload = (await response.json()) as ReadApiClosedPositionMiniChartResponse
+  const points = payload.items
+    .filter(
+      (item) =>
+        Number.isFinite(item.slot) &&
+        Number.isFinite(item.price) &&
+        item.price > 0 &&
+        isSafeChartNumber(item.price),
+    )
+    .map<ClosedPositionMiniChartPoint>((item) => ({
+      price: item.price,
+      slot: item.slot,
+    }))
+    .sort((left, right) => left.slot - right.slot)
+
+  const deduped: Array<ClosedPositionMiniChartPoint> = []
+  for (const point of points) {
+    const previous = deduped.at(-1)
+    if (previous && previous.slot === point.slot) {
+      deduped[deduped.length - 1] = point
+      continue
+    }
+
+    deduped.push(point)
+  }
+
+  return deduped
+}
+
+async function fetchMarketUpdateRangeFromReadApi({
+  endSlot,
+  marketId,
+  startSlot,
+}: {
+  endSlot: number
+  marketId: number
+  startSlot: number
+}) {
+  const query = new URLSearchParams({
+    end_slot: String(endSlot),
+    max_rows: String(DEFAULT_MARKET_HISTORY_MAX_ROWS),
+    start_slot: String(startSlot),
+  })
+
+  const response = await fetch(
+    readApiUrl(`/v1/markets/${marketId}/history?${query.toString()}`),
+    {
+      headers: {
+        Accept: 'application/json',
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(
+      `Failed to fetch market history (${response.status}): ${body || response.statusText}`,
+    )
+  }
+
+  const payload = (await response.json()) as ReadApiMarketHistoryResponse
+  return parseReadApiMarketUpdateItems(payload.items)
 }
 
 export async function fetchClosedPositionEvents({
@@ -371,32 +482,6 @@ export async function fetchClosedPositionEvents({
   }
 
   return data.map(parseClosePositionEvent)
-}
-
-export function subscribeToMarketUpdates({
-  channelName,
-  marketId,
-  onInsert,
-}: {
-  channelName: string
-  marketId: number
-  onInsert: (event: MarketUpdateEvent) => void
-}) {
-  return supabase
-    .channel(channelName)
-    .on<MarketUpdateEventRow>(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'market_update_events',
-        filter: `market_id=eq.${marketId}`,
-      },
-      (payload) => {
-        onInsert(parseMarketUpdateEvent(payload.new))
-      },
-    )
-    .subscribe()
 }
 
 export function subscribeToMarketPriceStream({
@@ -428,6 +513,16 @@ export function subscribeToMarketPriceStream({
   return stream
 }
 
-export async function unsubscribeFromChannel(channel: RealtimeChannel) {
-  await supabase.removeChannel(channel)
+function parseReadApiMarketUpdateItems(items: Array<ReadApiMarketHistoryItem>) {
+  return items.map((item) =>
+    parseMarketUpdateEvent({
+      base_flow: item.base_flow,
+      created_at: item.created_at,
+      id: stableEventIdFromUid(item.event_uid),
+      market_id: item.market_id,
+      quote_flow: item.quote_flow,
+      signature: item.signature,
+      slot: item.slot,
+    }),
+  )
 }

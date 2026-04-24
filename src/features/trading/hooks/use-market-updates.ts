@@ -3,8 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   dedupeMarketUpdatesById,
   sortMarketUpdatesDescending,
-  subscribeToMarketUpdates,
-  unsubscribeFromChannel,
 } from '../api/market-repository'
 import {
   hasFullCoverage,
@@ -89,7 +87,6 @@ export function useMarketUpdates({
     () => tradingQueries.marketUpdates({ limit, marketId }),
     [limit, marketId],
   )
-  const queryKey = queryOptions.queryKey
   const [historyError, setHistoryError] = useState<string | null>(null)
   const [rangeEvents, setRangeEvents] = useState<Array<MarketUpdateEvent>>([])
   const [rangeLoadedRanges, setRangeLoadedRanges] = useState<Array<SlotRange>>(
@@ -261,28 +258,6 @@ export function useMarketUpdates({
     },
     [marketId, queryClient],
   )
-
-  useEffect(() => {
-    const channel = subscribeToMarketUpdates({
-      channelName: `market_updates_${marketId}`,
-      marketId,
-      onInsert: (event) => {
-        queryClient.setQueryData<Array<MarketUpdateEvent>>(
-          queryKey,
-          (previous) => {
-            const current = previous ?? []
-            return sortMarketUpdatesDescending(
-              dedupeMarketUpdatesById([event, ...current]),
-            ).slice(0, limit)
-          },
-        )
-      },
-    })
-
-    return () => {
-      void unsubscribeFromChannel(channel)
-    }
-  }, [limit, marketId, queryClient, queryKey])
 
   return {
     events,

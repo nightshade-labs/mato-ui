@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from './client'
-import type { MarketUpdateEvent, MarketUpdateEventRow } from './types'
+import type { MarketUpdateEvent } from './types'
 import { parseMarketUpdateEvent, parseClosePositionEvent } from './types'
 import {
   getMarketUpdates,
@@ -14,6 +12,8 @@ export function useMarketUpdates() {
   return useQuery({
     queryKey: ['market-updates'],
     queryFn: () => getMarketUpdates(),
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: true,
     select: (data) => data.map(parseMarketUpdateEvent),
   })
 }
@@ -22,52 +22,22 @@ export function useMarketUpdatesByMarketId(marketId: number) {
   return useQuery({
     queryKey: ['market-updates', marketId],
     queryFn: () => fetchMarketUpdatesByMarketId(marketId),
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: true,
     select: (data) => data.map(parseMarketUpdateEvent),
   })
 }
 
 export function useMarketUpdatesRealtime(marketId?: number) {
-  const [updates, setUpdates] = useState<MarketUpdateEvent[]>([])
-  const [isConnected, setIsConnected] = useState(false)
-
-  const { data: initialData, isLoading } = marketId
+  const query = marketId
     ? useMarketUpdatesByMarketId(marketId)
     : useMarketUpdates()
 
-  useEffect(() => {
-    if (initialData) {
-      setUpdates(initialData)
-    }
-  }, [initialData])
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('market-updates-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'market_update_events',
-          ...(marketId && { filter: `market_id=eq.${marketId}` }),
-        },
-        (payload) => {
-          const newEvent = parseMarketUpdateEvent(
-            payload.new as MarketUpdateEventRow,
-          )
-          setUpdates((prev) => [newEvent, ...prev])
-        },
-      )
-      .subscribe((status) => {
-        setIsConnected(status === 'SUBSCRIBED')
-      })
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [marketId])
-
-  return { data: updates, isLoading, isConnected }
+  return {
+    data: (query.data ?? []) as Array<MarketUpdateEvent>,
+    isLoading: query.isLoading,
+    isConnected: !query.isLoading && !query.isError,
+  }
 }
 
 export function useClosedPositions() {

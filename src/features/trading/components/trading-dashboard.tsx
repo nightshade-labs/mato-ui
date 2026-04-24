@@ -510,11 +510,6 @@ export function TradingDashboard() {
                     <ClosedPositionsList
                       baseDecimals={baseDecimals}
                       baseTicker={baseTicker}
-                      ensureMarketHistoryRanges={marketUpdates.ensureRanges}
-                      marketHistoryFailedRanges={marketUpdates.failedRanges}
-                      marketHistoryLoadedRanges={marketUpdates.loadedRanges}
-                      marketHistoryPendingRanges={marketUpdates.pendingRanges}
-                      marketHistorySeed={marketUpdates.sharedEvents}
                       marketId={MARKET_ID}
                       positionAuthority={address}
                       quoteDecimals={quoteDecimals}
@@ -593,11 +588,6 @@ export function TradingDashboard() {
                 <ClosedPositionsList
                   baseDecimals={baseDecimals}
                   baseTicker={baseTicker}
-                  ensureMarketHistoryRanges={marketUpdates.ensureRanges}
-                  marketHistoryFailedRanges={marketUpdates.failedRanges}
-                  marketHistoryLoadedRanges={marketUpdates.loadedRanges}
-                  marketHistoryPendingRanges={marketUpdates.pendingRanges}
-                  marketHistorySeed={marketUpdates.sharedEvents}
                   marketId={MARKET_ID}
                   positionAuthority={address}
                   quoteDecimals={quoteDecimals}
