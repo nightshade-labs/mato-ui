@@ -76,6 +76,113 @@ function isSameCrosshairData(
   )
 }
 
+const MIN_VALID_UNIX_TIME_SECONDS = 946684800 // 2000-01-01T00:00:00Z
+const MAX_VALID_UNIX_TIME_SECONDS = 4102444800 // 2100-01-01T00:00:00Z
+const MAX_LIGHTWEIGHT_CHART_ABS_VALUE = 90_071_992_547_409.91
+
+function normalizeUnixTimeSeconds(rawTime: number) {
+  if (!Number.isFinite(rawTime) || rawTime <= 0) {
+    return null
+  }
+
+  const candidates = [
+    rawTime,
+    rawTime / 1_000,
+    rawTime / 1_000_000,
+    rawTime / 1_000_000_000,
+  ]
+
+  for (const candidate of candidates) {
+    const normalized = Math.floor(candidate)
+    if (
+      normalized >= MIN_VALID_UNIX_TIME_SECONDS &&
+      normalized <= MAX_VALID_UNIX_TIME_SECONDS
+    ) {
+      return normalized
+    }
+  }
+
+  return null
+}
+
+function isSafeChartNumber(value: number) {
+  return (
+    Number.isFinite(value) &&
+    Math.abs(value) <= MAX_LIGHTWEIGHT_CHART_ABS_VALUE
+  )
+}
+
+function sanitizeChartCandles(data: Array<TradingViewAggregatedCandle>) {
+  const normalized = data
+    .map<TradingViewAggregatedCandle | null>((candle) => {
+      const time = normalizeUnixTimeSeconds(candle.time)
+      if (time === null) {
+        return null
+      }
+      if (
+        !isSafeChartNumber(candle.open) ||
+        !isSafeChartNumber(candle.high) ||
+        !isSafeChartNumber(candle.low) ||
+        !isSafeChartNumber(candle.close)
+      ) {
+        return null
+      }
+      if (
+        candle.open <= 0 ||
+        candle.high <= 0 ||
+        candle.low <= 0 ||
+        candle.close <= 0
+      ) {
+        return null
+      }
+
+      const normalizedHigh = Math.max(
+        candle.open,
+        candle.high,
+        candle.low,
+        candle.close,
+      )
+      const normalizedLow = Math.min(
+        candle.open,
+        candle.high,
+        candle.low,
+        candle.close,
+      )
+      const normalizedVolume =
+        isSafeChartNumber(candle.volume) && candle.volume >= 0 ? candle.volume : 0
+
+      return {
+        ...candle,
+        high: normalizedHigh,
+        low: normalizedLow,
+        time,
+        volume: normalizedVolume,
+      }
+    })
+    .filter((candle): candle is TradingViewAggregatedCandle => candle !== null)
+    .sort((left, right) => {
+      if (left.time === right.time) {
+        return left.endSlot - right.endSlot
+      }
+      return left.time - right.time
+    })
+
+  const deduped: Array<TradingViewAggregatedCandle> = []
+  for (const candle of normalized) {
+    const previous = deduped.at(-1)
+    if (previous && previous.time === candle.time) {
+      if (candle.endSlot >= previous.endSlot) {
+        deduped[deduped.length - 1] = candle
+      }
+      continue
+    }
+
+    deduped.push(candle)
+  }
+
+  return deduped
+}
+
 export function MarketPriceChart({
   defaultVisibleBars = 120,
   data,
@@ -112,26 +219,27 @@ export function MarketPriceChart({
   const wheelGestureTimeoutRef = useRef<number | null>(null)
   const lastCrosshairDataRef = useRef<ChartCrosshairData | null>(null)
   const previousViewportPresetKeyRef = useRef(viewportPresetKey)
+  const chartData = useMemo(() => sanitizeChartCandles(data), [data])
 
   const histogramData = useMemo(
     () =>
-      data.map<HistogramData<UTCTimestamp>>((candle) => ({
+      chartData.map<HistogramData<UTCTimestamp>>((candle) => ({
         color: candle.close >= candle.open ? '#43c29a55' : '#f86f7055',
         time: candle.time as UTCTimestamp,
         value: candle.volume,
       })),
-    [data],
+    [chartData],
   )
   const candleData = useMemo(
     () =>
-      data.map<CandlestickData<UTCTimestamp>>((candle) => ({
+      chartData.map<CandlestickData<UTCTimestamp>>((candle) => ({
         close: candle.close,
         high: candle.high,
         low: candle.low,
         open: candle.open,
         time: candle.time as UTCTimestamp,
       })),
-    [data],
+    [chartData],
   )
 
   const handleCrosshairMove = useEffectEvent(
@@ -184,7 +292,7 @@ export function MarketPriceChart({
       const barsInfo = candleSeriesRef.current.barsInLogicalRange(range)
       const request = buildOlderChartHistoryRequest({
         barsBefore: barsInfo?.barsBefore ?? null,
-        data,
+        data: chartData,
         logicalRange: range,
       })
       if (request === null) {
@@ -210,11 +318,14 @@ export function MarketPriceChart({
     },
   )
   const applyDefaultViewport = useEffectEvent(() => {
-    if (!chartRef.current || data.length === 0) {
+    if (!chartRef.current || chartData.length === 0) {
       return
     }
 
-    const nextRange = buildDefaultLogicalRange(data.length, defaultVisibleBars)
+    const nextRange = buildDefaultLogicalRange(
+      chartData.length,
+      defaultVisibleBars,
+    )
 
     isAdjustingVisibleRangeRef.current = true
 
@@ -437,15 +548,15 @@ export function MarketPriceChart({
       previousViewportPresetKeyRef.current !== viewportPresetKey
 
     const hadNoData = previousLength === 0
-    const nextFirstTime = data[0]?.time ?? null
-    const nextLastTime = data[data.length - 1]?.time ?? null
+    const nextFirstTime = chartData[0]?.time ?? null
+    const nextLastTime = chartData[chartData.length - 1]?.time ?? null
 
     previousViewportPresetKeyRef.current = viewportPresetKey
-    previousDataLengthRef.current = data.length
+    previousDataLengthRef.current = chartData.length
     previousFirstTimeRef.current = nextFirstTime
     previousLastTimeRef.current = nextLastTime
 
-    if (data.length > 0) {
+    if (chartData.length > 0) {
       if (hadNoData) {
         candleSeriesRef.current.setData(candleData)
         volumeSeriesRef.current.setData(histogramData)
@@ -456,7 +567,7 @@ export function MarketPriceChart({
       const nextRange = computePrependedLogicalRange({
         nextFirstTime,
         nextLastTime,
-        nextLength: data.length,
+        nextLength: chartData.length,
         previousFirstTime,
         previousLastTime,
         previousLength,
@@ -487,7 +598,7 @@ export function MarketPriceChart({
         nextLastTime >= previousLastTime
 
       if (canApplyIncrementalUpdate) {
-        const startIndex = data.findIndex(
+        const startIndex = chartData.findIndex(
           (candle) => candle.time >= previousLastTime,
         )
 
@@ -529,7 +640,7 @@ export function MarketPriceChart({
     previousLastTimeRef.current = null
     lastLogicalRangeRef.current = null
     handleCrosshairMove(null)
-  }, [candleData, data.length, histogramData, viewportPresetKey])
+  }, [candleData, chartData, chartData.length, histogramData, viewportPresetKey])
 
   useEffect(() => {
     if (resetSignal <= 0) return

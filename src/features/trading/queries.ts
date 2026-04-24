@@ -1,7 +1,6 @@
 import type { SolanaClient } from '@solana/client'
 import { queryOptions } from '@tanstack/react-query'
 import type { Address } from '@solana/kit'
-import type { MarketConfigRow } from '@/integrations/supabase'
 import {
   fetchClosedPositionEvents,
   fetchMarketConfig,
@@ -64,13 +63,10 @@ export const tradingQueries = {
       },
       staleTime: MARKET_UPDATE_RANGE_STALE_TIME,
     }),
-  marketPrice: (marketId: number, config?: MarketConfigRow) =>
+  marketPrice: (marketId: number) =>
     queryOptions({
       queryKey: tradingQueryKeys.marketPrice(marketId),
-      queryFn: async () => {
-        const resolvedConfig = config ?? (await fetchMarketConfig(marketId))
-        return fetchMarketPrice({ config: resolvedConfig, marketId })
-      },
+      queryFn: async () => fetchMarketPrice({ marketId }),
       refetchInterval: 5_000,
       refetchIntervalInBackground: true,
     }),

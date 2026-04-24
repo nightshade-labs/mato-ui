@@ -112,10 +112,7 @@ export function TradingDashboard() {
     quoteTicker,
   } = useMemo(() => deriveMarketIdentity(marketConfig), [marketConfig])
   const marketChartHistory = useMarketChartHistory({
-    baseDecimals,
-    latestEvents: marketUpdates.events,
     marketId: MARKET_ID,
-    quoteDecimals,
     timeframe: chartTimeframe,
   })
 
