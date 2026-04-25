@@ -9,7 +9,10 @@ function envValue(name: string) {
   return process.env?.[name] ?? ''
 }
 
-const DEFAULT_MARKET_ID = Number.parseInt(envValue('DEFAULT_MARKET_ID') || '1', 10)
+const DEFAULT_MARKET_ID = Number.parseInt(
+  envValue('DEFAULT_MARKET_ID') || '1',
+  10,
+)
 const FNV64_OFFSET_BASIS = 0xcbf29ce484222325n
 const FNV64_PRIME = 0x100000001b3n
 const FNV64_MASK = 0xffffffffffffffffn
@@ -36,7 +39,9 @@ interface ReadApiMarketUpdatesResponse {
 }
 
 function resolveReadApiBaseUrl() {
-  const value = (envValue('READ_API_URL') || envValue('VITE_READ_API_URL')).trim()
+  const value = (
+    envValue('READ_API_URL') || envValue('VITE_READ_API_URL')
+  ).trim()
   if (!value) {
     throw new Error(
       'READ_API_URL (or VITE_READ_API_URL) must be set to fetch market updates',

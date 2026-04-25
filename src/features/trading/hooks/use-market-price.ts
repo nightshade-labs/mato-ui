@@ -1,8 +1,6 @@
 import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  subscribeToMarketPriceStream,
-} from '../api/market-repository'
+import { subscribeToMarketPriceStream } from '../api/market-repository'
 import { tradingQueries } from '../queries'
 
 export function useMarketPrice(marketId: number) {

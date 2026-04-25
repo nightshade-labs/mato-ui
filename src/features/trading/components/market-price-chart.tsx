@@ -107,8 +107,7 @@ function normalizeUnixTimeSeconds(rawTime: number) {
 
 function isSafeChartNumber(value: number) {
   return (
-    Number.isFinite(value) &&
-    Math.abs(value) <= MAX_LIGHTWEIGHT_CHART_ABS_VALUE
+    Number.isFinite(value) && Math.abs(value) <= MAX_LIGHTWEIGHT_CHART_ABS_VALUE
   )
 }
 
@@ -149,7 +148,9 @@ function sanitizeChartCandles(data: Array<TradingViewAggregatedCandle>) {
         candle.close,
       )
       const normalizedVolume =
-        isSafeChartNumber(candle.volume) && candle.volume >= 0 ? candle.volume : 0
+        isSafeChartNumber(candle.volume) && candle.volume >= 0
+          ? candle.volume
+          : 0
 
       return {
         ...candle,
@@ -640,7 +641,13 @@ export function MarketPriceChart({
     previousLastTimeRef.current = null
     lastLogicalRangeRef.current = null
     handleCrosshairMove(null)
-  }, [candleData, chartData, chartData.length, histogramData, viewportPresetKey])
+  }, [
+    candleData,
+    chartData,
+    chartData.length,
+    histogramData,
+    viewportPresetKey,
+  ])
 
   useEffect(() => {
     if (resetSignal <= 0) return

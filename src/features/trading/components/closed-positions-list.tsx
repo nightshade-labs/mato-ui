@@ -284,7 +284,9 @@ export function ClosedPositionsList({
     }
   }, [marketId, pendingChartEvents])
 
-  const chartStateForEvent = (event: ClosePositionEvent): ClosedPositionChartState => {
+  const chartStateForEvent = (
+    event: ClosePositionEvent,
+  ): ClosedPositionChartState => {
     const existing = chartStatesByEventId.get(event.id)
     if (existing) {
       return existing

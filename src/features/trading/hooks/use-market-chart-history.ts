@@ -36,7 +36,9 @@ function mapTimeframeToInterval(timeframe: ChartTimeframe): CandleInterval {
   }
 }
 
-function toTradingViewCandle(candle: MarketCandle): TradingViewAggregatedCandle {
+function toTradingViewCandle(
+  candle: MarketCandle,
+): TradingViewAggregatedCandle {
   return {
     close: candle.close,
     endSlot: candle.endSlot,
@@ -180,7 +182,10 @@ export function useMarketChartHistory({
         Math.max(visibleBarCount, MIN_CHUNK_BARS),
       )
       const requestToMs = currentOldestTime * 1000
-      const requestFromMs = Math.max(0, requestToMs - barsToLoad * chartIntervalMs)
+      const requestFromMs = Math.max(
+        0,
+        requestToMs - barsToLoad * chartIntervalMs,
+      )
 
       if (requestToMs <= requestFromMs) {
         setHasMoreHistory(false)
@@ -235,13 +240,7 @@ export function useMarketChartHistory({
         }
       }
     },
-    [
-      chartIntervalMs,
-      hasMoreHistory,
-      isLoadingMoreHistory,
-      interval,
-      marketId,
-    ],
+    [chartIntervalMs, hasMoreHistory, isLoadingMoreHistory, interval, marketId],
   )
 
   useEffect(() => {

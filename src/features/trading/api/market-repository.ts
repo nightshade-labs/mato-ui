@@ -109,7 +109,12 @@ function normalizeUnixTimeSeconds(rawTime: number) {
     return null
   }
 
-  const candidates = [rawTime, rawTime / 1_000, rawTime / 1_000_000, rawTime / 1_000_000_000]
+  const candidates = [
+    rawTime,
+    rawTime / 1_000,
+    rawTime / 1_000_000,
+    rawTime / 1_000_000_000,
+  ]
   for (const candidate of candidates) {
     const normalized = Math.floor(candidate)
     if (
@@ -125,8 +130,7 @@ function normalizeUnixTimeSeconds(rawTime: number) {
 
 function isSafeChartNumber(value: number) {
   return (
-    Number.isFinite(value) &&
-    Math.abs(value) <= MAX_LIGHTWEIGHT_CHART_ABS_VALUE
+    Number.isFinite(value) && Math.abs(value) <= MAX_LIGHTWEIGHT_CHART_ABS_VALUE
   )
 }
 
@@ -217,11 +221,7 @@ export async function fetchLatestMarketUpdate(marketId: number) {
   return rows[0] ?? null
 }
 
-export async function fetchMarketPrice({
-  marketId,
-}: {
-  marketId: number
-}) {
+export async function fetchMarketPrice({ marketId }: { marketId: number }) {
   const response = await fetch(readApiUrl(`/v1/markets/${marketId}/price`), {
     headers: {
       Accept: 'application/json',
@@ -294,11 +294,21 @@ export async function fetchMarketCandles({
       ) {
         return null
       }
-      if (item.open <= 0 || item.high <= 0 || item.low <= 0 || item.close <= 0) {
+      if (
+        item.open <= 0 ||
+        item.high <= 0 ||
+        item.low <= 0 ||
+        item.close <= 0
+      ) {
         return null
       }
 
-      const normalizedHigh = Math.max(item.open, item.high, item.low, item.close)
+      const normalizedHigh = Math.max(
+        item.open,
+        item.high,
+        item.low,
+        item.close,
+      )
       const normalizedLow = Math.min(item.open, item.high, item.low, item.close)
       const normalizedVolume =
         isSafeChartNumber(item.volume) && item.volume >= 0 ? item.volume : 0
@@ -392,7 +402,8 @@ export async function fetchClosedPositionMiniChart({
     )
   }
 
-  const payload = (await response.json()) as ReadApiClosedPositionMiniChartResponse
+  const payload =
+    (await response.json()) as ReadApiClosedPositionMiniChartResponse
   const points = payload.items
     .filter(
       (item) =>
