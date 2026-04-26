@@ -46,7 +46,8 @@ export function isExitsAccountCloseable({
   index: bigint
 }) {
   return (
-    toBigInt(currentSlot) > getClosableAfterSlot(index, toBigInt(endSlotInterval))
+    toBigInt(currentSlot) >
+    getClosableAfterSlot(index, toBigInt(endSlotInterval))
   )
 }
 

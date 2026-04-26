@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useWalletConnection } from '@solana/react-hooks'
-import { Check, ChevronDown, Copy, HandCoins, LogOut, Wallet } from 'lucide-react'
+import {
+  Check,
+  ChevronDown,
+  Copy,
+  HandCoins,
+  LogOut,
+  Wallet,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -129,7 +136,9 @@ export function WalletConnectionButton() {
                       void reclaimRent.reclaimRent()
                     }}
                   >
-                    {reclaimRent.isReclaiming ? 'Reclaiming rent...' : 'Reclaim Rent'}
+                    {reclaimRent.isReclaiming
+                      ? 'Reclaiming rent...'
+                      : 'Reclaim Rent'}
                     <HandCoins className="size-4" />
                   </Button>
                 ) : null}
@@ -152,7 +161,9 @@ export function WalletConnectionButton() {
                   </p>
                 ) : null}
                 {reclaimRent.error ? (
-                  <p className="text-sm text-destructive">{reclaimRent.error}</p>
+                  <p className="text-sm text-destructive">
+                    {reclaimRent.error}
+                  </p>
                 ) : null}
               </>
             ) : (

@@ -15,7 +15,8 @@ describe('rent eligibility', () => {
   it('closes exits only after the full prices/exits account horizon', () => {
     const index = 3n
     const endSlotInterval = 5n
-    const closableAfterSlot = (index + 1n) * BigInt(ARRAY_LENGTH) * endSlotInterval
+    const closableAfterSlot =
+      (index + 1n) * BigInt(ARRAY_LENGTH) * endSlotInterval
 
     expect(
       isExitsAccountCloseable({

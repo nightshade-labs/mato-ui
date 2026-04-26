@@ -6,7 +6,10 @@ import {
   useWalletSession,
 } from '@solana/react-hooks'
 import { fetchMarket } from '@/lib/generated/twob/src/generated/accounts'
-import { MARKET_ID, MAX_RECLAIM_RENT_ACCOUNTS_PER_TRANSACTION } from '../constants'
+import {
+  MARKET_ID,
+  MAX_RECLAIM_RENT_ACCOUNTS_PER_TRANSACTION,
+} from '../constants'
 import {
   getPreviousIndex,
   getReferenceIndex,
@@ -18,7 +21,12 @@ import { tradingQueryKeys } from '../query-keys'
 import { tradingQueries } from '../queries'
 import { useMarketAddress } from './use-market-address'
 
-type ReclaimRentStatus = 'idle' | 'building' | 'submitting' | 'success' | 'error'
+type ReclaimRentStatus =
+  | 'idle'
+  | 'building'
+  | 'submitting'
+  | 'success'
+  | 'error'
 
 const RENT_RUNTIME_QUERY_KEY = 'rent-runtime-context'
 
@@ -128,11 +136,7 @@ export function useReclaimRent(enabled: boolean) {
       }
       return true
     }).length
-  }, [
-    exitsAccounts,
-    pricesAccounts,
-    runtimeContextQuery.data,
-  ])
+  }, [exitsAccounts, pricesAccounts, runtimeContextQuery.data])
 
   const reclaimRent = useCallback(async () => {
     if (!session) {
@@ -184,12 +188,7 @@ export function useReclaimRent(enabled: boolean) {
       setError(formatTransactionError(error, 'Failed to reclaim rent.'))
       return false
     }
-  }, [
-    client,
-    marketAddress,
-    queryClient,
-    session,
-  ])
+  }, [client, marketAddress, queryClient, session])
 
   const reset = useCallback(() => {
     sendTransaction.reset()
@@ -212,7 +211,9 @@ export function useReclaimRent(enabled: boolean) {
     error,
     isLoadingEligibility:
       shouldFetch &&
-      (exitsQuery.isPending || pricesQuery.isPending || runtimeContextQuery.isPending),
+      (exitsQuery.isPending ||
+        pricesQuery.isPending ||
+        runtimeContextQuery.isPending),
     isReclaiming: status === 'building' || status === 'submitting',
     reclaimRent,
     reclaimedCount,

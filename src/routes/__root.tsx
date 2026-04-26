@@ -10,6 +10,7 @@ import { TanStackDevtools } from '@tanstack/react-devtools'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import { SolanaProvider } from '../integrations/solana'
 import { Navbar } from '../components/navbar'
+import { RiskDisclaimerDialog } from '../components/risk-disclaimer-dialog'
 import { WalletConnectionButton } from '../features/trading/components/wallet-connection-button'
 
 import appCss from '../styles.css?url'
@@ -53,6 +54,7 @@ function RootLayout() {
         <WalletConnectionButton />
       </Navbar>
       <Outlet />
+      <RiskDisclaimerDialog />
     </>
   )
 }

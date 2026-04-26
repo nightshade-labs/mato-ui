@@ -94,7 +94,9 @@ export function ActivePositionCard({
               <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
                 Remaining
               </p>
-              <p className="font-medium">{metrics.remainingPercent.toFixed(1)}%</p>
+              <p className="font-medium">
+                {metrics.remainingPercent.toFixed(1)}%
+              </p>
             </div>
           </div>
         </div>

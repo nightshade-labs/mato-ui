@@ -147,7 +147,9 @@ function buildCloseExitsAccountInstruction({
       { address: previousPrices, role: AccountRole.WRITABLE },
       { address: SYSTEM_PROGRAM_ADDRESS, role: AccountRole.READONLY },
     ],
-    data: getCloseExitsAccountInstructionDataEncoder().encode({ referenceIndex }),
+    data: getCloseExitsAccountInstructionDataEncoder().encode({
+      referenceIndex,
+    }),
     programAddress: TWOB_ANCHOR_PROGRAM_ADDRESS,
   })
 }
@@ -727,22 +729,29 @@ export async function sendReclaimRent({
   const ownerAddress = session.account.address
   const owner = ownerAddress.toString()
 
-  const [currentSlot, marketAccount, ownedExitsAccounts, ownedPricesAccounts] = await Promise.all([
-    client.runtime.rpc.getSlot({ commitment: 'confirmed' }).send(),
-    fetchMarket(client.runtime.rpc, marketAddress, { commitment: 'confirmed' }),
-    fetchOwnedExitsAccounts(client.runtime.rpc, owner),
-    fetchOwnedPricesAccounts(client.runtime.rpc, owner),
-  ])
+  const [currentSlot, marketAccount, ownedExitsAccounts, ownedPricesAccounts] =
+    await Promise.all([
+      client.runtime.rpc.getSlot({ commitment: 'confirmed' }).send(),
+      fetchMarket(client.runtime.rpc, marketAddress, {
+        commitment: 'confirmed',
+      }),
+      fetchOwnedExitsAccounts(client.runtime.rpc, owner),
+      fetchOwnedPricesAccounts(client.runtime.rpc, owner),
+    ])
 
-  const exitsAccounts: ExitsRentAccount[] = ownedExitsAccounts.map((account) => ({
-    address: account.address,
-    index: account.data.index,
-  }))
-  const pricesAccounts: PricesRentAccount[] = ownedPricesAccounts.map((account) => ({
-    address: account.address,
-    index: account.data.index,
-    openPositions: account.data.openPositions,
-  }))
+  const exitsAccounts: ExitsRentAccount[] = ownedExitsAccounts.map(
+    (account) => ({
+      address: account.address,
+      index: account.data.index,
+    }),
+  )
+  const pricesAccounts: PricesRentAccount[] = ownedPricesAccounts.map(
+    (account) => ({
+      address: account.address,
+      index: account.data.index,
+      openPositions: account.data.openPositions,
+    }),
+  )
   const indicesWithOpenPositions = new Set<bigint>(
     pricesAccounts
       .filter((account) => account.openPositions > 0n)
@@ -779,14 +788,19 @@ export async function sendReclaimRent({
   if (closeableAccounts.length === 0) {
     throw new Error('No reclaimable rent accounts available.')
   }
-  const [bookkeepingAddress, currentExits, previousExits, currentPrices, previousPrices] =
-    await Promise.all([
-      deriveBookkeepingAddress(marketAddress),
-      deriveExitsAddress(marketAddress, referenceIndex),
-      deriveExitsAddress(marketAddress, previousIndex),
-      derivePricesAddress(marketAddress, referenceIndex),
-      derivePricesAddress(marketAddress, previousIndex),
-    ])
+  const [
+    bookkeepingAddress,
+    currentExits,
+    previousExits,
+    currentPrices,
+    previousPrices,
+  ] = await Promise.all([
+    deriveBookkeepingAddress(marketAddress),
+    deriveExitsAddress(marketAddress, referenceIndex),
+    deriveExitsAddress(marketAddress, previousIndex),
+    derivePricesAddress(marketAddress, referenceIndex),
+    derivePricesAddress(marketAddress, previousIndex),
+  ])
 
   const instructions = await Promise.all(
     closeableAccounts.map((account) => {

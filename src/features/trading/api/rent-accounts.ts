@@ -17,9 +17,11 @@ type ProgramAccountResponse = {
   pubkey: Address
 }
 
-type ProgramAccountsResponse = ProgramAccountResponse[] | {
-  value: ProgramAccountResponse[]
-}
+type ProgramAccountsResponse =
+  | ProgramAccountResponse[]
+  | {
+      value: ProgramAccountResponse[]
+    }
 
 function asProgramAccounts(response: ProgramAccountsResponse) {
   return Array.isArray(response) ? response : response.value
