@@ -23,6 +23,16 @@ export function Navbar({ children }: { children?: React.ReactNode }) {
           >
             Trade
           </Link>
+          <Link
+            to="/rent"
+            className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+            activeProps={{
+              className:
+                'rounded-lg px-3 py-1.5 text-sm text-foreground bg-white/5 transition-colors',
+            }}
+          >
+            Rent
+          </Link>
         </div>
       </div>
 

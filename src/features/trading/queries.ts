@@ -9,6 +9,10 @@ import {
   fetchMarketUpdatesPage,
 } from './api/market-repository'
 import {
+  fetchOwnedExitsAccounts,
+  fetchOwnedPricesAccounts,
+} from './api/rent-accounts'
+import {
   deriveMarketAddress,
   fetchEndSlotBookkeepingSnapshot,
   fetchStreamingMarketState,
@@ -83,6 +87,38 @@ export const tradingQueries = {
         if (!authority) return []
         return fetchTradePositions(client.runtime.rpc, authority)
       },
+    }),
+  ownedPricesAccounts: ({
+    authority,
+    client,
+  }: {
+    authority: string | null | undefined
+    client: SolanaClient
+  }) =>
+    queryOptions({
+      queryKey: tradingQueryKeys.ownedPricesAccounts(authority),
+      queryFn: async () => {
+        if (!authority) return []
+        return fetchOwnedPricesAccounts(client.runtime.rpc, authority)
+      },
+      refetchInterval: 10_000,
+      refetchIntervalInBackground: true,
+    }),
+  ownedExitsAccounts: ({
+    authority,
+    client,
+  }: {
+    authority: string | null | undefined
+    client: SolanaClient
+  }) =>
+    queryOptions({
+      queryKey: tradingQueryKeys.ownedExitsAccounts(authority),
+      queryFn: async () => {
+        if (!authority) return []
+        return fetchOwnedExitsAccounts(client.runtime.rpc, authority)
+      },
+      refetchInterval: 10_000,
+      refetchIntervalInBackground: true,
     }),
   closedPositions: ({
     limit = 50,

@@ -27,6 +27,10 @@ export const tradingQueryKeys = {
     ['trading', 'market-price', marketId] as const,
   tradePositions: (authority: string | null | undefined) =>
     ['trading', 'trade-positions', normalizeKeyPart(authority)] as const,
+  ownedPricesAccounts: (authority: string | null | undefined) =>
+    ['trading', 'owned-prices-accounts', normalizeKeyPart(authority)] as const,
+  ownedExitsAccounts: (authority: string | null | undefined) =>
+    ['trading', 'owned-exits-accounts', normalizeKeyPart(authority)] as const,
   closedPositions: (
     authority: string | null | undefined,
     marketId: number | undefined,
