@@ -1,12 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useWalletConnection, useWalletSession } from '@solana/react-hooks'
-import {
-  ArrowUpRight,
-  CandlestickChart,
-  RadioTower,
-  RefreshCcw,
-  Wallet,
-} from 'lucide-react'
+import { ArrowUpRight, RadioTower, RefreshCcw } from 'lucide-react'
 import {
   CHART_TIMEFRAMES,
   DEFAULT_MARKET_UPDATES_LIMIT,
@@ -25,7 +19,6 @@ import {
   formatExplorerTransactionUrl,
   formatPrice,
   formatSignedNumber,
-  shortenAddress,
 } from '../lib/format'
 import { useMarketAddress } from '../hooks/use-market-address'
 import { useMarketChartHistory } from '../hooks/use-market-chart-history'
@@ -43,7 +36,6 @@ import {
   formatDashboardPrice,
 } from '../view-models/trading-dashboard'
 import { MarketPriceChart } from './market-price-chart'
-import { WalletConnectionButton } from './wallet-connection-button'
 import { OrderEntryCard } from './order-entry-card'
 import { ActivePositionCard } from './active-position-card'
 import { ClosedPositionsList } from './closed-positions-list'
@@ -277,41 +269,21 @@ export function TradingDashboard() {
   const txSignature = submitOrder.signature ?? closePosition.signature
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[color:var(--color-page-bg)] text-foreground">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(40,197,173,0.18),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(254,194,96,0.12),transparent_24%),linear-gradient(180deg,rgba(7,17,31,0),rgba(7,17,31,0.85))]" />
-      <div className="relative mx-auto max-w-[1440px] px-4 pb-12 pt-6 sm:px-6 lg:px-8">
-        <header className="relative z-20 mb-8 rounded-[2rem] border border-white/10 bg-black/20 p-5 backdrop-blur-md">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-3">
-              <Badge variant="accent">TWOB Web Terminal</Badge>
-              <div>
-                <h1 className="text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">
-                  {baseTicker}/{quoteTicker}
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-                  A cleaner desktop port of `mato-mobile`: wallet-standard
-                  connection, Codama-generated Twob client, Supabase market
-                  history, and direct `lightweight-charts` rendering.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-                  Wallet
-                </div>
-                <div className="mt-2 flex items-center gap-3">
-                  <Wallet className="size-4 text-[color:var(--color-accent-strong)]" />
-                  <span className="font-medium">
-                    {address ? shortenAddress(address, 6, 6) : 'Disconnected'}
-                  </span>
-                </div>
-              </div>
-              <WalletConnectionButton />
-            </div>
-          </div>
-        </header>
+    <div className="relative min-h-screen bg-[color:var(--color-page-bg)] text-foreground">
+      <div className="relative mx-auto max-w-[1440px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
+        <div className="mb-5 flex items-baseline gap-3">
+          <h1 className="text-2xl font-semibold tracking-[-0.04em]">
+            {baseTicker}/{quoteTicker}
+          </h1>
+          <span className="text-2xl font-semibold tracking-[-0.04em] text-[color:var(--color-accent-strong)]">
+            {formatDashboardPrice(displayPrice)}
+          </span>
+          {priceDelta !== null && priceDeltaPercent !== null ? (
+            <Badge variant={priceDelta >= 0 ? 'positive' : 'negative'}>
+              {formatSignedNumber(priceDeltaPercent, 2)}%
+            </Badge>
+          ) : null}
+        </div>
 
         {topAlert ? (
           <Alert
@@ -338,18 +310,8 @@ export function TradingDashboard() {
           </Alert>
         ) : null}
 
-        <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricPanel
-            icon={<CandlestickChart className="size-4" />}
-            label="Last Price"
-            value={formatDashboardPrice(displayPrice)}
-            detail={
-              priceDelta !== null && priceDeltaPercent !== null
-                ? `${formatSignedNumber(priceDeltaPercent, 2)}%`
-                : 'Waiting for ticks'
-            }
-          />
-          <MetricPanel
+        <div className="mb-5 flex flex-wrap items-center gap-5 border-b border-white/8 pb-4 text-sm">
+          <StatItem
             label="24h High"
             value={
               marketStats.high === null
@@ -357,7 +319,7 @@ export function TradingDashboard() {
                 : `$${formatPrice(marketStats.high)}`
             }
           />
-          <MetricPanel
+          <StatItem
             label="24h Low"
             value={
               marketStats.low === null
@@ -365,42 +327,21 @@ export function TradingDashboard() {
                 : `$${formatPrice(marketStats.low)}`
             }
           />
-          <MetricPanel
-            icon={<RadioTower className="size-4" />}
+          <StatItem
             label={`24h Vol (${quoteTicker})`}
             value={formatCompactNumber(marketStats.volumeQuote)}
-            detail={
-              streamingStateQuery.data
-                ? 'Live stream active'
-                : 'Polling on-chain state'
-            }
           />
-        </section>
+          <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+            <RadioTower className="size-3.5" />
+            {streamingStateQuery.data ? 'Live' : 'Polling'}
+          </div>
+        </div>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(22rem,0.95fr)]">
           <div className="space-y-6">
             <Card className="border-white/10 bg-black/15">
-              <CardContent className="space-y-5 p-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                  <div>
-                    <div className="mb-2 flex items-center gap-2">
-                      <Badge variant="muted">Spot</Badge>
-                      {priceDelta !== null && priceDeltaPercent !== null ? (
-                        <Badge
-                          variant={priceDelta >= 0 ? 'positive' : 'negative'}
-                        >
-                          {formatSignedNumber(priceDeltaPercent, 2)}%
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <div className="text-4xl font-semibold tracking-[-0.05em]">
-                      {formatDashboardPrice(displayPrice)}
-                    </div>
-                    <div className="mt-2 text-sm text-muted-foreground">
-                      {activeOhlcvTimeLabel ?? 'Awaiting market history'}
-                    </div>
-                  </div>
-
+              <CardContent className="space-y-4 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap gap-2">
                     {(['chart', 'trades', 'order-book'] as const).map((tab) => (
                       <Button
@@ -413,18 +354,18 @@ export function TradingDashboard() {
                         {tab === 'order-book' ? 'Order book' : tab}
                       </Button>
                     ))}
-                    <Button
-                      className="rounded-full"
-                      onClick={() =>
-                        setChartResetSignal((previous) => previous + 1)
-                      }
-                      size="xs"
-                      variant="outline"
-                    >
-                      <RefreshCcw className="size-3.5" />
-                      Reset
-                    </Button>
                   </div>
+                  <Button
+                    className="rounded-full"
+                    onClick={() =>
+                      setChartResetSignal((previous) => previous + 1)
+                    }
+                    size="xs"
+                    variant="outline"
+                  >
+                    <RefreshCcw className="size-3.5" />
+                    Reset
+                  </Button>
                 </div>
 
                 {marketPanelTab === 'chart' ? (
@@ -638,30 +579,14 @@ export function TradingDashboard() {
   )
 }
 
-function MetricPanel({
-  detail,
-  icon,
-  label,
-  value,
-}: {
-  detail?: string
-  icon?: React.ReactNode
-  label: string
-  value: string
-}) {
+function StatItem({ label, value }: { label: string; value: string }) {
   return (
-    <Card className="border-white/10 bg-black/20">
-      <CardContent className="space-y-2 p-5">
-        <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-          <span>{label}</span>
-          {icon}
-        </div>
-        <div className="text-2xl font-semibold tracking-[-0.04em]">{value}</div>
-        {detail ? (
-          <div className="text-sm text-muted-foreground">{detail}</div>
-        ) : null}
-      </CardContent>
-    </Card>
+    <div>
+      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-0.5 font-medium">{value}</div>
+    </div>
   )
 }
 

@@ -1,5 +1,6 @@
 import {
   HeadContent,
+  Outlet,
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router'
@@ -8,6 +9,8 @@ import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import { SolanaProvider } from '../integrations/solana'
+import { Navbar } from '../components/navbar'
+import { WalletConnectionButton } from '../features/trading/components/wallet-connection-button'
 
 import appCss from '../styles.css?url'
 
@@ -28,7 +31,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'Mato TWOB Web',
+        title: 'Mato',
       },
     ],
     links: [
@@ -39,8 +42,20 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     ],
   }),
 
+  component: RootLayout,
   shellComponent: RootDocument,
 })
+
+function RootLayout() {
+  return (
+    <>
+      <Navbar>
+        <WalletConnectionButton />
+      </Navbar>
+      <Outlet />
+    </>
+  )
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
