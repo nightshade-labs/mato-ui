@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useWalletConnection } from '@solana/react-hooks'
-import { Check, ChevronDown, Copy, LogOut, Wallet } from 'lucide-react'
+import { Check, ChevronDown, Copy, HandCoins, LogOut, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { shortenAddress } from '../lib/format'
+import { useReclaimRent } from '../hooks/use-reclaim-rent'
 
 export function WalletConnectionButton() {
   const {
@@ -19,6 +20,7 @@ export function WalletConnectionButton() {
   } = useWalletConnection()
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const reclaimRent = useReclaimRent(open && connected)
 
   if (!isReady) {
     return (
@@ -42,6 +44,8 @@ export function WalletConnectionButton() {
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1_500)
   }
+
+  const showReclaimRentButton = connected && reclaimRent.closeableCount > 0
 
   return (
     <div className="relative z-[70]">
@@ -93,10 +97,24 @@ export function WalletConnectionButton() {
                     </span>
                   </button>
                 </div>
+                {showReclaimRentButton ? (
+                  <Button
+                    className="w-full justify-between rounded-xl"
+                    disabled={reclaimRent.isReclaiming}
+                    variant="outline"
+                    onClick={() => {
+                      void reclaimRent.reclaimRent()
+                    }}
+                  >
+                    {reclaimRent.isReclaiming ? 'Reclaiming rent...' : 'Reclaim Rent'}
+                    <HandCoins className="size-4" />
+                  </Button>
+                ) : null}
                 <Button
                   className="w-full justify-between rounded-xl"
                   variant="outline"
                   onClick={() => {
+                    reclaimRent.reset()
                     void disconnect()
                     setOpen(false)
                   }}
@@ -104,6 +122,15 @@ export function WalletConnectionButton() {
                   Disconnect
                   <LogOut className="size-4" />
                 </Button>
+                {reclaimRent.status === 'success' ? (
+                  <p className="text-sm text-emerald-300">
+                    Reclaimed rent from {reclaimRent.reclaimedCount} account
+                    {reclaimRent.reclaimedCount === 1 ? '' : 's'}.
+                  </p>
+                ) : null}
+                {reclaimRent.error ? (
+                  <p className="text-sm text-destructive">{reclaimRent.error}</p>
+                ) : null}
               </>
             ) : (
               <>

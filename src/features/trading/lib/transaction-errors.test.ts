@@ -38,4 +38,25 @@ describe('formatTransactionError', () => {
       ),
     ).toBe('fallback')
   })
+
+  it('adds a plan hint when the planner only returns structured metadata', () => {
+    const error = {
+      context: {
+        transactionPlanResult: {
+          kind: 'single',
+          status: 'failed',
+          error: {
+            code: '1001',
+            name: 'SimulationFailure',
+            reason: 'Instruction 0 failed',
+          },
+        },
+      },
+      message: 'The provided transaction plan failed to execute.',
+    }
+
+    expect(formatTransactionError(error, 'fallback')).toBe(
+      'fallback Details: SimulationFailure / 1001 / Instruction 0 failed',
+    )
+  })
 })

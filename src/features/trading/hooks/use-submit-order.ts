@@ -75,11 +75,18 @@ export function useSubmitOrder() {
         })
         setStatus('success')
         setSignature(serializedSignature)
-        void queryClient.invalidateQueries({
-          queryKey: tradingQueryKeys.tradePositions(
-            session.account.address.toString(),
-          ),
-        })
+        const connectedAddress = session.account.address.toString()
+        void Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: tradingQueryKeys.tradePositions(connectedAddress),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: tradingQueryKeys.ownedExitsAccounts(connectedAddress),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: tradingQueryKeys.ownedPricesAccounts(connectedAddress),
+          }),
+        ])
         return true
       } catch (error) {
         setStatus('error')

@@ -57,18 +57,23 @@ export function useClosePosition() {
         })
         setStatus('success')
         setSignature(serializedSignature)
+        const connectedAddress = session.account.address.toString()
         void Promise.all([
           queryClient.invalidateQueries({
-            queryKey: tradingQueryKeys.tradePositions(
-              session.account.address.toString(),
-            ),
+            queryKey: tradingQueryKeys.tradePositions(connectedAddress),
           }),
           queryClient.invalidateQueries({
             queryKey: tradingQueryKeys.closedPositions(
-              session.account.address.toString(),
+              connectedAddress,
               undefined,
               50,
             ),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: tradingQueryKeys.ownedExitsAccounts(connectedAddress),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: tradingQueryKeys.ownedPricesAccounts(connectedAddress),
           }),
         ])
         return true

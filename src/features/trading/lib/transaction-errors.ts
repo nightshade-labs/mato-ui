@@ -58,7 +58,10 @@ function extractMessage(error: unknown): string | null {
   }
 
   const errorMessage = readString(error.message)
-  if (errorMessage && errorMessage !== GENERIC_TRANSACTION_PLAN_MESSAGE) {
+  if (
+    errorMessage &&
+    !errorMessage.startsWith(GENERIC_TRANSACTION_PLAN_MESSAGE)
+  ) {
     return errorMessage
   }
 
@@ -69,6 +72,23 @@ function extractLogs(error: unknown): string[] | null {
   if (!isRecord(error)) return null
   const context = isRecord(error.context) ? error.context : null
   return readLogs(context?.logs) ?? readLogs(error.logs)
+}
+
+function extractPlanHint(value: unknown): string | null {
+  const failedPlan = findFirstFailedPlanResult(value)
+  if (!failedPlan) return null
+
+  const failedError = failedPlan.error
+  const message = extractMessage(failedError)
+  if (message) return message
+
+  if (!isRecord(failedError)) return null
+
+  const code = readString(failedError.code)
+  const name = readString(failedError.name)
+  const reason = readString(failedError.reason)
+  const hint = [name, code, reason].filter(Boolean).join(' / ')
+  return hint.length > 0 ? hint : null
 }
 
 export function formatTransactionError(error: unknown, fallback: string) {
@@ -84,7 +104,11 @@ export function formatTransactionError(error: unknown, fallback: string) {
     extractMessage(nestedError) ?? extractMessage(error) ?? fallback
 
   const logs = extractLogs(nestedError) ?? extractLogs(error)
-  if (!logs || logs.length === 0) return message
+  if (!logs || logs.length === 0) {
+    if (message !== fallback) return message
+    const hint = extractPlanHint(transactionPlanResult)
+    return hint ? `${fallback} Details: ${hint}` : message
+  }
 
   const tail = logs.slice(-2).join(' | ')
   return `${message} Logs: ${tail}`

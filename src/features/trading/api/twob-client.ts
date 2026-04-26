@@ -11,6 +11,7 @@ import {
 } from '@solana/client'
 import type { UseSendTransactionReturnType } from '@solana/react-hooks'
 import {
+  AccountRole,
   appendTransactionMessageInstructions,
   createTransactionMessage,
   getAddressEncoder,
@@ -25,6 +26,7 @@ import {
   signAndSendTransactionMessageWithSigners,
   signTransactionMessageWithSigners,
   type Address,
+  type Instruction,
 } from '@solana/kit'
 import {
   fetchBookkeeping,
@@ -38,6 +40,8 @@ import {
   getAuthorityClosePositionInstructionAsync,
   getSubmitOrderInstructionAsync,
 } from '@/lib/generated/twob/src/generated/instructions'
+import { getCloseExitsAccountInstructionDataEncoder } from '@/lib/generated/twob/src/generated/instructions/closeExitsAccount'
+import { getClosePricesAccountInstructionDataEncoder } from '@/lib/generated/twob/src/generated/instructions/closePricesAccount'
 import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '@/lib/generated/twob/src/generated/programs'
 import { ARRAY_LENGTH } from '../constants'
 import type {
@@ -46,10 +50,21 @@ import type {
 } from '../domain/models'
 import { encodeBase58 } from '../lib/base58'
 import { decodeBase64 } from '../lib/bytes'
+import {
+  collectCloseableRentAccounts,
+  type ExitsRentAccount,
+  type PricesRentAccount,
+} from '../lib/rent'
+import {
+  fetchOwnedExitsAccounts,
+  fetchOwnedPricesAccounts,
+} from './rent-accounts'
 
 const textEncoder = new TextEncoder()
 const BOOKKEEPING_DELAY_SLOTS = 20
 const SIGNATURE_POLL_INTERVAL_MS = 1_000
+const SYSTEM_PROGRAM_ADDRESS =
+  '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
 
 export type TwobRpcClient = SolanaClient['runtime']['rpc']
 
@@ -94,6 +109,90 @@ async function waitForConfirmedSignature(
   }
 
   throw new Error('Transaction confirmation timed out.')
+}
+
+function buildCloseExitsAccountInstruction({
+  bookkeepingAddress,
+  currentExits,
+  currentPrices,
+  exitsAddress,
+  marketAddress,
+  ownerAddress,
+  previousExits,
+  previousPrices,
+  referenceIndex,
+  signerAddress,
+}: {
+  bookkeepingAddress: Address
+  currentExits: Address
+  currentPrices: Address
+  exitsAddress: Address
+  marketAddress: Address
+  ownerAddress: Address
+  previousExits: Address
+  previousPrices: Address
+  referenceIndex: bigint
+  signerAddress: Address
+}): Instruction {
+  return Object.freeze({
+    accounts: [
+      { address: signerAddress, role: AccountRole.WRITABLE_SIGNER },
+      { address: ownerAddress, role: AccountRole.WRITABLE },
+      { address: exitsAddress, role: AccountRole.WRITABLE },
+      { address: marketAddress, role: AccountRole.WRITABLE },
+      { address: bookkeepingAddress, role: AccountRole.WRITABLE },
+      { address: currentExits, role: AccountRole.READONLY },
+      { address: previousExits, role: AccountRole.READONLY },
+      { address: currentPrices, role: AccountRole.WRITABLE },
+      { address: previousPrices, role: AccountRole.WRITABLE },
+      { address: SYSTEM_PROGRAM_ADDRESS, role: AccountRole.READONLY },
+    ],
+    data: getCloseExitsAccountInstructionDataEncoder().encode({ referenceIndex }),
+    programAddress: TWOB_ANCHOR_PROGRAM_ADDRESS,
+  })
+}
+
+function buildClosePricesAccountInstruction({
+  bookkeepingAddress,
+  currentExits,
+  currentPrices,
+  marketAddress,
+  ownerAddress,
+  previousExits,
+  previousPrices,
+  pricesAddress,
+  referenceIndex,
+  signerAddress,
+}: {
+  bookkeepingAddress: Address
+  currentExits: Address
+  currentPrices: Address
+  marketAddress: Address
+  ownerAddress: Address
+  previousExits: Address
+  previousPrices: Address
+  pricesAddress: Address
+  referenceIndex: bigint
+  signerAddress: Address
+}): Instruction {
+  return Object.freeze({
+    accounts: [
+      { address: signerAddress, role: AccountRole.WRITABLE_SIGNER },
+      { address: ownerAddress, role: AccountRole.WRITABLE },
+      { address: pricesAddress, role: AccountRole.WRITABLE },
+      { address: marketAddress, role: AccountRole.WRITABLE },
+      { address: bookkeepingAddress, role: AccountRole.WRITABLE },
+      { address: currentExits, role: AccountRole.READONLY },
+      { address: previousExits, role: AccountRole.READONLY },
+      { address: currentPrices, role: AccountRole.WRITABLE },
+      { address: previousPrices, role: AccountRole.WRITABLE },
+      { address: SYSTEM_PROGRAM_ADDRESS, role: AccountRole.READONLY },
+    ],
+    data: getClosePricesAccountInstructionDataEncoder().encode({
+      referenceIndex,
+    }),
+    programAddress: TWOB_ANCHOR_PROGRAM_ADDRESS,
+  })
 }
 
 export async function deriveMarketAddress(marketId: bigint | number) {
@@ -546,6 +645,32 @@ export async function sendClosePosition({
     derivePricesAddress(marketAddress, previousIndex),
   ])
 
+  const [futureExitsAccountInfo, futurePricesAccountInfo] = await Promise.all([
+    client.runtime.rpc
+      .getAccountInfo(futureExits, {
+        commitment: 'confirmed',
+        encoding: 'base64',
+      })
+      .send(),
+    client.runtime.rpc
+      .getAccountInfo(futurePrices, {
+        commitment: 'confirmed',
+        encoding: 'base64',
+      })
+      .send(),
+  ])
+
+  if (!futureExitsAccountInfo.value) {
+    throw new Error(
+      'Cannot close this position because its exits account is missing. It may have been reclaimed while the position was still open.',
+    )
+  }
+  if (!futurePricesAccountInfo.value) {
+    throw new Error(
+      'Cannot close this position because its prices account is missing. It may have been reclaimed while the position was still open.',
+    )
+  }
+
   const instruction = await getAuthorityClosePositionInstructionAsync({
     authority: walletSigner,
     baseMint: marketAccount.data.baseMint,
@@ -582,4 +707,152 @@ export async function sendClosePosition({
   const serializedSignature = signature.toString()
   await waitForConfirmedSignature(client.runtime.rpc, serializedSignature)
   return serializedSignature
+}
+
+export async function sendReclaimRent({
+  client,
+  request,
+  session,
+}: {
+  client: SolanaClient
+  request: {
+    marketAddress: Address
+    maxAccounts: number
+  }
+  session: WalletSession
+}) {
+  const { marketAddress, maxAccounts } = request
+  const walletSigner = createWalletTransactionSigner(session).signer
+  const signerAddress = walletSigner.address
+  const ownerAddress = session.account.address
+  const owner = ownerAddress.toString()
+
+  const [currentSlot, marketAccount, ownedExitsAccounts, ownedPricesAccounts] = await Promise.all([
+    client.runtime.rpc.getSlot({ commitment: 'confirmed' }).send(),
+    fetchMarket(client.runtime.rpc, marketAddress, { commitment: 'confirmed' }),
+    fetchOwnedExitsAccounts(client.runtime.rpc, owner),
+    fetchOwnedPricesAccounts(client.runtime.rpc, owner),
+  ])
+
+  const exitsAccounts: ExitsRentAccount[] = ownedExitsAccounts.map((account) => ({
+    address: account.address,
+    index: account.data.index,
+  }))
+  const pricesAccounts: PricesRentAccount[] = ownedPricesAccounts.map((account) => ({
+    address: account.address,
+    index: account.data.index,
+    openPositions: account.data.openPositions,
+  }))
+  const indicesWithOpenPositions = new Set<bigint>(
+    pricesAccounts
+      .filter((account) => account.openPositions > 0n)
+      .map((account) => account.index),
+  )
+
+  const referenceIndex = getReferenceIndex(
+    Number(currentSlot),
+    marketAccount.data.endSlotInterval,
+  )
+  if (referenceIndex <= 0n) {
+    throw new Error('Reclaim rent is not available yet for this market.')
+  }
+  const previousIndex = getPreviousIndex(referenceIndex)
+
+  const candidateAccounts = collectCloseableRentAccounts({
+    currentSlot: Number(currentSlot),
+    endSlotInterval: marketAccount.data.endSlotInterval,
+    exitsAccounts,
+    maxAccounts: exitsAccounts.length + pricesAccounts.length,
+    pricesAccounts,
+  })
+  const closeableAccounts = candidateAccounts
+    .filter((account) => account.index < previousIndex)
+    .filter(
+      (account) =>
+        !(
+          account.kind === 'exits' &&
+          indicesWithOpenPositions.has(account.index)
+        ),
+    )
+    .slice(0, Math.max(0, Math.floor(maxAccounts)))
+
+  if (closeableAccounts.length === 0) {
+    throw new Error('No reclaimable rent accounts available.')
+  }
+  const [bookkeepingAddress, currentExits, previousExits, currentPrices, previousPrices] =
+    await Promise.all([
+      deriveBookkeepingAddress(marketAddress),
+      deriveExitsAddress(marketAddress, referenceIndex),
+      deriveExitsAddress(marketAddress, previousIndex),
+      derivePricesAddress(marketAddress, referenceIndex),
+      derivePricesAddress(marketAddress, previousIndex),
+    ])
+
+  const instructions = await Promise.all(
+    closeableAccounts.map((account) => {
+      if (account.kind === 'exits') {
+        return buildCloseExitsAccountInstruction({
+          bookkeepingAddress,
+          currentExits,
+          currentPrices,
+          exitsAddress: account.address,
+          marketAddress,
+          ownerAddress,
+          previousExits,
+          previousPrices,
+          referenceIndex,
+          signerAddress,
+        })
+      }
+
+      return buildClosePricesAccountInstruction({
+        bookkeepingAddress,
+        currentExits,
+        currentPrices,
+        marketAddress,
+        ownerAddress,
+        previousExits,
+        previousPrices,
+        pricesAddress: account.address,
+        referenceIndex,
+        signerAddress,
+      })
+    }),
+  )
+
+  const { value: blockhashLifetime } = await client.runtime.rpc
+    .getLatestBlockhash({ commitment: 'confirmed' })
+    .send()
+
+  const transactionMessage = pipe(
+    createTransactionMessage({ version: 0 }),
+    (message) => setTransactionMessageFeePayerSigner(walletSigner, message),
+    (message) =>
+      setTransactionMessageLifetimeUsingBlockhash(blockhashLifetime, message),
+    (message) => appendTransactionMessageInstructions(instructions, message),
+  )
+
+  let serializedSignature: string
+  if (isTransactionMessageWithSingleSendingSigner(transactionMessage)) {
+    const signatureBytes =
+      await signAndSendTransactionMessageWithSigners(transactionMessage)
+    serializedSignature = getBase58Decoder().decode(signatureBytes)
+  } else {
+    const signedTransaction =
+      await signTransactionMessageWithSigners(transactionMessage)
+    const blockhashBackedTransaction = signedTransaction as Parameters<
+      typeof client.actions.sendTransaction
+    >[0]
+    const signature = await client.actions.sendTransaction(
+      blockhashBackedTransaction,
+      'confirmed',
+    )
+    serializedSignature = signature.toString()
+  }
+  await waitForConfirmedSignature(client.runtime.rpc, serializedSignature)
+
+  return {
+    closedAccounts: closeableAccounts.length,
+    signature: serializedSignature,
+  }
 }
