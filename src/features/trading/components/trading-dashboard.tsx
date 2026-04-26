@@ -14,7 +14,7 @@ import {
   sanitizeAmountInput,
   toSliderPercent,
 } from '../lib/amounts'
-import { formatExplorerTransactionUrl, formatSignedNumber } from '../lib/format'
+import { formatExplorerTransactionUrl } from '../lib/format'
 import { useMarketAddress } from '../hooks/use-market-address'
 import { useMarketChartHistory } from '../hooks/use-market-chart-history'
 import { useMarketConfig } from '../hooks/use-market-config'
@@ -43,7 +43,6 @@ import type { TradePositionRecord } from '../domain/models'
 import { endpoint } from '@/integrations/solana'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Alert } from '@/components/ui/alert'
 
 const DEFAULT_VISIBLE_BARS_BY_TIMEFRAME: Record<ChartTimeframe, number> = {
@@ -164,8 +163,6 @@ export function TradingDashboard() {
     displayPrice,
     estimatedConversionText,
     executionPriceDisplay,
-    priceDelta,
-    priceDeltaPercent,
     priceImpactDisplay,
   } = dashboardViewModel
 
@@ -264,11 +261,6 @@ export function TradingDashboard() {
           <span className="text-2xl font-semibold tracking-[-0.04em] text-[color:var(--color-accent-strong)]">
             {formatDashboardPrice(displayPrice)}
           </span>
-          {priceDelta !== null && priceDeltaPercent !== null ? (
-            <Badge variant={priceDelta >= 0 ? 'positive' : 'negative'}>
-              {formatSignedNumber(priceDeltaPercent, 2)}%
-            </Badge>
-          ) : null}
         </div>
 
         {topAlert ? (
