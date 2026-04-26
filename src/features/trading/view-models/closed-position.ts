@@ -44,6 +44,14 @@ export function buildClosedPositionSummary({
     grossBaseAtoms,
     baseDecimals,
   )
+  const effectiveQuoteAtoms = isBuy ? consumedAtoms : receivedAtoms
+  const effectiveBaseAtoms = isBuy ? receivedAtoms : consumedAtoms
+  const effectivePrice = computeAveragePrice(
+    effectiveQuoteAtoms,
+    quoteDecimals,
+    effectiveBaseAtoms,
+    baseDecimals,
+  )
 
   return {
     averageFillPrice,
@@ -52,6 +60,7 @@ export function buildClosedPositionSummary({
     depositToken,
     feeAtoms,
     flowLabel,
+    effectivePrice,
     isBuy,
     receivedAtoms,
     remainingAtoms,

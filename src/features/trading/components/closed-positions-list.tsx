@@ -11,6 +11,7 @@ import type { MiniPriceChartPoint } from '../lib/mini-chart'
 import {
   formatAtoms,
   formatExplorerTransactionUrl,
+  formatPrice,
   shortenAddress,
 } from '../lib/format'
 import { buildClosedPositionSummary } from '../view-models/closed-position'
@@ -460,6 +461,14 @@ const ClosedPositionRow = memo(function ClosedPositionRow({
           <DetailCard
             label="Received"
             value={`${formatAtoms(summary.receivedAtoms, summary.swappedDecimals)} ${summary.swappedToken}`}
+          />
+          <DetailCard
+            label="Effective price"
+            value={
+              summary.effectivePrice === null
+                ? '—'
+                : `${formatPrice(summary.effectivePrice)} ${quoteTicker}/${baseTicker}`
+            }
           />
           <DetailCard
             label="Fee"

@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { Address } from '@solana/kit'
-import { ArrowUpRight, ChevronDown, Timer, Waves } from 'lucide-react'
+import { ArrowUpRight, Waves } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import type { TradePositionRecord } from '../domain/models'
-import { formatAtoms, formatPrice, shortenAddress } from '../lib/format'
+import { formatAtoms, formatPrice } from '../lib/format'
 import { getActivePositionMetrics } from '../lib/position-progress'
 import { useEndSlotBookkeepingSnapshot } from '../hooks/use-end-slot-bookkeeping-snapshot'
 import type { StreamingMarketState } from '../domain/models'
@@ -32,7 +32,6 @@ export function ActivePositionCard({
   quoteTicker: string
   streamingState: StreamingMarketState | null
 }) {
-  const [expanded, setExpanded] = useState(false)
   const snapshotQuery = useEndSlotBookkeepingSnapshot({
     currentSlot: streamingState?.currentSlot ?? null,
     enabled: Boolean(
@@ -72,44 +71,33 @@ export function ActivePositionCard({
   return (
     <Card className="border-white/10 bg-black/15">
       <CardContent className="space-y-4 p-5">
-        <button
-          className="w-full text-left"
-          onClick={() => setExpanded((previous) => !previous)}
-          type="button"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Badge
-                variant={position.data.isBuy === 1 ? 'positive' : 'negative'}
-              >
-                {metrics.sideLabel}
-              </Badge>
-              <div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Waves className="size-4" />
-                  <span>{metrics.flowLabel}</span>
-                </div>
-                <p className="mt-1 text-lg font-semibold">
-                  {formatAtoms(metrics.amountAtoms, metrics.depositedDecimals)}{' '}
-                  {metrics.depositedToken}
-                </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Badge
+              variant={position.data.isBuy === 1 ? 'positive' : 'negative'}
+            >
+              {metrics.sideLabel}
+            </Badge>
+            <div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Waves className="size-4" />
+                <span>{metrics.flowLabel}</span>
               </div>
-            </div>
-            <div className="flex items-center gap-3 text-right">
-              <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                  Remaining
-                </p>
-                <p className="font-medium">
-                  {metrics.remainingPercent.toFixed(1)}%
-                </p>
-              </div>
-              <ChevronDown
-                className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
-              />
+              <p className="mt-1 text-lg font-semibold">
+                {formatAtoms(metrics.amountAtoms, metrics.depositedDecimals)}{' '}
+                {metrics.depositedToken}
+              </p>
             </div>
           </div>
-        </button>
+          <div className="flex items-center gap-3 text-right">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                Remaining
+              </p>
+              <p className="font-medium">{metrics.remainingPercent.toFixed(1)}%</p>
+            </div>
+          </div>
+        </div>
 
         <Progress
           className="h-2.5 bg-white/8"
@@ -140,33 +128,24 @@ export function ActivePositionCard({
           />
         </div>
 
-        {expanded ? (
-          <>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <MetricCard
-                icon={<ArrowUpRight className="size-4" />}
-                label="Average Price"
-                value={
-                  metrics.averagePrice === null
-                    ? '—'
-                    : `${formatPrice(metrics.averagePrice)} ${quoteTicker}/${baseTicker}`
-                }
-              />
-              <MetricCard
-                icon={<Timer className="size-4" />}
-                label="Position"
-                value={shortenAddress(position.address, 6, 6)}
-              />
-            </div>
-            <Button
-              className="w-full rounded-xl bg-rose-500/85 text-white hover:bg-rose-500"
-              disabled={isClosing}
-              onClick={() => onClose(position.address)}
-            >
-              {isClosing ? 'Closing position...' : 'Close position'}
-            </Button>
-          </>
-        ) : null}
+        <div className="grid gap-3">
+          <MetricCard
+            icon={<ArrowUpRight className="size-4" />}
+            label="Average Price"
+            value={
+              metrics.averagePrice === null
+                ? '—'
+                : `${formatPrice(metrics.averagePrice)} ${quoteTicker}/${baseTicker}`
+            }
+          />
+        </div>
+        <Button
+          className="w-full rounded-xl bg-rose-500/85 text-white hover:bg-rose-500"
+          disabled={isClosing}
+          onClick={() => onClose(position.address)}
+        >
+          {isClosing ? 'Closing position...' : 'Close position'}
+        </Button>
       </CardContent>
     </Card>
   )
