@@ -1,12 +1,6 @@
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import type { OrderSide } from '../constants'
@@ -58,14 +52,7 @@ export function OrderEntryCard({
 }) {
   return (
     <Card className="border-white/10 bg-black/20">
-      <CardHeader>
-        <CardTitle>Create order</CardTitle>
-        <CardDescription>
-          Submit time-weighted TWOB orders with the same execution model as the
-          mobile app.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-5 pt-6">
         <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/5 p-1">
           <Button
             className="rounded-xl"
@@ -129,7 +116,7 @@ export function OrderEntryCard({
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm text-muted-foreground">
-              {selectedPercent.toFixed(2)}% of available balance
+              {selectedPercent.toFixed(1)}% of available balance
             </span>
           </div>
         </div>
@@ -152,7 +139,7 @@ export function OrderEntryCard({
                 onClick={() => onPercentSelect(percent)}
                 size="xs"
                 variant={
-                  Math.abs(selectedPercent - percent) < 0.01
+                  Math.abs(selectedPercent - percent) < 0.5
                     ? 'default'
                     : 'outline'
                 }
