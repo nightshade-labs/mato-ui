@@ -199,8 +199,16 @@ export function useReclaimRent(enabled: boolean) {
     setReclaimedCount(0)
   }, [sendTransaction])
 
+  const clearFeedback = useCallback(() => {
+    setStatus('idle')
+    setError(null)
+    setSignature(null)
+    setReclaimedCount(0)
+  }, [])
+
   return {
     closeableCount,
+    clearFeedback,
     error,
     isLoadingEligibility:
       shouldFetch &&

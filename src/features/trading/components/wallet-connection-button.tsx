@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useWalletConnection } from '@solana/react-hooks'
 import { Check, ChevronDown, Copy, HandCoins, LogOut, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -20,7 +20,30 @@ export function WalletConnectionButton() {
   } = useWalletConnection()
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement | null>(null)
   const reclaimRent = useReclaimRent(open && connected)
+
+  useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (dropdownRef.current?.contains(target)) return
+
+      setOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (open) return
+    reclaimRent.clearFeedback()
+  }, [open, reclaimRent.clearFeedback])
 
   if (!isReady) {
     return (
@@ -48,7 +71,7 @@ export function WalletConnectionButton() {
   const showReclaimRentButton = connected && reclaimRent.closeableCount > 0
 
   return (
-    <div className="relative z-[70]">
+    <div ref={dropdownRef} className="relative z-[70]">
       <Button
         size="lg"
         variant="outline"
