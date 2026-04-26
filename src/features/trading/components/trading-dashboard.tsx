@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useWalletConnection, useWalletSession } from '@solana/react-hooks'
-import { ArrowUpRight, RadioTower, RefreshCcw } from 'lucide-react'
+import { ArrowUpRight, RefreshCcw } from 'lucide-react'
 import {
   CHART_TIMEFRAMES,
   DEFAULT_MARKET_UPDATES_LIMIT,
@@ -14,12 +14,7 @@ import {
   sanitizeAmountInput,
   toSliderPercent,
 } from '../lib/amounts'
-import {
-  formatCompactNumber,
-  formatExplorerTransactionUrl,
-  formatPrice,
-  formatSignedNumber,
-} from '../lib/format'
+import { formatExplorerTransactionUrl, formatSignedNumber } from '../lib/format'
 import { useMarketAddress } from '../hooks/use-market-address'
 import { useMarketChartHistory } from '../hooks/use-market-chart-history'
 import { useMarketConfig } from '../hooks/use-market-config'
@@ -171,13 +166,10 @@ export function TradingDashboard() {
     ],
   )
   const {
-    activeOhlcv,
-    activeOhlcvTimeLabel,
     chartCandles,
     displayPrice,
     estimatedConversionText,
     executionPriceDisplay,
-    marketStats,
     priceDelta,
     priceDeltaPercent,
     priceImpactDisplay,
@@ -310,33 +302,6 @@ export function TradingDashboard() {
           </Alert>
         ) : null}
 
-        <div className="mb-5 flex flex-wrap items-center gap-5 border-b border-white/8 pb-4 text-sm">
-          <StatItem
-            label="24h High"
-            value={
-              marketStats.high === null
-                ? '—'
-                : `$${formatPrice(marketStats.high)}`
-            }
-          />
-          <StatItem
-            label="24h Low"
-            value={
-              marketStats.low === null
-                ? '—'
-                : `$${formatPrice(marketStats.low)}`
-            }
-          />
-          <StatItem
-            label={`24h Vol (${quoteTicker})`}
-            value={formatCompactNumber(marketStats.volumeQuote)}
-          />
-          <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-            <RadioTower className="size-3.5" />
-            {streamingStateQuery.data ? 'Live' : 'Polling'}
-          </div>
-        </div>
-
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(22rem,0.95fr)]">
           <div className="space-y-6">
             <Card className="border-white/10 bg-black/15">
@@ -389,35 +354,6 @@ export function TradingDashboard() {
                         ))}
                       </div>
                     </div>
-
-                    {activeOhlcv ? (
-                      <div className="grid gap-3 rounded-2xl border border-white/8 bg-white/5 p-4 sm:grid-cols-5">
-                        <MetricChip
-                          label="Open"
-                          value={formatPrice(activeOhlcv.open)}
-                        />
-                        <MetricChip
-                          label="High"
-                          value={formatPrice(activeOhlcv.high)}
-                        />
-                        <MetricChip
-                          label="Low"
-                          value={formatPrice(activeOhlcv.low)}
-                        />
-                        <MetricChip
-                          label="Close"
-                          value={formatPrice(activeOhlcv.close)}
-                        />
-                        <MetricChip
-                          label="Volume"
-                          value={
-                            activeOhlcv.volume === null
-                              ? '—'
-                              : formatCompactNumber(activeOhlcv.volume)
-                          }
-                        />
-                      </div>
-                    ) : null}
 
                     {marketUpdates.isLoading && chartCandles.length === 0 ? (
                       <div className="flex min-h-[420px] items-center justify-center rounded-[1.5rem] border border-white/8 bg-white/5 text-sm text-muted-foreground">
@@ -575,28 +511,6 @@ export function TradingDashboard() {
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function StatItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-        {label}
-      </div>
-      <div className="mt-0.5 font-medium">{value}</div>
-    </div>
-  )
-}
-
-function MetricChip({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/8 bg-black/20 p-3">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-        {label}
-      </div>
-      <div className="mt-1 font-medium">{value}</div>
     </div>
   )
 }
