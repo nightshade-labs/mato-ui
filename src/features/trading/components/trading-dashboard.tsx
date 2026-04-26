@@ -38,12 +38,7 @@ import type {
   ChartCrosshairData,
   ChartHistoryRequest,
 } from './market-price-chart'
-import type {
-  ChartTimeframe,
-  MarketPanelTab,
-  OrderSide,
-  PositionPanelTab,
-} from '../constants'
+import type { ChartTimeframe, OrderSide, PositionPanelTab } from '../constants'
 import type { TradePositionRecord } from '../domain/models'
 import { endpoint } from '@/integrations/solana'
 import { Card, CardContent } from '@/components/ui/card'
@@ -77,7 +72,6 @@ export function TradingDashboard() {
   const [side, setSide] = useState<OrderSide>('buy')
   const [amountInput, setAmountInput] = useState('')
   const [durationSeconds, setDurationSeconds] = useState(30 * 60)
-  const [marketPanelTab, setMarketPanelTab] = useState<MarketPanelTab>('chart')
   const [positionPanelTab, setPositionPanelTab] =
     useState<PositionPanelTab>('active')
   const [chartTimeframe, setChartTimeframe] = useState<ChartTimeframe>('1m')
@@ -308,15 +302,19 @@ export function TradingDashboard() {
               <CardContent className="space-y-4 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap gap-2">
-                    {(['chart', 'trades', 'order-book'] as const).map((tab) => (
+                    {CHART_TIMEFRAMES.map((timeframe) => (
                       <Button
-                        key={tab}
+                        key={timeframe.label}
                         className="rounded-full"
-                        onClick={() => setMarketPanelTab(tab)}
+                        onClick={() => setChartTimeframe(timeframe.label)}
                         size="xs"
-                        variant={marketPanelTab === tab ? 'default' : 'outline'}
+                        variant={
+                          chartTimeframe === timeframe.label
+                            ? 'default'
+                            : 'outline'
+                        }
                       >
-                        {tab === 'order-book' ? 'Order book' : tab}
+                        {timeframe.label}
                       </Button>
                     ))}
                   </div>
@@ -333,70 +331,31 @@ export function TradingDashboard() {
                   </Button>
                 </div>
 
-                {marketPanelTab === 'chart' ? (
-                  <>
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex flex-wrap gap-2">
-                        {CHART_TIMEFRAMES.map((timeframe) => (
-                          <Button
-                            key={timeframe.label}
-                            className="rounded-full"
-                            onClick={() => setChartTimeframe(timeframe.label)}
-                            size="xs"
-                            variant={
-                              chartTimeframe === timeframe.label
-                                ? 'default'
-                                : 'outline'
-                            }
-                          >
-                            {timeframe.label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {marketUpdates.isLoading && chartCandles.length === 0 ? (
-                      <div className="flex min-h-[420px] items-center justify-center rounded-[1.5rem] border border-white/8 bg-white/5 text-sm text-muted-foreground">
-                        Loading market history...
-                      </div>
-                    ) : chartCandles.length === 0 ? (
-                      <div className="flex min-h-[420px] items-center justify-center rounded-[1.5rem] border border-white/8 bg-white/5 text-sm text-muted-foreground">
-                        Not enough market updates to render the chart yet.
-                      </div>
-                    ) : (
-                      <div className="overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),rgba(255,255,255,0)_55%)]">
-                        <MarketPriceChart
-                          defaultVisibleBars={
-                            DEFAULT_VISIBLE_BARS_BY_TIMEFRAME[chartTimeframe]
-                          }
-                          data={chartCandles}
-                          hasMoreHistory={marketChartHistory.hasMoreHistory}
-                          isLoadingMoreHistory={
-                            marketChartHistory.isLoadingMoreHistory
-                          }
-                          onCrosshairMove={setCrosshairData}
-                          onNeedOlderHistory={handleNeedOlderChartHistory}
-                          resetSignal={chartResetSignal}
-                          viewportPresetKey={chartTimeframe}
-                        />
-                      </div>
-                    )}
-                  </>
-                ) : marketPanelTab === 'trades' ? (
-                  address ? (
-                    <ClosedPositionsList
-                      baseDecimals={baseDecimals}
-                      baseTicker={baseTicker}
-                      marketId={MARKET_ID}
-                      positionAuthority={address}
-                      quoteDecimals={quoteDecimals}
-                      quoteTicker={quoteTicker}
-                    />
-                  ) : (
-                    <EmptyState copy="Connect a wallet to inspect your recent fills and close events." />
-                  )
+                {marketUpdates.isLoading && chartCandles.length === 0 ? (
+                  <div className="flex min-h-[420px] items-center justify-center rounded-[1.5rem] border border-white/8 bg-white/5 text-sm text-muted-foreground">
+                    Loading market history...
+                  </div>
+                ) : chartCandles.length === 0 ? (
+                  <div className="flex min-h-[420px] items-center justify-center rounded-[1.5rem] border border-white/8 bg-white/5 text-sm text-muted-foreground">
+                    Not enough market updates to render the chart yet.
+                  </div>
                 ) : (
-                  <EmptyState copy="Order book snapshots are not in the available feed yet, so the web app mirrors the mobile placeholder here." />
+                  <div className="overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),rgba(255,255,255,0)_55%)]">
+                    <MarketPriceChart
+                      defaultVisibleBars={
+                        DEFAULT_VISIBLE_BARS_BY_TIMEFRAME[chartTimeframe]
+                      }
+                      data={chartCandles}
+                      hasMoreHistory={marketChartHistory.hasMoreHistory}
+                      isLoadingMoreHistory={
+                        marketChartHistory.isLoadingMoreHistory
+                      }
+                      onCrosshairMove={setCrosshairData}
+                      onNeedOlderHistory={handleNeedOlderChartHistory}
+                      resetSignal={chartResetSignal}
+                      viewportPresetKey={chartTimeframe}
+                    />
+                  </div>
                 )}
 
                 {marketUpdates.error ? (
