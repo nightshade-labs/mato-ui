@@ -136,7 +136,7 @@ export function MiniPriceChart({
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"
-            strokeWidth="2.5"
+            strokeWidth="1.5"
           />
         </svg>
       </div>
