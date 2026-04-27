@@ -14,8 +14,7 @@ if (existsSync('dist/client')) {
   try { rmSync('.vercel/output/static/index.html') } catch {}
 }
 
-// Locate the server entry — TanStack Start names it after the input file ('server.js')
-// but fall back to scanning if needed.
+// Locate the server entry built by vite
 const serverDir = 'dist/server'
 if (!existsSync(serverDir)) {
   throw new Error(`${serverDir}/ not found — did vite build complete?`)
@@ -31,22 +30,35 @@ if (!serverFile) {
   throw new Error(`No .js files in ${serverDir}/. Files: ${readdirSync(serverDir).join(', ')}`)
 }
 
-const serverEntry = join(serverDir, serverFile)
-console.log(`Server entry: ${serverEntry}`)
+console.log(`Server entry: ${serverDir}/${serverFile}`)
 
-// Bundle server into a single file for Vercel's Node.js streaming runtime.
-// TanStack Start exports { default: { fetch(request): Response } }.
-await build({
-  stdin: {
-    contents: `import h from './${serverEntry}'; export default req => h.fetch(req)`,
-    resolveDir: process.cwd(),
-  },
-  bundle: true,
-  platform: 'node',
-  format: 'esm',
-  outfile: '.vercel/output/functions/ssr.func/index.js',
-  logLevel: 'warning',
-})
+// Write a real entry file so esbuild can use outdir + splitting
+// (splitting: true ensures dynamic import chunks are co-located in the func dir)
+const entryFile = '_vercel_entry.mjs'
+writeFileSync(
+  entryFile,
+  `import h from './${join(serverDir, serverFile)}'; export default req => h.fetch(req)\n`
+)
+
+try {
+  await build({
+    entryPoints: { index: entryFile },
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    splitting: true,
+    outdir: '.vercel/output/functions/ssr.func',
+    logLevel: 'warning',
+  })
+} finally {
+  rmSync(entryFile)
+}
+
+// Node.js requires explicit "type": "module" to load .js files as ESM
+writeFileSync(
+  '.vercel/output/functions/ssr.func/package.json',
+  JSON.stringify({ type: 'module' })
+)
 
 writeFileSync(
   '.vercel/output/functions/ssr.func/.vc-config.json',
