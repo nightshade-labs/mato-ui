@@ -35,9 +35,25 @@ console.log(`Server entry: ${serverDir}/${serverFile}`)
 // Write a real entry file so esbuild can use outdir + splitting
 // (splitting: true ensures dynamic import chunks are co-located in the func dir)
 const entryFile = '_vercel_entry.mjs'
+// Vercel's Node.js launcher sets request.url to just the path ("/").
+// TanStack Start calls new URL(request.url) which throws on a relative URL,
+// so we reconstruct the full absolute URL before handing off.
 writeFileSync(
   entryFile,
-  `import h from './${join(serverDir, serverFile)}'; export default req => h.fetch(req)\n`
+  `import h from './${join(serverDir, serverFile).replaceAll('\\\\', '/')}';
+export default (req) => {
+  let url = req.url;
+  if (!url.startsWith('http')) {
+    const proto = req.headers.get('x-forwarded-proto') ?? 'https';
+    const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? 'localhost';
+    url = proto + '://' + host + url;
+  }
+  const request = url !== req.url
+    ? new Request(url, { method: req.method, headers: req.headers, body: req.body, duplex: 'half' })
+    : req;
+  return h.fetch(request);
+};
+`
 )
 
 try {
