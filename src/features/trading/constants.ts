@@ -1,5 +1,5 @@
 export const MARKET_ID = Number(import.meta.env.VITE_MARKET_ID ?? '1')
-export const ARRAY_LENGTH = 20
+export const ARRAY_LENGTH = 10
 export const SLOT_DURATION_MS = 400
 export const SLOT_DURATION_SECONDS = SLOT_DURATION_MS / 1000
 export const NATIVE_FEE_BUFFER_ATOMS = 2_000_000n
