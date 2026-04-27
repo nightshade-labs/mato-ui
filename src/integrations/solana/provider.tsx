@@ -3,7 +3,7 @@ import { autoDiscover, createClient } from '@solana/client'
 
 const endpoint =
   (typeof window !== 'undefined' && import.meta.env.VITE_SOLANA_RPC_URL) ||
-  'https://api.devnet.solana.com'
+  'https://api.mainnet.solana.com'
 
 const websocketEndpoint =
   (typeof window !== 'undefined' && import.meta.env.VITE_SOLANA_WS_URL) ||
