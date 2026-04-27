@@ -30,39 +30,58 @@ if (!serverFile) {
   throw new Error(`No .js files in ${serverDir}/. Files: ${readdirSync(serverDir).join(', ')}`)
 }
 
-console.log(`Server entry: ${serverDir}/${serverFile}`)
+const serverPath = join(serverDir, serverFile).replaceAll('\\', '/')
+console.log(`Server entry: ${serverPath}`)
 
-// Write a real entry file so esbuild can use outdir + splitting
-// (splitting: true ensures dynamic import chunks are co-located in the func dir)
-const entryFile = '_vercel_entry.mjs'
 // Vercel's Node.js launcher passes a Node.js IncomingMessage, not a Web API Request.
-// We convert it manually before handing off to TanStack Start.
-writeFileSync(
-  entryFile,
-  `import h from './${join(serverDir, serverFile).replaceAll('\\\\', '/')}';
+// We convert it, call TanStack Start's fetch handler, then pipe the Response body
+// into the Node.js ServerResponse so Vercel can reliably stream it back.
+const entryFile = '_vercel_entry.mjs'
+writeFileSync(entryFile, `
+import h from './${serverPath}';
 
-export default async (req, _res) => {
+export default async (req, res) => {
   const proto = req.headers['x-forwarded-proto'] ?? 'https';
-  const host = req.headers['x-forwarded-host'] ?? req.headers['host'] ?? 'localhost';
-  const url = proto + '://' + host + req.url;
+  const host  = req.headers['x-forwarded-host'] ?? req.headers['host'] ?? 'localhost';
+  const url   = proto + '://' + host + req.url;
 
   const headers = new Headers();
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (Array.isArray(value)) value.forEach(v => headers.append(key, v));
-    else if (value != null) headers.set(key, value);
+  for (const [k, v] of Object.entries(req.headers)) {
+    if (Array.isArray(v)) v.forEach(x => headers.append(k, x));
+    else if (v != null) headers.set(k, v);
   }
 
   const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
-  const request = new Request(url, {
+  const webRequest = new Request(url, {
     method: req.method,
     headers,
     ...(hasBody ? { body: req, duplex: 'half' } : {}),
   });
 
-  return h.fetch(request);
+  const response = await h.fetch(webRequest);
+
+  res.statusCode = response.status;
+  for (const [k, v] of response.headers.entries()) {
+    if (k === 'set-cookie') res.appendHeader(k, v);
+    else res.setHeader(k, v);
+  }
+
+  if (response.body) {
+    const reader = response.body.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(Buffer.from(value));
+      }
+    } finally {
+      res.end();
+    }
+  } else {
+    res.end();
+  }
 };
-`
-)
+`)
 
 try {
   await build({
@@ -73,9 +92,9 @@ try {
     splitting: true,
     outdir: '.vercel/output/functions/ssr.func',
     logLevel: 'warning',
-    // react-dom/server.node.js is CJS and calls require('util') at runtime.
-    // In an ESM bundle `require` is undefined, so we inject it into every chunk.
     banner: {
+      // react-dom/server.node.js is CJS and calls require() — inject a real
+      // require() so esbuild's CJS shim can resolve Node built-ins at runtime.
       js: "import { createRequire } from 'module';\nconst require = createRequire(import.meta.url);",
     },
   })
@@ -83,7 +102,7 @@ try {
   rmSync(entryFile)
 }
 
-// Node.js requires explicit "type": "module" to load .js files as ESM
+// Node.js needs "type":"module" to load .js files as ESM
 writeFileSync(
   '.vercel/output/functions/ssr.func/package.json',
   JSON.stringify({ type: 'module' })
@@ -95,7 +114,6 @@ writeFileSync(
     runtime: 'nodejs22.x',
     handler: 'index.js',
     launcherType: 'Nodejs',
-    supportsResponseStreaming: true,
   })
 )
 
