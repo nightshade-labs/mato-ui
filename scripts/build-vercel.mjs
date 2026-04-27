@@ -1,5 +1,6 @@
 import { build } from 'esbuild'
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 console.log('Building Vercel output...')
 
@@ -13,12 +14,31 @@ if (existsSync('dist/client')) {
   try { rmSync('.vercel/output/static/index.html') } catch {}
 }
 
-// Bundle server into a single file for Vercel's Node.js runtime.
-// TanStack Start exports { default: { fetch(request): Response } },
-// which matches Vercel's streaming Node.js handler format.
+// Locate the server entry — TanStack Start names it after the input file ('server.js')
+// but fall back to scanning if needed.
+const serverDir = 'dist/server'
+if (!existsSync(serverDir)) {
+  throw new Error(`${serverDir}/ not found — did vite build complete?`)
+}
+
+const candidates = readdirSync(serverDir).filter(f => f.endsWith('.js') && !f.endsWith('.map'))
+const serverFile =
+  candidates.find(f => f === 'server.js') ??
+  candidates.find(f => f === 'index.js') ??
+  candidates[0]
+
+if (!serverFile) {
+  throw new Error(`No .js files in ${serverDir}/. Files: ${readdirSync(serverDir).join(', ')}`)
+}
+
+const serverEntry = join(serverDir, serverFile)
+console.log(`Server entry: ${serverEntry}`)
+
+// Bundle server into a single file for Vercel's Node.js streaming runtime.
+// TanStack Start exports { default: { fetch(request): Response } }.
 await build({
   stdin: {
-    contents: `import h from './dist/server/index.js'; export default req => h.fetch(req)`,
+    contents: `import h from './${serverEntry}'; export default req => h.fetch(req)`,
     resolveDir: process.cwd(),
   },
   bundle: true,
