@@ -49,6 +49,11 @@ try {
     splitting: true,
     outdir: '.vercel/output/functions/ssr.func',
     logLevel: 'warning',
+    // react-dom/server.node.js is CJS and calls require('util') at runtime.
+    // In an ESM bundle `require` is undefined, so we inject it into every chunk.
+    banner: {
+      js: "import { createRequire } from 'module';\nconst require = createRequire(import.meta.url);",
+    },
   })
 } finally {
   rmSync(entryFile)
