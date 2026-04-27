@@ -88,11 +88,11 @@ export function getPricesEncoder(): FixedSizeEncoder<PricesArgs> {
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['owner', getAddressEncoder()],
-      ['basePerQuoteSnapshot', getArrayEncoder(getU128Encoder(), { size: 20 })],
-      ['quotePerBaseSnapshot', getArrayEncoder(getU128Encoder(), { size: 20 })],
+      ['basePerQuoteSnapshot', getArrayEncoder(getU128Encoder(), { size: 10 })],
+      ['quotePerBaseSnapshot', getArrayEncoder(getU128Encoder(), { size: 10 })],
       [
         'slotsWithoutTradesSnapshot',
-        getArrayEncoder(getU64Encoder(), { size: 20 }),
+        getArrayEncoder(getU64Encoder(), { size: 10 }),
       ],
       ['openPositions', getU64Encoder()],
       ['index', getU64Encoder()],
@@ -107,11 +107,11 @@ export function getPricesDecoder(): FixedSizeDecoder<Prices> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['owner', getAddressDecoder()],
-    ['basePerQuoteSnapshot', getArrayDecoder(getU128Decoder(), { size: 20 })],
-    ['quotePerBaseSnapshot', getArrayDecoder(getU128Decoder(), { size: 20 })],
+    ['basePerQuoteSnapshot', getArrayDecoder(getU128Decoder(), { size: 10 })],
+    ['quotePerBaseSnapshot', getArrayDecoder(getU128Decoder(), { size: 10 })],
     [
       'slotsWithoutTradesSnapshot',
-      getArrayDecoder(getU64Decoder(), { size: 20 }),
+      getArrayDecoder(getU64Decoder(), { size: 10 }),
     ],
     ['openPositions', getU64Decoder()],
     ['index', getU64Decoder()],
@@ -178,5 +178,5 @@ export async function fetchAllMaybePrices(
 }
 
 export function getPricesSize(): number {
-  return 857
+  return 457
 }

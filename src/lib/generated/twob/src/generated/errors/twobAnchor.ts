@@ -20,48 +20,51 @@ export const TWOB_ANCHOR_ERROR__DURATION_TOO_SHORT = 0x1770 // 6000
 export const TWOB_ANCHOR_ERROR__DURATION_TOO_LONG = 0x1771 // 6001
 /** EndSlotAlreadyPassed: End slot has already passed */
 export const TWOB_ANCHOR_ERROR__END_SLOT_ALREADY_PASSED = 0x1772 // 6002
+/** DepositTooSmall: Increase order size */
+export const TWOB_ANCHOR_ERROR__DEPOSIT_TOO_SMALL = 0x1773 // 6003
 /** FlowTooSmall: Increase order size or reduce order duration */
-export const TWOB_ANCHOR_ERROR__FLOW_TOO_SMALL = 0x1773 // 6003
+export const TWOB_ANCHOR_ERROR__FLOW_TOO_SMALL = 0x1774 // 6004
 /** InvalidMint: Invalid mint account */
-export const TWOB_ANCHOR_ERROR__INVALID_MINT = 0x1774 // 6004
+export const TWOB_ANCHOR_ERROR__INVALID_MINT = 0x1775 // 6005
 /** WrongExitsAccount: Wrong exits account */
-export const TWOB_ANCHOR_ERROR__WRONG_EXITS_ACCOUNT = 0x1775 // 6005
+export const TWOB_ANCHOR_ERROR__WRONG_EXITS_ACCOUNT = 0x1776 // 6006
 /** WrongPricesAccount: Wrong prices account */
-export const TWOB_ANCHOR_ERROR__WRONG_PRICES_ACCOUNT = 0x1776 // 6006
+export const TWOB_ANCHOR_ERROR__WRONG_PRICES_ACCOUNT = 0x1777 // 6007
 /** WrongTokenAccount: Wrong token account */
-export const TWOB_ANCHOR_ERROR__WRONG_TOKEN_ACCOUNT = 0x1777 // 6007
+export const TWOB_ANCHOR_ERROR__WRONG_TOKEN_ACCOUNT = 0x1778 // 6008
 /** InvalidOrder: Invalid order submission */
-export const TWOB_ANCHOR_ERROR__INVALID_ORDER = 0x1778 // 6008
+export const TWOB_ANCHOR_ERROR__INVALID_ORDER = 0x1779 // 6009
 /** BookNotUpToDate: Book not up to date */
-export const TWOB_ANCHOR_ERROR__BOOK_NOT_UP_TO_DATE = 0x1779 // 6009
+export const TWOB_ANCHOR_ERROR__BOOK_NOT_UP_TO_DATE = 0x177a // 6010
 /** PositionNotEnded: Cannot close open position. */
-export const TWOB_ANCHOR_ERROR__POSITION_NOT_ENDED = 0x177a // 6010
+export const TWOB_ANCHOR_ERROR__POSITION_NOT_ENDED = 0x177b // 6011
 /** NotEnoughDeposits: Deposits are too low for specified flow. */
-export const TWOB_ANCHOR_ERROR__NOT_ENOUGH_DEPOSITS = 0x177b // 6011
+export const TWOB_ANCHOR_ERROR__NOT_ENOUGH_DEPOSITS = 0x177c // 6012
 /** MinAmountOutNotReached: Minimum amount out is not reached. */
-export const TWOB_ANCHOR_ERROR__MIN_AMOUNT_OUT_NOT_REACHED = 0x177c // 6012
+export const TWOB_ANCHOR_ERROR__MIN_AMOUNT_OUT_NOT_REACHED = 0x177d // 6013
 /** LiquidityPositionUnhealthy: Liquidity position is unhealthy. */
-export const TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_UNHEALTHY = 0x177d // 6013
+export const TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_UNHEALTHY = 0x177e // 6014
 /** LiquidityPositionStillActive: Liquidity position still active. */
-export const TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_STILL_ACTIVE = 0x177e // 6014
+export const TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_STILL_ACTIVE = 0x177f // 6015
 /** LiquidityPositionNotActive: Liquidity position not active anymore. */
-export const TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_NOT_ACTIVE = 0x177f // 6015
+export const TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_NOT_ACTIVE = 0x1780 // 6016
 /** NoDebt: Liquidity position has no debt. */
-export const TWOB_ANCHOR_ERROR__NO_DEBT = 0x1780 // 6016
+export const TWOB_ANCHOR_ERROR__NO_DEBT = 0x1781 // 6017
 /** MustCoverDebt: Deposits must cover debt. */
-export const TWOB_ANCHOR_ERROR__MUST_COVER_DEBT = 0x1781 // 6017
+export const TWOB_ANCHOR_ERROR__MUST_COVER_DEBT = 0x1782 // 6018
 /** MarketIsPaused: Market is paused. */
-export const TWOB_ANCHOR_ERROR__MARKET_IS_PAUSED = 0x1782 // 6018
+export const TWOB_ANCHOR_ERROR__MARKET_IS_PAUSED = 0x1783 // 6019
 /** RemainingOrders: Market still has orders. */
-export const TWOB_ANCHOR_ERROR__REMAINING_ORDERS = 0x1783 // 6019
+export const TWOB_ANCHOR_ERROR__REMAINING_ORDERS = 0x1784 // 6020
 /** AccountStillUsed: Too early to close account. */
-export const TWOB_ANCHOR_ERROR__ACCOUNT_STILL_USED = 0x1784 // 6020
+export const TWOB_ANCHOR_ERROR__ACCOUNT_STILL_USED = 0x1785 // 6021
 /** TradePositionExpired: Too late to close position. */
-export const TWOB_ANCHOR_ERROR__TRADE_POSITION_EXPIRED = 0x1785 // 6021
+export const TWOB_ANCHOR_ERROR__TRADE_POSITION_EXPIRED = 0x1786 // 6022
 
 export type TwobAnchorError =
   | typeof TWOB_ANCHOR_ERROR__ACCOUNT_STILL_USED
   | typeof TWOB_ANCHOR_ERROR__BOOK_NOT_UP_TO_DATE
+  | typeof TWOB_ANCHOR_ERROR__DEPOSIT_TOO_SMALL
   | typeof TWOB_ANCHOR_ERROR__DURATION_TOO_LONG
   | typeof TWOB_ANCHOR_ERROR__DURATION_TOO_SHORT
   | typeof TWOB_ANCHOR_ERROR__END_SLOT_ALREADY_PASSED
@@ -88,6 +91,7 @@ if (process.env.NODE_ENV !== 'production') {
   twobAnchorErrorMessages = {
     [TWOB_ANCHOR_ERROR__ACCOUNT_STILL_USED]: `Too early to close account.`,
     [TWOB_ANCHOR_ERROR__BOOK_NOT_UP_TO_DATE]: `Book not up to date`,
+    [TWOB_ANCHOR_ERROR__DEPOSIT_TOO_SMALL]: `Increase order size`,
     [TWOB_ANCHOR_ERROR__DURATION_TOO_LONG]: `Duration is too long`,
     [TWOB_ANCHOR_ERROR__DURATION_TOO_SHORT]: `Duration is too short`,
     [TWOB_ANCHOR_ERROR__END_SLOT_ALREADY_PASSED]: `End slot has already passed`,

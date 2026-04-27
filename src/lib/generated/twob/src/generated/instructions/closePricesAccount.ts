@@ -55,6 +55,7 @@ export function getClosePricesAccountDiscriminatorBytes() {
 
 export type ClosePricesAccountInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
+  TAccountSigner extends string | AccountMeta<string> = string,
   TAccountOwner extends string | AccountMeta<string> = string,
   TAccountPrices extends string | AccountMeta<string> = string,
   TAccountMarket extends string | AccountMeta<string> = string,
@@ -70,9 +71,12 @@ export type ClosePricesAccountInstruction<
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
+      TAccountSigner extends string
+        ? WritableSignerAccount<TAccountSigner> &
+            AccountSignerMeta<TAccountSigner>
+        : TAccountSigner,
       TAccountOwner extends string
-        ? WritableSignerAccount<TAccountOwner> &
-            AccountSignerMeta<TAccountOwner>
+        ? WritableAccount<TAccountOwner>
         : TAccountOwner,
       TAccountPrices extends string
         ? WritableAccount<TAccountPrices>
@@ -142,6 +146,7 @@ export function getClosePricesAccountInstructionDataCodec(): FixedSizeCodec<
 }
 
 export type ClosePricesAccountAsyncInput<
+  TAccountSigner extends string = string,
   TAccountOwner extends string = string,
   TAccountPrices extends string = string,
   TAccountMarket extends string = string,
@@ -152,7 +157,8 @@ export type ClosePricesAccountAsyncInput<
   TAccountPreviousPrices extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  owner: TransactionSigner<TAccountOwner>
+  signer: TransactionSigner<TAccountSigner>
+  owner: Address<TAccountOwner>
   prices: Address<TAccountPrices>
   market: Address<TAccountMarket>
   bookkeeping?: Address<TAccountBookkeeping>
@@ -165,6 +171,7 @@ export type ClosePricesAccountAsyncInput<
 }
 
 export async function getClosePricesAccountInstructionAsync<
+  TAccountSigner extends string,
   TAccountOwner extends string,
   TAccountPrices extends string,
   TAccountMarket extends string,
@@ -177,6 +184,7 @@ export async function getClosePricesAccountInstructionAsync<
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
   input: ClosePricesAccountAsyncInput<
+    TAccountSigner,
     TAccountOwner,
     TAccountPrices,
     TAccountMarket,
@@ -191,6 +199,7 @@ export async function getClosePricesAccountInstructionAsync<
 ): Promise<
   ClosePricesAccountInstruction<
     TProgramAddress,
+    TAccountSigner,
     TAccountOwner,
     TAccountPrices,
     TAccountMarket,
@@ -207,6 +216,7 @@ export async function getClosePricesAccountInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
+    signer: { value: input.signer ?? null, isWritable: true },
     owner: { value: input.owner ?? null, isWritable: true },
     prices: { value: input.prices ?? null, isWritable: true },
     market: { value: input.market ?? null, isWritable: true },
@@ -252,6 +262,7 @@ export async function getClosePricesAccountInstructionAsync<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
+      getAccountMeta('signer', accounts.signer),
       getAccountMeta('owner', accounts.owner),
       getAccountMeta('prices', accounts.prices),
       getAccountMeta('market', accounts.market),
@@ -268,6 +279,7 @@ export async function getClosePricesAccountInstructionAsync<
     programAddress,
   } as ClosePricesAccountInstruction<
     TProgramAddress,
+    TAccountSigner,
     TAccountOwner,
     TAccountPrices,
     TAccountMarket,
@@ -281,6 +293,7 @@ export async function getClosePricesAccountInstructionAsync<
 }
 
 export type ClosePricesAccountInput<
+  TAccountSigner extends string = string,
   TAccountOwner extends string = string,
   TAccountPrices extends string = string,
   TAccountMarket extends string = string,
@@ -291,7 +304,8 @@ export type ClosePricesAccountInput<
   TAccountPreviousPrices extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  owner: TransactionSigner<TAccountOwner>
+  signer: TransactionSigner<TAccountSigner>
+  owner: Address<TAccountOwner>
   prices: Address<TAccountPrices>
   market: Address<TAccountMarket>
   bookkeeping: Address<TAccountBookkeeping>
@@ -304,6 +318,7 @@ export type ClosePricesAccountInput<
 }
 
 export function getClosePricesAccountInstruction<
+  TAccountSigner extends string,
   TAccountOwner extends string,
   TAccountPrices extends string,
   TAccountMarket extends string,
@@ -316,6 +331,7 @@ export function getClosePricesAccountInstruction<
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
   input: ClosePricesAccountInput<
+    TAccountSigner,
     TAccountOwner,
     TAccountPrices,
     TAccountMarket,
@@ -329,6 +345,7 @@ export function getClosePricesAccountInstruction<
   config?: { programAddress?: TProgramAddress },
 ): ClosePricesAccountInstruction<
   TProgramAddress,
+  TAccountSigner,
   TAccountOwner,
   TAccountPrices,
   TAccountMarket,
@@ -344,6 +361,7 @@ export function getClosePricesAccountInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    signer: { value: input.signer ?? null, isWritable: true },
     owner: { value: input.owner ?? null, isWritable: true },
     prices: { value: input.prices ?? null, isWritable: true },
     market: { value: input.market ?? null, isWritable: true },
@@ -371,6 +389,7 @@ export function getClosePricesAccountInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
+      getAccountMeta('signer', accounts.signer),
       getAccountMeta('owner', accounts.owner),
       getAccountMeta('prices', accounts.prices),
       getAccountMeta('market', accounts.market),
@@ -387,6 +406,7 @@ export function getClosePricesAccountInstruction<
     programAddress,
   } as ClosePricesAccountInstruction<
     TProgramAddress,
+    TAccountSigner,
     TAccountOwner,
     TAccountPrices,
     TAccountMarket,
@@ -405,15 +425,16 @@ export type ParsedClosePricesAccountInstruction<
 > = {
   programAddress: Address<TProgram>
   accounts: {
-    owner: TAccountMetas[0]
-    prices: TAccountMetas[1]
-    market: TAccountMetas[2]
-    bookkeeping: TAccountMetas[3]
-    currentExits: TAccountMetas[4]
-    previousExits: TAccountMetas[5]
-    currentPrices: TAccountMetas[6]
-    previousPrices: TAccountMetas[7]
-    systemProgram: TAccountMetas[8]
+    signer: TAccountMetas[0]
+    owner: TAccountMetas[1]
+    prices: TAccountMetas[2]
+    market: TAccountMetas[3]
+    bookkeeping: TAccountMetas[4]
+    currentExits: TAccountMetas[5]
+    previousExits: TAccountMetas[6]
+    currentPrices: TAccountMetas[7]
+    previousPrices: TAccountMetas[8]
+    systemProgram: TAccountMetas[9]
   }
   data: ClosePricesAccountInstructionData
 }
@@ -426,12 +447,12 @@ export function parseClosePricesAccountInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedClosePricesAccountInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 9) {
+  if (instruction.accounts.length < 10) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 9,
+        expectedAccountMetas: 10,
       },
     )
   }
@@ -444,6 +465,7 @@ export function parseClosePricesAccountInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      signer: getNextAccount(),
       owner: getNextAccount(),
       prices: getNextAccount(),
       market: getNextAccount(),

@@ -135,7 +135,7 @@ import {
 } from '../instructions'
 
 export const TWOB_ANCHOR_PROGRAM_ADDRESS =
-  'twobmF9NrRYUA6AN1yTdnWYfEpCr9UXWpESTRPG1KJj' as Address<'twobmF9NrRYUA6AN1yTdnWYfEpCr9UXWpESTRPG1KJj'>
+  'CCAmAqvza37EWzou7LoYCaGKzdJsCu1CLPMp3Wvx3Bc5' as Address<'CCAmAqvza37EWzou7LoYCaGKzdJsCu1CLPMp3Wvx3Bc5'>
 
 export enum TwobAnchorAccount {
   Bookkeeping,
@@ -476,7 +476,7 @@ export function identifyTwobAnchorInstruction(
 }
 
 export type ParsedTwobAnchorInstruction<
-  TProgram extends string = 'twobmF9NrRYUA6AN1yTdnWYfEpCr9UXWpESTRPG1KJj',
+  TProgram extends string = 'CCAmAqvza37EWzou7LoYCaGKzdJsCu1CLPMp3Wvx3Bc5',
 > =
   | ({
       instructionType: TwobAnchorInstruction.AddLiquidity

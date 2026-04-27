@@ -59,6 +59,8 @@ export type Exits = {
   baseExits: Array<bigint>
   /** Stores the quote flow that is removed from the market at a given slot because an order ended */
   quoteExits: Array<bigint>
+  /** Number of open trade positions that end in this reference interval */
+  openPositions: bigint
   index: bigint
   bump: number
 }
@@ -70,6 +72,8 @@ export type ExitsArgs = {
   baseExits: Array<number | bigint>
   /** Stores the quote flow that is removed from the market at a given slot because an order ended */
   quoteExits: Array<number | bigint>
+  /** Number of open trade positions that end in this reference interval */
+  openPositions: number | bigint
   index: number | bigint
   bump: number
 }
@@ -80,8 +84,9 @@ export function getExitsEncoder(): FixedSizeEncoder<ExitsArgs> {
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['owner', getAddressEncoder()],
-      ['baseExits', getArrayEncoder(getU128Encoder(), { size: 20 })],
-      ['quoteExits', getArrayEncoder(getU128Encoder(), { size: 20 })],
+      ['baseExits', getArrayEncoder(getU128Encoder(), { size: 10 })],
+      ['quoteExits', getArrayEncoder(getU128Encoder(), { size: 10 })],
+      ['openPositions', getU64Encoder()],
       ['index', getU64Encoder()],
       ['bump', getU8Encoder()],
     ]),
@@ -94,8 +99,9 @@ export function getExitsDecoder(): FixedSizeDecoder<Exits> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['owner', getAddressDecoder()],
-    ['baseExits', getArrayDecoder(getU128Decoder(), { size: 20 })],
-    ['quoteExits', getArrayDecoder(getU128Decoder(), { size: 20 })],
+    ['baseExits', getArrayDecoder(getU128Decoder(), { size: 10 })],
+    ['quoteExits', getArrayDecoder(getU128Decoder(), { size: 10 })],
+    ['openPositions', getU64Decoder()],
     ['index', getU64Decoder()],
     ['bump', getU8Decoder()],
   ])
@@ -160,5 +166,5 @@ export async function fetchAllMaybeExits(
 }
 
 export function getExitsSize(): number {
-  return 689
+  return 377
 }
