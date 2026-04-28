@@ -73,7 +73,7 @@ export function TradingDashboard() {
   const [durationSeconds, setDurationSeconds] = useState(30 * 60)
   const [positionPanelTab, setPositionPanelTab] =
     useState<PositionPanelTab>('active')
-  const [chartTimeframe, setChartTimeframe] = useState<ChartTimeframe>('1m')
+  const [chartTimeframe, setChartTimeframe] = useState<ChartTimeframe>('5m')
   const [chartResetSignal, setChartResetSignal] = useState(0)
   const [crosshairData, setCrosshairData] = useState<ChartCrosshairData | null>(
     null,
