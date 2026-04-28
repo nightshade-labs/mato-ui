@@ -255,10 +255,10 @@ export function TradingDashboard() {
     <div className="relative min-h-screen bg-[color:var(--color-page-bg)] text-foreground">
       <div className="relative mx-auto max-w-[1440px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
         <div className="mb-5 flex items-baseline gap-3">
-          <h1 className="text-2xl font-semibold tracking-[-0.04em]">
+          <h1 className="text-xl font-semibold tracking-[-0.04em] sm:text-2xl">
             {baseTicker}/{quoteTicker}
           </h1>
-          <span className="text-2xl font-semibold tracking-[-0.04em] text-[color:var(--color-accent-strong)]">
+          <span className="text-xl font-semibold tracking-[-0.04em] text-[color:var(--color-accent-strong)] sm:text-2xl">
             {formatDashboardPrice(displayPrice)}
           </span>
         </div>
@@ -288,9 +288,43 @@ export function TradingDashboard() {
           </Alert>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(22rem,0.95fr)]">
-          <div className="space-y-6">
-            <Card className="border-white/10 bg-black/15">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(22rem,0.95fr)]">
+          <div className="space-y-6 xl:col-start-2 xl:row-start-1">
+            <OrderEntryCard
+              amountInput={amountInput}
+              amountTokenTicker={amountTokenTicker}
+              availableAmountDisplay={
+                Number(availableAtoms) / 10 ** amountDecimals
+              }
+              canSubmit={!submitDisabled}
+              durationSeconds={durationSeconds}
+              estimatedConversionText={estimatedConversionText}
+              executionPriceDisplay={executionPriceDisplay}
+              isConnected={walletConnection.connected}
+              onAmountChange={(value) => {
+                setAmountInput(sanitizeAmountInput(value))
+                setValidationError(null)
+              }}
+              onDurationChange={setDurationSeconds}
+              onMaxClick={() => handleSliderChange(100)}
+              onPercentSelect={handleSliderChange}
+              onSideChange={(nextSide) => {
+                setSide(nextSide)
+                setAmountInput('')
+                setValidationError(null)
+              }}
+              onSliderChange={handleSliderChange}
+              onSubmit={() => void handleSubmit()}
+              priceImpactDisplay={priceImpactDisplay}
+              selectedPercent={sliderValue}
+              side={side}
+              statusLabel={submitStatusLabel}
+              validationError={validationError}
+            />
+          </div>
+
+          <div className="space-y-6 xl:col-start-1 xl:row-start-1">
+            <Card className="hidden border-white/10 bg-black/15 xl:block">
               <CardContent className="space-y-4 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap gap-2">
@@ -425,40 +459,6 @@ export function TradingDashboard() {
                 <EmptyState copy="Connect a wallet to load your closed positions." />
               )}
             </div>
-          </div>
-
-          <div className="space-y-6">
-            <OrderEntryCard
-              amountInput={amountInput}
-              amountTokenTicker={amountTokenTicker}
-              availableAmountDisplay={
-                Number(availableAtoms) / 10 ** amountDecimals
-              }
-              canSubmit={!submitDisabled}
-              durationSeconds={durationSeconds}
-              estimatedConversionText={estimatedConversionText}
-              executionPriceDisplay={executionPriceDisplay}
-              isConnected={walletConnection.connected}
-              onAmountChange={(value) => {
-                setAmountInput(sanitizeAmountInput(value))
-                setValidationError(null)
-              }}
-              onDurationChange={setDurationSeconds}
-              onMaxClick={() => handleSliderChange(100)}
-              onPercentSelect={handleSliderChange}
-              onSideChange={(nextSide) => {
-                setSide(nextSide)
-                setAmountInput('')
-                setValidationError(null)
-              }}
-              onSliderChange={handleSliderChange}
-              onSubmit={() => void handleSubmit()}
-              priceImpactDisplay={priceImpactDisplay}
-              selectedPercent={sliderValue}
-              side={side}
-              statusLabel={submitStatusLabel}
-              validationError={validationError}
-            />
           </div>
         </div>
       </div>

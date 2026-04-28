@@ -57,7 +57,7 @@ export function WalletConnectionButton() {
       <Button
         size="lg"
         variant="outline"
-        className="min-w-[13rem] justify-between rounded-full px-5"
+        className="min-w-[9rem] justify-between rounded-full px-5 sm:min-w-[13rem]"
       >
         <span className="text-sm text-muted-foreground">Loading wallets</span>
       </Button>
@@ -82,7 +82,7 @@ export function WalletConnectionButton() {
       <Button
         size="lg"
         variant="outline"
-        className="max-w-full min-w-[13rem] justify-between rounded-full border-white/10 bg-white/5 px-5 hover:bg-white/10"
+        className="max-w-full min-w-[9rem] justify-between rounded-full border-white/10 bg-white/5 px-5 hover:bg-white/10 sm:min-w-[13rem]"
         onClick={() => setOpen((previous) => !previous)}
       >
         <span className="flex min-w-0 items-center gap-2">

@@ -98,7 +98,7 @@ export function OrderEntryCard({
             <div className="flex items-center gap-3">
               <Input
                 autoComplete="off"
-                className="h-14 border-0 bg-transparent px-3 text-2xl font-semibold shadow-none focus-visible:ring-0"
+                className="h-14 w-0 min-w-0 flex-1 border-0 bg-transparent px-3 text-2xl font-semibold shadow-none focus-visible:ring-0"
                 id="order-amount"
                 inputMode="decimal"
                 onChange={(event) => onAmountChange(event.target.value)}
