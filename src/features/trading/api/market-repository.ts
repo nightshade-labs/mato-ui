@@ -8,6 +8,7 @@ import {
   supabase,
 } from '@/integrations/supabase'
 import { readApiUrl } from './read-api'
+import type { MarketPriceSnapshot } from '../domain/models'
 
 export type CandleInterval = '1m' | '5m' | '1h'
 const MAX_LIGHTWEIGHT_CHART_ABS_VALUE = 90_071_992_547_409.91
@@ -146,6 +147,16 @@ function stableEventIdFromUid(eventUid: string) {
   return Number(normalized === 0n ? 1n : normalized)
 }
 
+function parseReadApiPrice(data: ReadApiPriceResponse): MarketPriceSnapshot {
+  const eventTimeMs = Date.parse(data.event_time)
+
+  return {
+    eventTimeMs: Number.isFinite(eventTimeMs) ? eventTimeMs : null,
+    price: Number.isFinite(data.price) ? data.price : null,
+    slot: Number.isFinite(data.slot) ? data.slot : null,
+  }
+}
+
 export function sortMarketUpdatesDescending(events: Array<MarketUpdateEvent>) {
   return [...events].sort((left, right) => right.slot - left.slot)
 }
@@ -237,10 +248,7 @@ export async function fetchMarketPrice({ marketId }: { marketId: number }) {
 
   const data = (await response.json()) as ReadApiPriceResponse
 
-  return {
-    price: Number.isFinite(data.price) ? data.price : null,
-    slot: Number.isFinite(data.slot) ? data.slot : null,
-  }
+  return parseReadApiPrice(data)
 }
 
 export async function fetchMarketCandles({
@@ -500,7 +508,7 @@ export function subscribeToMarketPriceStream({
   onPriceUpdate,
 }: {
   marketId: number
-  onPriceUpdate: (payload: { price: number; slot: number }) => void
+  onPriceUpdate: (payload: MarketPriceSnapshot) => void
 }) {
   const stream = new EventSource(readApiUrl(`/v1/markets/${marketId}/stream`))
 
@@ -511,10 +519,7 @@ export function subscribeToMarketPriceStream({
         return
       }
 
-      onPriceUpdate({
-        price: payload.price,
-        slot: payload.slot,
-      })
+      onPriceUpdate(parseReadApiPrice(payload))
     } catch (error) {
       console.error('Failed to parse market price stream payload', error)
     }
