@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { aggregateTradingViewCandles } from './market'
+import {
+  aggregateTradingViewCandles,
+  mergeLivePriceIntoCandles,
+} from './market'
 import type { MarketUpdateEvent } from '@/integrations/supabase'
+import type { TradingViewAggregatedCandle } from './market'
 
 function marketEvent(
   slot: number,
@@ -89,5 +93,96 @@ describe('aggregateTradingViewCandles', () => {
     expect(candles.map((candle) => candle.high)).toEqual([100, 100, 200])
     expect(candles.map((candle) => candle.low)).toEqual([100, 100, 100])
     expect(candles.map((candle) => candle.volume)).toEqual([100, 0, 200])
+  })
+})
+
+function chartCandle(
+  timeMs: number,
+  overrides: Partial<TradingViewAggregatedCandle> = {},
+): TradingViewAggregatedCandle {
+  return {
+    close: 102,
+    endSlot: 10,
+    high: 105,
+    low: 95,
+    open: 100,
+    startSlot: 1,
+    time: Math.floor(timeMs / 1000),
+    volume: 50,
+    ...overrides,
+  }
+}
+
+describe('mergeLivePriceIntoCandles', () => {
+  it('updates the current candle with the latest streamed price', () => {
+    const intervalMs = 60_000
+    const baseTimeMs = Date.parse('2026-03-27T10:00:00.000Z')
+    const candles = [chartCandle(baseTimeMs)]
+
+    const merged = mergeLivePriceIntoCandles({
+      candles,
+      intervalMs,
+      priceSnapshot: {
+        eventTimeMs: baseTimeMs + 30_000,
+        price: 110,
+        slot: 11,
+      },
+    })
+
+    expect(merged).toHaveLength(1)
+    expect(merged[0]).toMatchObject({
+      close: 110,
+      endSlot: 11,
+      high: 110,
+      low: 95,
+      open: 100,
+      volume: 50,
+    })
+  })
+
+  it('opens a new candle when the streamed price lands in the next bucket', () => {
+    const intervalMs = 60_000
+    const baseTimeMs = Date.parse('2026-03-27T10:00:00.000Z')
+    const candles = [chartCandle(baseTimeMs)]
+
+    const merged = mergeLivePriceIntoCandles({
+      candles,
+      intervalMs,
+      priceSnapshot: {
+        eventTimeMs: baseTimeMs + 65_000,
+        price: 98,
+        slot: 12,
+      },
+    })
+
+    expect(merged).toHaveLength(2)
+    expect(merged[1]).toEqual({
+      close: 98,
+      endSlot: 12,
+      high: 102,
+      low: 98,
+      open: 102,
+      startSlot: 12,
+      time: Math.floor((baseTimeMs + 60_000) / 1000),
+      volume: 0,
+    })
+  })
+
+  it('ignores older streamed prices that would move the chart backwards', () => {
+    const intervalMs = 60_000
+    const baseTimeMs = Date.parse('2026-03-27T10:00:00.000Z')
+    const candles = [chartCandle(baseTimeMs)]
+
+    const merged = mergeLivePriceIntoCandles({
+      candles,
+      intervalMs,
+      priceSnapshot: {
+        eventTimeMs: baseTimeMs + 20_000,
+        price: 120,
+        slot: 9,
+      },
+    })
+
+    expect(merged).toBe(candles)
   })
 })

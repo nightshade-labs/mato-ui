@@ -12,8 +12,8 @@ export function useMarketPrice(marketId: number) {
   useEffect(() => {
     const stream = subscribeToMarketPriceStream({
       marketId,
-      onPriceUpdate: ({ price, slot }) => {
-        queryClient.setQueryData(queryKey, { price, slot })
+      onPriceUpdate: (priceSnapshot) => {
+        queryClient.setQueryData(queryKey, priceSnapshot)
       },
     })
 

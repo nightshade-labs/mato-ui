@@ -7,9 +7,14 @@ import {
 import { CHART_TIMEFRAMES } from '../constants'
 import type { OlderChartHistoryRequest } from '../lib/chart-history'
 import type { ChartTimeframe } from '../constants'
-import type { TradingViewAggregatedCandle } from '../lib/market'
+import {
+  mergeLivePriceIntoCandles,
+  type TradingViewAggregatedCandle,
+} from '../lib/market'
+import type { MarketPriceSnapshot } from '../domain/models'
 
 interface UseMarketChartHistoryOptions {
+  latestPrice?: MarketPriceSnapshot | null
   marketId: number
   timeframe: ChartTimeframe
 }
@@ -78,6 +83,7 @@ function mergeCandlesAscending(
 }
 
 export function useMarketChartHistory({
+  latestPrice = null,
   marketId,
   timeframe,
 }: UseMarketChartHistoryOptions) {
@@ -88,6 +94,7 @@ export function useMarketChartHistory({
   const oldestLoadedCandleTimeRef = useRef<number | null>(null)
   const candlesRef = useRef<Array<TradingViewAggregatedCandle>>([])
   const requestEpochRef = useRef(0)
+  const latestPriceRef = useRef<MarketPriceSnapshot | null>(latestPrice)
 
   const chartIntervalMs = useMemo(
     () =>
@@ -100,6 +107,26 @@ export function useMarketChartHistory({
   useEffect(() => {
     candlesRef.current = candles
   }, [candles])
+
+  useEffect(() => {
+    latestPriceRef.current = latestPrice
+
+    setCandles((currentCandles) => {
+      const mergedCandles = mergeLivePriceIntoCandles({
+        candles: currentCandles,
+        intervalMs: chartIntervalMs,
+        priceSnapshot: latestPrice,
+      })
+
+      if (mergedCandles === currentCandles) {
+        return currentCandles
+      }
+
+      candlesRef.current = mergedCandles
+      oldestLoadedCandleTimeRef.current ??= mergedCandles[0]?.time ?? null
+      return mergedCandles
+    })
+  }, [chartIntervalMs, latestPrice])
 
   useEffect(() => {
     requestEpochRef.current += 1
@@ -131,9 +158,14 @@ export function useMarketChartHistory({
         }
 
         const mapped = nextCandles.map(toTradingViewCandle)
-        setCandles(mapped)
-        candlesRef.current = mapped
-        oldestLoadedCandleTimeRef.current = mapped[0]?.time ?? null
+        const liveMerged = mergeLivePriceIntoCandles({
+          candles: mapped,
+          intervalMs: chartIntervalMs,
+          priceSnapshot: latestPriceRef.current,
+        })
+        setCandles(liveMerged)
+        candlesRef.current = liveMerged
+        oldestLoadedCandleTimeRef.current = liveMerged[0]?.time ?? null
         setHasMoreHistory(mapped.length > 0)
       } catch (fetchError) {
         if (cancelled || requestEpochRef.current !== requestEpoch) {

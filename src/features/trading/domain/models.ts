@@ -15,3 +15,9 @@ export interface StreamingMarketState {
   bookkeepingQuotePerBase: bigint
   bookkeepingLastUpdateSlot: number
 }
+
+export interface MarketPriceSnapshot {
+  eventTimeMs: number | null
+  price: number | null
+  slot: number | null
+}

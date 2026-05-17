@@ -20,3 +20,4 @@ export function SolanaProvider({ children }: { children: React.ReactNode }) {
     <BaseSolanaProvider client={solanaClient}>{children}</BaseSolanaProvider>
   )
 }
+ 
