@@ -1,11 +1,10 @@
+import { DURATION_OPTIONS } from '../constants'
+import { formatUiAmount } from '../lib/format'
+import type { OrderSide } from '../constants'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import type { OrderSide } from '../constants'
-import { DURATION_OPTIONS } from '../constants'
-import { formatUiAmount } from '../lib/format'
 
 export function OrderEntryCard({
   amountInput,
@@ -27,7 +26,6 @@ export function OrderEntryCard({
   selectedPercent,
   side,
   statusLabel,
-  validationError,
 }: {
   amountInput: string
   amountTokenTicker: string
@@ -48,7 +46,6 @@ export function OrderEntryCard({
   selectedPercent: number
   side: OrderSide
   statusLabel: string
-  validationError: string | null
 }) {
   return (
     <Card className="border-white/10 bg-black/20">
@@ -181,12 +178,6 @@ export function OrderEntryCard({
             ))}
           </div>
         </div>
-
-        {validationError ? (
-          <Alert className="border-destructive/30 bg-destructive/10 text-destructive">
-            {validationError}
-          </Alert>
-        ) : null}
 
         <Button
           className="h-12 w-full rounded-2xl text-base"
