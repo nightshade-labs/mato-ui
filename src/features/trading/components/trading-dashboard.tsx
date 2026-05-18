@@ -470,7 +470,7 @@ export function TradingDashboard() {
                     ))}
                   </div>
                 ) : (
-                  <EmptyState copy="Your active TWOB positions will appear here once an order is live." />
+                  <EmptyState copy="Your active positions will appear here once an order is live." />
                 )
               ) : address ? (
                 <ClosedPositionsList
