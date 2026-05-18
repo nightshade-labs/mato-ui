@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useWalletConnection } from '@solana/react-hooks'
+import { toast } from 'sonner'
 import {
   Check,
   ChevronDown,
@@ -8,11 +9,12 @@ import {
   LogOut,
   Wallet,
 } from 'lucide-react'
+import { useReclaimRent } from '../hooks/use-reclaim-rent'
+import { formatExplorerTransactionUrl, shortenAddress } from '../lib/format'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { shortenAddress } from '../lib/format'
-import { useReclaimRent } from '../hooks/use-reclaim-rent'
+import { endpoint } from '@/integrations/solana'
 
 export function WalletConnectionButton() {
   const {
@@ -52,6 +54,46 @@ export function WalletConnectionButton() {
     reclaimRent.clearFeedback()
   }, [open, reclaimRent.clearFeedback])
 
+  useEffect(() => {
+    if (status !== 'error') return
+
+    toast.error('Wallet connection failed', {
+      description: 'Try another connector.',
+      id: 'wallet-connection-error',
+    })
+  }, [status])
+
+  useEffect(() => {
+    const signature = reclaimRent.signature
+    if (reclaimRent.status !== 'success' || !signature) return
+
+    toast.success('Rent reclaimed', {
+      action: {
+        label: 'View',
+        onClick: () => {
+          window.open(
+            formatExplorerTransactionUrl(signature, endpoint),
+            '_blank',
+            'noopener,noreferrer',
+          )
+        },
+      },
+      description: `Closed ${reclaimRent.reclaimedCount} rent account${
+        reclaimRent.reclaimedCount === 1 ? '' : 's'
+      }.`,
+      id: `reclaim-rent-success-${signature}`,
+    })
+  }, [reclaimRent.reclaimedCount, reclaimRent.signature, reclaimRent.status])
+
+  useEffect(() => {
+    if (!reclaimRent.error) return
+
+    toast.error('Rent reclaim failed', {
+      description: reclaimRent.error,
+      id: 'reclaim-rent-error',
+    })
+  }, [reclaimRent.error])
+
   if (!isReady) {
     return (
       <Button
@@ -67,8 +109,7 @@ export function WalletConnectionButton() {
   const address = wallet?.account.address.toString() ?? null
 
   const handleCopyAddress = async () => {
-    if (!address || typeof navigator === 'undefined' || !navigator.clipboard)
-      return
+    if (!address) return
 
     await navigator.clipboard.writeText(address)
     setCopied(true)
@@ -154,17 +195,6 @@ export function WalletConnectionButton() {
                   Disconnect
                   <LogOut className="size-4" />
                 </Button>
-                {reclaimRent.status === 'success' ? (
-                  <p className="text-sm text-emerald-300">
-                    Reclaimed rent from {reclaimRent.reclaimedCount} account
-                    {reclaimRent.reclaimedCount === 1 ? '' : 's'}.
-                  </p>
-                ) : null}
-                {reclaimRent.error ? (
-                  <p className="text-sm text-destructive">
-                    {reclaimRent.error}
-                  </p>
-                ) : null}
               </>
             ) : (
               <>
@@ -198,11 +228,6 @@ export function WalletConnectionButton() {
               </>
             )}
 
-            {status === 'error' ? (
-              <p className="text-sm text-destructive">
-                Wallet connection failed. Try another connector.
-              </p>
-            ) : null}
           </CardContent>
         </Card>
       ) : null}

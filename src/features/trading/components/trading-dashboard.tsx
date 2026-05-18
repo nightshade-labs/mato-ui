@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useWalletConnection, useWalletSession } from '@solana/react-hooks'
-import { ArrowUpRight, RefreshCcw } from 'lucide-react'
+import { RefreshCcw } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   CHART_TIMEFRAMES,
   DEFAULT_MARKET_UPDATES_LIMIT,
@@ -43,7 +44,6 @@ import type { TradePositionRecord } from '../domain/models'
 import { endpoint } from '@/integrations/solana'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Alert } from '@/components/ui/alert'
 
 const DEFAULT_VISIBLE_BARS_BY_TIMEFRAME: Record<ChartTimeframe, number> = {
   '1m': 120,
@@ -78,7 +78,6 @@ export function TradingDashboard() {
   const [crosshairData, setCrosshairData] = useState<ChartCrosshairData | null>(
     null,
   )
-  const [validationError, setValidationError] = useState<string | null>(null)
 
   const submitOrder = useSubmitOrder()
   const closePosition = useClosePosition()
@@ -186,6 +185,64 @@ export function TradingDashboard() {
             ? 'Submit buy order'
             : 'Submit sell order'
 
+  useEffect(() => {
+    const signature = submitOrder.signature
+    if (submitOrder.status !== 'success' || !signature) return
+
+    toast.success('Order submitted', {
+      action: {
+        label: 'View',
+        onClick: () => {
+          window.open(
+            formatExplorerTransactionUrl(signature, endpoint),
+            '_blank',
+            'noopener,noreferrer',
+          )
+        },
+      },
+      description: 'The transaction was confirmed.',
+      id: `submit-order-success-${signature}`,
+    })
+  }, [submitOrder.signature, submitOrder.status])
+
+  useEffect(() => {
+    if (!submitOrder.error) return
+
+    toast.error('Order failed', {
+      description: submitOrder.error,
+      id: 'submit-order-error',
+    })
+  }, [submitOrder.error])
+
+  useEffect(() => {
+    const signature = closePosition.signature
+    if (closePosition.status !== 'success' || !signature) return
+
+    toast.success('Position closed', {
+      action: {
+        label: 'View',
+        onClick: () => {
+          window.open(
+            formatExplorerTransactionUrl(signature, endpoint),
+            '_blank',
+            'noopener,noreferrer',
+          )
+        },
+      },
+      description: 'The close transaction was confirmed.',
+      id: `close-position-success-${signature}`,
+    })
+  }, [closePosition.signature, closePosition.status])
+
+  useEffect(() => {
+    if (!closePosition.error) return
+
+    toast.error('Close failed', {
+      description: closePosition.error,
+      id: 'close-position-error',
+    })
+  }, [closePosition.error])
+
   const refreshBalances = async () => {
     await Promise.allSettled([baseBalance.refresh(), quoteBalance.refresh()])
   }
@@ -206,26 +263,31 @@ export function TradingDashboard() {
 
     const nextAmountAtoms = atomsFromPercent(availableAtoms, percent)
     setAmountInput(formatAtomsToInput(nextAmountAtoms, amountDecimals))
-    setValidationError(null)
   }
 
   const handleSubmit = async () => {
     if (!marketAddress) {
-      setValidationError('Market address is still loading.')
+      toast.error('Order not ready', {
+        description: 'Market address is still loading.',
+        id: 'order-validation',
+      })
       return
     }
     if (!amountAtoms || amountAtoms <= 0n) {
-      setValidationError(`Enter a valid ${amountTokenTicker} amount.`)
+      toast.error('Order not ready', {
+        description: `Enter a valid ${amountTokenTicker} amount.`,
+        id: 'order-validation',
+      })
       return
     }
     if (amountAtoms > availableAtoms) {
-      setValidationError(
-        `Amount exceeds available ${amountTokenTicker} balance.`,
-      )
+      toast.error('Order not ready', {
+        description: `Amount exceeds available ${amountTokenTicker} balance.`,
+        id: 'order-validation',
+      })
       return
     }
 
-    setValidationError(null)
     const durationSlots = durationToSlots(durationSeconds)
     const success = await submitOrder.submitOrder({
       amount: amountAtoms,
@@ -243,15 +305,6 @@ export function TradingDashboard() {
     }
   }
 
-  const topAlert = validationError ?? submitOrder.error ?? closePosition.error
-  const topAlertVariant =
-    submitOrder.status === 'success' || closePosition.status === 'success'
-      ? 'success'
-      : topAlert
-        ? 'error'
-        : null
-  const txSignature = submitOrder.signature ?? closePosition.signature
-
   return (
     <div className="relative min-h-screen bg-[color:var(--color-page-bg)] text-foreground">
       <div className="relative mx-auto max-w-[1440px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
@@ -263,31 +316,6 @@ export function TradingDashboard() {
             {formatDashboardPrice(displayPrice)}
           </span>
         </div>
-
-        {topAlert ? (
-          <Alert
-            className={`mb-6 ${
-              topAlertVariant === 'success'
-                ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100'
-                : 'border-destructive/30 bg-destructive/10 text-destructive'
-            }`}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span>{topAlert}</span>
-              {txSignature ? (
-                <a
-                  className="inline-flex items-center gap-1 font-medium underline underline-offset-4"
-                  href={formatExplorerTransactionUrl(txSignature, endpoint)}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  View transaction
-                  <ArrowUpRight className="size-4" />
-                </a>
-              ) : null}
-            </div>
-          </Alert>
-        ) : null}
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(22rem,0.95fr)]">
           <div className="space-y-6 xl:col-start-2 xl:row-start-1">
@@ -304,7 +332,6 @@ export function TradingDashboard() {
               isConnected={walletConnection.connected}
               onAmountChange={(value) => {
                 setAmountInput(sanitizeAmountInput(value))
-                setValidationError(null)
               }}
               onDurationChange={setDurationSeconds}
               onMaxClick={() => handleSliderChange(100)}
@@ -312,7 +339,6 @@ export function TradingDashboard() {
               onSideChange={(nextSide) => {
                 setSide(nextSide)
                 setAmountInput('')
-                setValidationError(null)
               }}
               onSliderChange={handleSliderChange}
               onSubmit={() => void handleSubmit()}
@@ -320,7 +346,6 @@ export function TradingDashboard() {
               selectedPercent={sliderValue}
               side={side}
               statusLabel={submitStatusLabel}
-              validationError={validationError}
             />
           </div>
 

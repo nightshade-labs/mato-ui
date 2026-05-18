@@ -11,6 +11,7 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import { SolanaProvider } from '../integrations/solana'
 import { Navbar } from '../components/navbar'
 import { RiskDisclaimerDialog } from '../components/risk-disclaimer-dialog'
+import { Toaster } from '../components/ui/sonner'
 import { WalletConnectionButton } from '../features/trading/components/wallet-connection-button'
 
 import appCss from '../styles.css?url'
@@ -66,7 +67,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <SolanaProvider>{children}</SolanaProvider>
+        <SolanaProvider>
+          {children}
+          <Toaster position="top-right" />
+        </SolanaProvider>
         <TanStackDevtools
           config={{
             position: 'bottom-right',
