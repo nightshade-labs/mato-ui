@@ -10,7 +10,11 @@ import {
   Wallet,
 } from 'lucide-react'
 import { useReclaimRent } from '../hooks/use-reclaim-rent'
-import { formatExplorerTransactionUrl, shortenAddress } from '../lib/format'
+import {
+  formatAtoms,
+  formatExplorerTransactionUrl,
+  shortenAddress,
+} from '../lib/format'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -78,12 +82,13 @@ export function WalletConnectionButton() {
           )
         },
       },
-      description: `Closed ${reclaimRent.reclaimedCount} rent account${
-        reclaimRent.reclaimedCount === 1 ? '' : 's'
-      }.`,
+      description: `Reclaimed ${formatAtoms(
+        reclaimRent.reclaimedLamports,
+        9,
+      )} SOL.`,
       id: `reclaim-rent-success-${signature}`,
     })
-  }, [reclaimRent.reclaimedCount, reclaimRent.signature, reclaimRent.status])
+  }, [reclaimRent.reclaimedLamports, reclaimRent.signature, reclaimRent.status])
 
   useEffect(() => {
     if (!reclaimRent.error) return

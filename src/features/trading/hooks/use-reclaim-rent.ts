@@ -43,7 +43,7 @@ export function useReclaimRent(enabled: boolean) {
   const [status, setStatus] = useState<ReclaimRentStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [signature, setSignature] = useState<string | null>(null)
-  const [reclaimedCount, setReclaimedCount] = useState(0)
+  const [reclaimedLamports, setReclaimedLamports] = useState(0n)
 
   const exitsQuery = useQuery({
     ...tradingQueries.ownedExitsAccounts({ authority: ownerAddress, client }),
@@ -93,6 +93,7 @@ export function useReclaimRent(enabled: boolean) {
       (exitsQuery.data ?? []).map((account) => ({
         address: account.address,
         index: account.data.index,
+        lamports: account.lamports,
       })),
     [exitsQuery.data],
   )
@@ -101,6 +102,7 @@ export function useReclaimRent(enabled: boolean) {
       (pricesQuery.data ?? []).map((account) => ({
         address: account.address,
         index: account.data.index,
+        lamports: account.lamports,
         openPositions: account.data.openPositions,
       })),
     [pricesQuery.data],
@@ -153,7 +155,7 @@ export function useReclaimRent(enabled: boolean) {
     setStatus('building')
     setError(null)
     setSignature(null)
-    setReclaimedCount(0)
+    setReclaimedLamports(0n)
 
     try {
       setStatus('submitting')
@@ -167,7 +169,7 @@ export function useReclaimRent(enabled: boolean) {
       })
 
       setStatus('success')
-      setReclaimedCount(result.closedAccounts)
+      setReclaimedLamports(result.reclaimedLamports)
       setSignature(result.signature)
 
       const connectedAddress = session.account.address.toString()
@@ -195,14 +197,14 @@ export function useReclaimRent(enabled: boolean) {
     setStatus('idle')
     setError(null)
     setSignature(null)
-    setReclaimedCount(0)
+    setReclaimedLamports(0n)
   }, [sendTransaction])
 
   const clearFeedback = useCallback(() => {
     setStatus('idle')
     setError(null)
     setSignature(null)
-    setReclaimedCount(0)
+    setReclaimedLamports(0n)
   }, [])
 
   return {
@@ -216,7 +218,7 @@ export function useReclaimRent(enabled: boolean) {
         runtimeContextQuery.isPending),
     isReclaiming: status === 'building' || status === 'submitting',
     reclaimRent,
-    reclaimedCount,
+    reclaimedLamports,
     reset,
     signature,
     status,
