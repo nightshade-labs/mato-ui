@@ -743,12 +743,14 @@ export async function sendReclaimRent({
     (account) => ({
       address: account.address,
       index: account.data.index,
+      lamports: account.lamports,
     }),
   )
   const pricesAccounts: PricesRentAccount[] = ownedPricesAccounts.map(
     (account) => ({
       address: account.address,
       index: account.data.index,
+      lamports: account.lamports,
       openPositions: account.data.openPositions,
     }),
   )
@@ -788,6 +790,10 @@ export async function sendReclaimRent({
   if (closeableAccounts.length === 0) {
     throw new Error('No reclaimable rent accounts available.')
   }
+  const reclaimedLamports = closeableAccounts.reduce(
+    (sum, account) => sum + account.lamports,
+    0n,
+  )
   const [
     bookkeepingAddress,
     currentExits,
@@ -866,7 +872,7 @@ export async function sendReclaimRent({
   await waitForConfirmedSignature(client.runtime.rpc, serializedSignature)
 
   return {
-    closedAccounts: closeableAccounts.length,
+    reclaimedLamports,
     signature: serializedSignature,
   }
 }

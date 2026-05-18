@@ -60,18 +60,24 @@ describe('rent eligibility', () => {
       currentSlot: 10_000n,
       endSlotInterval: 5n,
       exitsAccounts: [
-        { address: asAddress('11111111111111111111111111111111'), index: 0n },
+        {
+          address: asAddress('11111111111111111111111111111111'),
+          index: 0n,
+          lamports: 1_000_000n,
+        },
       ],
       maxAccounts: 1,
       pricesAccounts: [
         {
           address: asAddress('SysvarC1ock11111111111111111111111111111111'),
           index: 0n,
+          lamports: 2_000_000n,
           openPositions: 0n,
         },
       ],
     })
 
     expect(accounts).toHaveLength(1)
+    expect(accounts[0]?.lamports).toBe(1_000_000n)
   })
 })

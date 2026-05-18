@@ -7,11 +7,13 @@ import {
 export type ExitsRentAccount = {
   address: Address
   index: bigint
+  lamports: bigint
 }
 
 export type PricesRentAccount = {
   address: Address
   index: bigint
+  lamports: bigint
   openPositions: bigint
 }
 
@@ -20,11 +22,13 @@ export type RentAccountToClose =
       address: Address
       index: bigint
       kind: 'exits'
+      lamports: bigint
     }
   | {
       address: Address
       index: bigint
       kind: 'prices'
+      lamports: bigint
       openPositions: bigint
     }
 
@@ -93,6 +97,7 @@ export function collectCloseableRentAccounts({
       address: account.address,
       index: account.index,
       kind: 'exits' as const,
+      lamports: account.lamports,
     }))
 
   const closeablePrices: RentAccountToClose[] = pricesAccounts
@@ -108,6 +113,7 @@ export function collectCloseableRentAccounts({
       address: account.address,
       index: account.index,
       kind: 'prices' as const,
+      lamports: account.lamports,
       openPositions: account.openPositions,
     }))
 

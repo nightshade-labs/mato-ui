@@ -13,7 +13,7 @@ import { encodeBase58 } from '../lib/base58'
 import type { TwobRpcClient } from './twob-client'
 
 type ProgramAccountResponse = {
-  account: { data: [string, string] }
+  account: { data: [string, string]; lamports: bigint | number | string }
   pubkey: Address
 }
 
@@ -27,14 +27,20 @@ function asProgramAccounts(response: ProgramAccountsResponse) {
   return Array.isArray(response) ? response : response.value
 }
 
+function toLamports(value: bigint | number | string) {
+  return typeof value === 'bigint' ? value : BigInt(value)
+}
+
 export type OwnedPricesAccount = {
   address: Address
   data: Prices
+  lamports: bigint
 }
 
 export type OwnedExitsAccount = {
   address: Address
   data: Exits
+  lamports: bigint
 }
 
 export async function fetchOwnedPricesAccounts(
@@ -71,6 +77,7 @@ export async function fetchOwnedPricesAccounts(
     .map(({ account, pubkey }) => ({
       address: pubkey,
       data: decoder.decode(decodeBase64(account.data[0])),
+      lamports: toLamports(account.lamports),
     }))
     .sort((left, right) => {
       if (left.data.index === right.data.index) return 0
@@ -112,6 +119,7 @@ export async function fetchOwnedExitsAccounts(
     .map(({ account, pubkey }) => ({
       address: pubkey,
       data: decoder.decode(decodeBase64(account.data[0])),
+      lamports: toLamports(account.lamports),
     }))
     .sort((left, right) => {
       if (left.data.index === right.data.index) return 0
