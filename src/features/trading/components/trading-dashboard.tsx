@@ -15,7 +15,7 @@ import {
   sanitizeAmountInput,
   toSliderPercent,
 } from '../lib/amounts'
-import { formatExplorerTransactionUrl } from '../lib/format'
+import { formatExplorerTransactionUrl, formatUiAmount } from '../lib/format'
 import { useMarketAddress } from '../hooks/use-market-address'
 import { useMarketChartHistory } from '../hooks/use-market-chart-history'
 import { useMarketConfig } from '../hooks/use-market-config'
@@ -113,6 +113,12 @@ export function TradingDashboard() {
   )
   const amountExceedsAvailable =
     amountAtoms !== null && amountAtoms > availableAtoms
+  const availableAmountDisplay = Number(availableAtoms) / 10 ** amountDecimals
+  const amountValidationMessage = amountExceedsAvailable
+    ? `Amount exceeds available balance. You have ${formatUiAmount(
+        availableAmountDisplay,
+      )} ${amountTokenTicker}.`
+    : null
 
   const amountUiValue = useMemo(() => {
     if (!amountAtoms || amountAtoms <= 0n) return null
@@ -181,9 +187,11 @@ export function TradingDashboard() {
         ? 'Wrapping SOL...'
         : submitOrder.status === 'submitting'
           ? 'Submitting order...'
-          : side === 'buy'
-            ? 'Submit buy order'
-            : 'Submit sell order'
+          : amountExceedsAvailable
+            ? 'Amount exceeds balance'
+            : side === 'buy'
+              ? 'Submit buy order'
+              : 'Submit sell order'
 
   useEffect(() => {
     const signature = submitOrder.signature
@@ -321,10 +329,9 @@ export function TradingDashboard() {
           <div className="space-y-6 xl:col-start-2 xl:row-start-1">
             <OrderEntryCard
               amountInput={amountInput}
+              amountValidationMessage={amountValidationMessage}
               amountTokenTicker={amountTokenTicker}
-              availableAmountDisplay={
-                Number(availableAtoms) / 10 ** amountDecimals
-              }
+              availableAmountDisplay={availableAmountDisplay}
               canSubmit={!submitDisabled}
               durationSeconds={durationSeconds}
               estimatedConversionText={estimatedConversionText}

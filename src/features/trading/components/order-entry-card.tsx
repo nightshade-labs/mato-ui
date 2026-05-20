@@ -5,9 +5,11 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 export function OrderEntryCard({
   amountInput,
+  amountValidationMessage,
   amountTokenTicker,
   availableAmountDisplay,
   canSubmit,
@@ -28,6 +30,7 @@ export function OrderEntryCard({
   statusLabel,
 }: {
   amountInput: string
+  amountValidationMessage: string | null
   amountTokenTicker: string
   availableAmountDisplay: number
   canSubmit: boolean
@@ -91,9 +94,20 @@ export function OrderEntryCard({
             </Button>
           </div>
 
-          <div className="rounded-[1.25rem] border border-white/10 bg-black/25 p-2">
+          <div
+            className={cn(
+              'rounded-[1.25rem] border p-2 transition-colors',
+              amountValidationMessage
+                ? 'border-destructive/60 bg-destructive/10'
+                : 'border-white/10 bg-black/25',
+            )}
+          >
             <div className="flex items-center gap-3">
               <Input
+                aria-describedby={
+                  amountValidationMessage ? 'order-amount-error' : undefined
+                }
+                aria-invalid={amountValidationMessage ? true : undefined}
                 autoComplete="off"
                 className="h-14 w-0 min-w-0 flex-1 border-0 bg-transparent px-3 text-2xl font-semibold shadow-none focus-visible:ring-0"
                 id="order-amount"
@@ -112,8 +126,17 @@ export function OrderEntryCard({
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm text-muted-foreground">
-              {selectedPercent.toFixed(1)}% of available balance
+            <span
+              className={cn(
+                'text-sm',
+                amountValidationMessage
+                  ? 'text-destructive'
+                  : 'text-muted-foreground',
+              )}
+              id={amountValidationMessage ? 'order-amount-error' : undefined}
+            >
+              {amountValidationMessage ??
+                `${selectedPercent.toFixed(1)}% of available balance`}
             </span>
           </div>
         </div>
