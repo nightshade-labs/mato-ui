@@ -6,6 +6,7 @@ import {
   CHART_TIMEFRAMES,
   DEFAULT_MARKET_UPDATES_LIMIT,
   MARKET_ID,
+  MIN_TRADE_AMOUNT_ATOMS,
 } from '../constants'
 import {
   atomsFromPercent,
@@ -15,7 +16,7 @@ import {
   sanitizeAmountInput,
   toSliderPercent,
 } from '../lib/amounts'
-import { formatExplorerTransactionUrl } from '../lib/format'
+import { formatAtoms, formatExplorerTransactionUrl } from '../lib/format'
 import { useMarketAddress } from '../hooks/use-market-address'
 import { useMarketChartHistory } from '../hooks/use-market-chart-history'
 import { useMarketConfig } from '../hooks/use-market-config'
@@ -113,6 +114,17 @@ export function TradingDashboard() {
   )
   const amountExceedsAvailable =
     amountAtoms !== null && amountAtoms > availableAtoms
+  const amountBelowMinimum =
+    amountAtoms !== null &&
+    amountAtoms > 0n &&
+    amountAtoms < MIN_TRADE_AMOUNT_ATOMS
+  const minimumAmountDisplay = formatAtoms(
+    MIN_TRADE_AMOUNT_ATOMS,
+    amountDecimals,
+  )
+  const amountValidationMessage = amountBelowMinimum
+    ? `Minimum order size is ${minimumAmountDisplay} ${amountTokenTicker}.`
+    : null
 
   const amountUiValue = useMemo(() => {
     if (!amountAtoms || amountAtoms <= 0n) return null
@@ -171,6 +183,7 @@ export function TradingDashboard() {
     !marketAddress ||
     !amountAtoms ||
     amountAtoms <= 0n ||
+    amountBelowMinimum ||
     amountExceedsAvailable ||
     submitOrder.isSubmitting
 
@@ -181,9 +194,11 @@ export function TradingDashboard() {
         ? 'Wrapping SOL...'
         : submitOrder.status === 'submitting'
           ? 'Submitting order...'
-          : side === 'buy'
-            ? 'Submit buy order'
-            : 'Submit sell order'
+          : amountBelowMinimum
+            ? 'Amount too small'
+            : side === 'buy'
+              ? 'Submit buy order'
+              : 'Submit sell order'
 
   useEffect(() => {
     const signature = submitOrder.signature
@@ -287,6 +302,13 @@ export function TradingDashboard() {
       })
       return
     }
+    if (amountAtoms < MIN_TRADE_AMOUNT_ATOMS) {
+      toast.error('Order not ready', {
+        description: `Minimum order size is ${minimumAmountDisplay} ${amountTokenTicker}.`,
+        id: 'order-validation',
+      })
+      return
+    }
 
     const durationSlots = durationToSlots(durationSeconds)
     const success = await submitOrder.submitOrder({
@@ -321,6 +343,7 @@ export function TradingDashboard() {
           <div className="space-y-6 xl:col-start-2 xl:row-start-1">
             <OrderEntryCard
               amountInput={amountInput}
+              amountValidationMessage={amountValidationMessage}
               amountTokenTicker={amountTokenTicker}
               availableAmountDisplay={
                 Number(availableAtoms) / 10 ** amountDecimals
@@ -330,6 +353,7 @@ export function TradingDashboard() {
               estimatedConversionText={estimatedConversionText}
               executionPriceDisplay={executionPriceDisplay}
               isConnected={walletConnection.connected}
+              minimumAmountDisplay={minimumAmountDisplay}
               onAmountChange={(value) => {
                 setAmountInput(sanitizeAmountInput(value))
               }}
