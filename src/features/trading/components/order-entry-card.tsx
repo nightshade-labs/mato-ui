@@ -17,6 +17,7 @@ export function OrderEntryCard({
   estimatedConversionText,
   executionPriceDisplay,
   isConnected,
+  minimumAmountDisplay,
   onAmountChange,
   onDurationChange,
   onMaxClick,
@@ -38,6 +39,7 @@ export function OrderEntryCard({
   estimatedConversionText: string
   executionPriceDisplay: string
   isConnected: boolean
+  minimumAmountDisplay: string
   onAmountChange: (value: string) => void
   onDurationChange: (seconds: number) => void
   onMaxClick: () => void
@@ -79,9 +81,14 @@ export function OrderEntryCard({
               >
                 Order size
               </label>
-              <div className="mt-1 text-sm text-muted-foreground">
-                Available {formatUiAmount(availableAmountDisplay)}{' '}
-                {amountTokenTicker}
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                <span>
+                  Available {formatUiAmount(availableAmountDisplay)}{' '}
+                  {amountTokenTicker}
+                </span>
+                <span>
+                  Minimum {minimumAmountDisplay} {amountTokenTicker}
+                </span>
               </div>
             </div>
             <Button
@@ -127,6 +134,7 @@ export function OrderEntryCard({
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <span
+              aria-live={amountValidationMessage ? 'polite' : undefined}
               className={cn(
                 'text-sm',
                 amountValidationMessage
