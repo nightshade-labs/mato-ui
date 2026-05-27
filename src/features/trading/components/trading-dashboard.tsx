@@ -16,7 +16,11 @@ import {
   sanitizeAmountInput,
   toSliderPercent,
 } from '../lib/amounts'
-import { formatAtoms, formatExplorerTransactionUrl } from '../lib/format'
+import {
+  formatAtoms,
+  formatExplorerTransactionUrl,
+  formatUiAmount,
+} from '../lib/format'
 import { useMarketAddress } from '../hooks/use-market-address'
 import { useMarketChartHistory } from '../hooks/use-market-chart-history'
 import { useMarketConfig } from '../hooks/use-market-config'
@@ -118,13 +122,18 @@ export function TradingDashboard() {
     amountAtoms !== null &&
     amountAtoms > 0n &&
     amountAtoms < MIN_TRADE_AMOUNT_ATOMS
+  const availableAmountDisplay = Number(availableAtoms) / 10 ** amountDecimals
   const minimumAmountDisplay = formatAtoms(
     MIN_TRADE_AMOUNT_ATOMS,
     amountDecimals,
   )
-  const amountValidationMessage = amountBelowMinimum
-    ? `Minimum order size is ${minimumAmountDisplay} ${amountTokenTicker}.`
-    : null
+  const amountValidationMessage = amountExceedsAvailable
+    ? `Amount exceeds available balance. You have ${formatUiAmount(
+        availableAmountDisplay,
+      )} ${amountTokenTicker}.`
+    : amountBelowMinimum
+      ? `Minimum order size is ${minimumAmountDisplay} ${amountTokenTicker}.`
+      : null
 
   const amountUiValue = useMemo(() => {
     if (!amountAtoms || amountAtoms <= 0n) return null
@@ -194,11 +203,13 @@ export function TradingDashboard() {
         ? 'Wrapping SOL...'
         : submitOrder.status === 'submitting'
           ? 'Submitting order...'
-          : amountBelowMinimum
-            ? 'Amount too small'
-            : side === 'buy'
-              ? 'Submit buy order'
-              : 'Submit sell order'
+          : amountExceedsAvailable
+            ? 'Amount exceeds balance'
+            : amountBelowMinimum
+              ? 'Amount too small'
+              : side === 'buy'
+                ? 'Submit buy order'
+                : 'Submit sell order'
 
   useEffect(() => {
     const signature = submitOrder.signature
@@ -345,9 +356,7 @@ export function TradingDashboard() {
               amountInput={amountInput}
               amountValidationMessage={amountValidationMessage}
               amountTokenTicker={amountTokenTicker}
-              availableAmountDisplay={
-                Number(availableAtoms) / 10 ** amountDecimals
-              }
+              availableAmountDisplay={availableAmountDisplay}
               canSubmit={!submitDisabled}
               durationSeconds={durationSeconds}
               estimatedConversionText={estimatedConversionText}
