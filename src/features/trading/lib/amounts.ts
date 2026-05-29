@@ -50,6 +50,12 @@ export function getSpendableNativeAtoms(
   return spendableLamports + wrappedAtoms
 }
 
+export function isNativeBalanceBelowTransactionMinimum(
+  lamports: bigint | null,
+) {
+  return lamports !== null && lamports < NATIVE_FEE_BUFFER_ATOMS
+}
+
 export function getSpendableTokenAtoms(balanceAtoms: bigint | null) {
   return balanceAtoms ?? 0n
 }
