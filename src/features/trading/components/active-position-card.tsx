@@ -103,7 +103,7 @@ export function ActivePositionCard({
 
         <Progress
           className="h-2.5 bg-white/8"
-          indicatorClassName="bg-[linear-gradient(90deg,var(--color-accent-strong),#7be6c1)]"
+          indicatorClassName="bg-[linear-gradient(90deg,var(--color-accent-strong),#f0586a)]"
           value={metrics.progressPercent}
         />
 
@@ -142,7 +142,7 @@ export function ActivePositionCard({
           />
         </div>
         <Button
-          className="w-full rounded-xl bg-rose-500/85 text-white hover:bg-rose-500"
+          className="w-full rounded-xl bg-destructive/85 text-white hover:bg-destructive"
           disabled={isClosing}
           onClick={() => onClose(position.address)}
         >

@@ -225,7 +225,7 @@ export function MarketPriceChart({
   const histogramData = useMemo(
     () =>
       chartData.map<HistogramData<UTCTimestamp>>((candle) => ({
-        color: candle.close >= candle.open ? '#43c29a55' : '#f86f7055',
+        color: candle.close >= candle.open ? '#1fd79a55' : '#d4243a55',
         time: candle.time as UTCTimestamp,
         value: candle.volume,
       })),
@@ -384,12 +384,12 @@ export function MarketPriceChart({
     })
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      borderDownColor: '#f86f70',
-      borderUpColor: '#43c29a',
-      downColor: '#f86f70',
-      wickDownColor: '#f86f70',
-      wickUpColor: '#43c29a',
-      upColor: '#43c29a',
+      borderDownColor: '#d4243a',
+      borderUpColor: '#1fd79a',
+      downColor: '#d4243a',
+      wickDownColor: '#d4243a',
+      wickUpColor: '#1fd79a',
+      upColor: '#1fd79a',
     })
 
     const volumeSeries = chart.addSeries(HistogramSeries, {

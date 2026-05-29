@@ -438,9 +438,9 @@ const ClosedPositionRow = memo(function ClosedPositionRow({
       {hasChart ? (
         <div className="mt-4">
           <MiniPriceChart
-            averageClassName="stroke-emerald-300/70"
+            averageClassName="stroke-[#1fd79a]/55"
             averagePrice={summary.averageFillPrice}
-            lineClassName="stroke-[color:var(--color-accent-strong)]"
+            lineClassName="stroke-[#1fd79a]"
             points={chartPoints}
           />
         </div>
