@@ -31,7 +31,7 @@ export function RiskDisclaimerDialog() {
     <Dialog open={open}>
       <DialogContent showCloseButton={false}>
         <DialogHeader>
-          <div className="flex items-center gap-2 text-amber-400">
+          <div className="flex items-center gap-2 text-warning">
             <AlertTriangle className="size-5" />
             <DialogTitle>Experimental Protocol</DialogTitle>
           </div>

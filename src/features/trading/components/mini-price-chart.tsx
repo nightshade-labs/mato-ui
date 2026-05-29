@@ -69,9 +69,9 @@ function LegendSwatch({
 
 export function MiniPriceChart({
   averagePrice,
-  lineClassName = 'stroke-[#1fd79a]',
+  lineClassName = 'stroke-positive',
   points,
-  averageClassName = 'stroke-[#1fd79a]/55',
+  averageClassName = 'stroke-positive/55',
 }: {
   averagePrice: number | null
   averageClassName?: string

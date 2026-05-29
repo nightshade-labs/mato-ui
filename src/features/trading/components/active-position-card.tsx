@@ -103,7 +103,7 @@ export function ActivePositionCard({
 
         <Progress
           className="h-2.5 bg-white/8"
-          indicatorClassName="bg-[linear-gradient(90deg,var(--color-accent-strong),#f0586a)]"
+          indicatorClassName="bg-[linear-gradient(90deg,var(--color-accent-strong),var(--color-accent-strong-soft))]"
           value={metrics.progressPercent}
         />
 

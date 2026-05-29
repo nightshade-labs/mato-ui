@@ -209,6 +209,16 @@ export function MarketPriceChart({
   const chartRef = useRef<IChartApi | null>(null)
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null)
+  const seriesColors = useMemo(() => {
+    if (typeof document === 'undefined') {
+      return { positive: '#1fd79a', negative: '#d4243a' }
+    }
+    const root = getComputedStyle(document.documentElement)
+    return {
+      positive: root.getPropertyValue('--color-positive').trim() || '#1fd79a',
+      negative: root.getPropertyValue('--color-negative').trim() || '#d4243a',
+    }
+  }, [])
   const previousDataLengthRef = useRef(0)
   const previousFirstTimeRef = useRef<number | null>(null)
   const previousLastTimeRef = useRef<number | null>(null)
@@ -225,11 +235,14 @@ export function MarketPriceChart({
   const histogramData = useMemo(
     () =>
       chartData.map<HistogramData<UTCTimestamp>>((candle) => ({
-        color: candle.close >= candle.open ? '#1fd79a55' : '#d4243a55',
+        color:
+          candle.close >= candle.open
+            ? `${seriesColors.positive}55`
+            : `${seriesColors.negative}55`,
         time: candle.time as UTCTimestamp,
         value: candle.volume,
       })),
-    [chartData],
+    [chartData, seriesColors.positive, seriesColors.negative],
   )
   const candleData = useMemo(
     () =>
@@ -384,12 +397,12 @@ export function MarketPriceChart({
     })
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      borderDownColor: '#d4243a',
-      borderUpColor: '#1fd79a',
-      downColor: '#d4243a',
-      wickDownColor: '#d4243a',
-      wickUpColor: '#1fd79a',
-      upColor: '#1fd79a',
+      borderDownColor: seriesColors.negative,
+      borderUpColor: seriesColors.positive,
+      downColor: seriesColors.negative,
+      wickDownColor: seriesColors.negative,
+      wickUpColor: seriesColors.positive,
+      upColor: seriesColors.positive,
     })
 
     const volumeSeries = chart.addSeries(HistogramSeries, {
@@ -532,7 +545,7 @@ export function MarketPriceChart({
         wheelGestureTimeoutRef.current = null
       }
     }
-  }, [height])
+  }, [height, seriesColors])
 
   useEffect(() => {
     if (

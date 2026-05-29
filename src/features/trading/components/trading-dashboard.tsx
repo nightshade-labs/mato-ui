@@ -399,7 +399,7 @@ export function TradingDashboard() {
         </div>
 
         {lowSubmitNativeSolWarning ? (
-          <Alert className="mb-5 flex items-start gap-3 border-amber-400/35 bg-amber-500/10 text-amber-100">
+          <Alert className="mb-5 flex items-start gap-3 border-warning/35 bg-warning/10 text-warning-foreground">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <span>{lowSubmitNativeSolWarning}</span>
           </Alert>

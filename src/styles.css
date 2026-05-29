@@ -42,7 +42,14 @@
   --sidebar-border: oklch(0.35 0.03 246);
   --sidebar-ring: #d4243a;
   --color-accent-strong: #d4243a;
+  --color-accent-strong-soft: #f0586a;
   --color-accent-warm: #f6c465;
+  --color-positive: #1fd79a;
+  --color-positive-foreground: #a7f3d0;
+  --color-negative: var(--color-accent-strong);
+  --color-negative-foreground: #fecdd3;
+  --color-warning: var(--color-accent-warm);
+  --color-warning-foreground: #fef3c7;
 }
 
 @theme inline {
@@ -87,7 +94,14 @@
   --color-page-bg: var(--page-bg);
   --color-elevated: var(--elevated);
   --color-accent-strong: var(--color-accent-strong);
+  --color-accent-strong-soft: var(--color-accent-strong-soft);
   --color-accent-warm: var(--color-accent-warm);
+  --color-positive: var(--color-positive);
+  --color-positive-foreground: var(--color-positive-foreground);
+  --color-negative: var(--color-negative);
+  --color-negative-foreground: var(--color-negative-foreground);
+  --color-warning: var(--color-warning);
+  --color-warning-foreground: var(--color-warning-foreground);
 }
 
 @layer base {
