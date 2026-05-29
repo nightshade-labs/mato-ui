@@ -5,7 +5,6 @@ import {
   useSolanaClient,
   useWalletSession,
 } from '@solana/react-hooks'
-import { fetchMarket } from '@/lib/generated/twob/src/generated/accounts'
 import {
   MARKET_ID,
   MAX_RECLAIM_RENT_ACCOUNTS_PER_TRANSACTION,
@@ -20,6 +19,7 @@ import { collectCloseableRentAccounts } from '../lib/rent'
 import { tradingQueryKeys } from '../query-keys'
 import { tradingQueries } from '../queries'
 import { useMarketAddress } from './use-market-address'
+import { fetchMarket } from '@/lib/generated/twob/src/generated/accounts'
 
 type ReclaimRentStatus =
   | 'idle'
@@ -185,9 +185,9 @@ export function useReclaimRent(enabled: boolean) {
         }),
       ])
       return true
-    } catch (error) {
+    } catch (caughtError) {
       setStatus('error')
-      setError(formatTransactionError(error, 'Failed to reclaim rent.'))
+      setError(formatTransactionError(caughtError, 'Failed to reclaim rent.'))
       return false
     }
   }, [client, marketAddress, queryClient, session])
