@@ -1,17 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useWalletConnection, useWalletSession } from '@solana/react-hooks'
-import { RefreshCcw } from 'lucide-react'
+import { AlertTriangle, RefreshCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   CHART_TIMEFRAMES,
   DEFAULT_MARKET_UPDATES_LIMIT,
+  MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
   MARKET_ID,
   MIN_TRADE_AMOUNT_ATOMS,
+  NATIVE_FEE_BUFFER_ATOMS,
+  NATIVE_SOL_DECIMALS,
 } from '../constants'
 import {
   atomsFromPercent,
   durationToSlots,
   formatAtomsToInput,
+  isNativeBalanceBelowTransactionMinimum,
   parseTokenAmount,
   sanitizeAmountInput,
   toSliderPercent,
@@ -28,6 +32,7 @@ import { useMarketPrice } from '../hooks/use-market-price'
 import { useMarketUpdates } from '../hooks/use-market-updates'
 import { useStreamingMarketState } from '../hooks/use-streaming-market-state'
 import { useTradePositions } from '../hooks/use-trade-positions'
+import { useWalletSolBalance } from '../hooks/use-wallet-sol-balance'
 import { useWalletTokenBalance } from '../hooks/use-wallet-token-balance'
 import { useSubmitOrder } from '../hooks/use-submit-order'
 import { useClosePosition } from '../hooks/use-close-position'
@@ -47,6 +52,7 @@ import type {
 import type { ChartTimeframe, OrderSide, PositionPanelTab } from '../constants'
 import type { TradePositionRecord } from '../domain/models'
 import { endpoint } from '@/integrations/solana'
+import { Alert } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -103,6 +109,7 @@ export function TradingDashboard() {
 
   const baseBalance = useWalletTokenBalance(baseMint, baseDecimals || 9)
   const quoteBalance = useWalletTokenBalance(quoteMint, quoteDecimals || 9)
+  const nativeSolBalance = useWalletSolBalance()
 
   const selectedBalance = side === 'sell' ? baseBalance : quoteBalance
   const amountTokenTicker = side === 'sell' ? baseTicker : quoteTicker
@@ -134,6 +141,33 @@ export function TradingDashboard() {
     : amountBelowMinimum
       ? `Minimum order size is ${minimumAmountDisplay} ${amountTokenTicker}.`
       : null
+  const hasLowSubmitNativeSolBalance =
+    walletConnection.connected &&
+    isNativeBalanceBelowTransactionMinimum(nativeSolBalance.lamports)
+  const hasLowMaintenanceNativeSolBalance =
+    walletConnection.connected &&
+    isNativeBalanceBelowTransactionMinimum(
+      nativeSolBalance.lamports,
+      MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+    )
+  const requiredSubmitNativeSolDisplay = formatAtoms(
+    NATIVE_FEE_BUFFER_ATOMS,
+    NATIVE_SOL_DECIMALS,
+  )
+  const requiredMaintenanceNativeSolDisplay = formatAtoms(
+    MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+    NATIVE_SOL_DECIMALS,
+  )
+  const nativeSolBalanceDisplay =
+    nativeSolBalance.lamports === null
+      ? null
+      : formatAtoms(nativeSolBalance.lamports, NATIVE_SOL_DECIMALS)
+  const lowSubmitNativeSolWarning = hasLowSubmitNativeSolBalance
+    ? `Your wallet has ${nativeSolBalanceDisplay} SOL. Add SOL before submitting orders; at least ${requiredSubmitNativeSolDisplay} SOL is required for fees and rent.`
+    : null
+  const lowMaintenanceNativeSolWarning = hasLowMaintenanceNativeSolBalance
+    ? `Your wallet has ${nativeSolBalanceDisplay} SOL. Add SOL before closing positions; at least ${requiredMaintenanceNativeSolDisplay} SOL is required for fees.`
+    : null
 
   const amountUiValue = useMemo(() => {
     if (!amountAtoms || amountAtoms <= 0n) return null
@@ -194,6 +228,7 @@ export function TradingDashboard() {
     amountAtoms <= 0n ||
     amountBelowMinimum ||
     amountExceedsAvailable ||
+    hasLowSubmitNativeSolBalance ||
     submitOrder.isSubmitting
 
   const submitStatusLabel =
@@ -207,9 +242,11 @@ export function TradingDashboard() {
             ? 'Amount exceeds balance'
             : amountBelowMinimum
               ? 'Amount too small'
-              : side === 'buy'
-                ? 'Submit buy order'
-                : 'Submit sell order'
+              : hasLowSubmitNativeSolBalance
+                ? 'Add SOL to submit'
+                : side === 'buy'
+                  ? 'Submit buy order'
+                  : 'Submit sell order'
 
   useEffect(() => {
     const signature = submitOrder.signature
@@ -270,7 +307,11 @@ export function TradingDashboard() {
   }, [closePosition.error])
 
   const refreshBalances = async () => {
-    await Promise.allSettled([baseBalance.refresh(), quoteBalance.refresh()])
+    await Promise.allSettled([
+      baseBalance.refresh(),
+      nativeSolBalance.refresh(),
+      quoteBalance.refresh(),
+    ])
   }
 
   const handleNeedOlderChartHistory = ({
@@ -320,6 +361,13 @@ export function TradingDashboard() {
       })
       return
     }
+    if (lowSubmitNativeSolWarning) {
+      toast.warning('Not enough SOL', {
+        description: lowSubmitNativeSolWarning,
+        id: 'order-validation',
+      })
+      return
+    }
 
     const durationSlots = durationToSlots(durationSeconds)
     const success = await submitOrder.submitOrder({
@@ -349,6 +397,13 @@ export function TradingDashboard() {
             {formatDashboardPrice(displayPrice)}
           </span>
         </div>
+
+        {lowSubmitNativeSolWarning ? (
+          <Alert className="mb-5 flex items-start gap-3 border-amber-400/35 bg-amber-500/10 text-amber-100">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span>{lowSubmitNativeSolWarning}</span>
+          </Alert>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(22rem,0.95fr)]">
           <div className="space-y-6 xl:col-start-2 xl:row-start-1">
@@ -487,6 +542,14 @@ export function TradingDashboard() {
                         isClosing={closePosition.isClosing}
                         marketAddress={marketAddress}
                         onClose={async (tradePositionAddress) => {
+                          if (lowMaintenanceNativeSolWarning) {
+                            toast.warning('Not enough SOL', {
+                              description: lowMaintenanceNativeSolWarning,
+                              id: 'close-position-validation',
+                            })
+                            return
+                          }
+
                           const success = await closePosition.closePosition({
                             marketAddress,
                             tradePositionAddress,
