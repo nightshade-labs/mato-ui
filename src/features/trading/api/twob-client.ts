@@ -1,15 +1,12 @@
 import {
+  SIGNATURE_STATUS_TIMEOUT_MS,
   WRAPPED_SOL_MINT,
   confirmationMeetsCommitment,
   createWalletTransactionSigner,
   deriveConfirmationStatus,
   detectTokenProgram,
   normalizeSignature,
-  SIGNATURE_STATUS_TIMEOUT_MS,
-  type SolanaClient,
-  type WalletSession,
 } from '@solana/client'
-import type { UseSendTransactionReturnType } from '@solana/react-hooks'
 import {
   AccountRole,
   appendTransactionMessageInstructions,
@@ -25,9 +22,26 @@ import {
   setTransactionMessageLifetimeUsingBlockhash,
   signAndSendTransactionMessageWithSigners,
   signTransactionMessageWithSigners,
-  type Address,
-  type Instruction,
 } from '@solana/kit'
+import {
+  ARRAY_LENGTH,
+  MAX_BATCH_CLOSE_POSITIONS_PER_TRANSACTION,
+} from '../constants'
+import { encodeBase58 } from '../lib/base58'
+import { decodeBase64 } from '../lib/bytes'
+import { collectCloseableRentAccounts } from '../lib/rent'
+import {
+  fetchOwnedExitsAccounts,
+  fetchOwnedPricesAccounts,
+} from './rent-accounts'
+import type { SolanaClient, WalletSession } from '@solana/client'
+import type { UseSendTransactionReturnType } from '@solana/react-hooks'
+import type { Address, Instruction } from '@solana/kit'
+import type {
+  StreamingMarketState,
+  TradePositionRecord,
+} from '../domain/models'
+import type { ExitsRentAccount, PricesRentAccount } from '../lib/rent'
 import {
   fetchBookkeeping,
   fetchMarket,
@@ -43,22 +57,6 @@ import {
 import { getCloseExitsAccountInstructionDataEncoder } from '@/lib/generated/twob/src/generated/instructions/closeExitsAccount'
 import { getClosePricesAccountInstructionDataEncoder } from '@/lib/generated/twob/src/generated/instructions/closePricesAccount'
 import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '@/lib/generated/twob/src/generated/programs'
-import { ARRAY_LENGTH } from '../constants'
-import type {
-  StreamingMarketState,
-  TradePositionRecord,
-} from '../domain/models'
-import { encodeBase58 } from '../lib/base58'
-import { decodeBase64 } from '../lib/bytes'
-import {
-  collectCloseableRentAccounts,
-  type ExitsRentAccount,
-  type PricesRentAccount,
-} from '../lib/rent'
-import {
-  fetchOwnedExitsAccounts,
-  fetchOwnedPricesAccounts,
-} from './rent-accounts'
 
 const textEncoder = new TextEncoder()
 const BOOKKEEPING_DELAY_SLOTS = 20
@@ -313,7 +311,7 @@ export async function fetchStreamingMarketState(
 export async function fetchTradePositions(
   rpcClient: TwobRpcClient,
   authority: string,
-): Promise<TradePositionRecord[]> {
+): Promise<Array<TradePositionRecord>> {
   const response = (await rpcClient
     .getProgramAccounts(TWOB_ANCHOR_PROGRAM_ADDRESS, {
       commitment: 'confirmed',
@@ -598,15 +596,59 @@ export async function sendClosePosition({
   sendTransaction: SendTransactionHelper
   session: WalletSession
 }) {
-  const { marketAddress, tradePositionAddress } = request
+  return sendClosePositions({
+    client,
+    request: {
+      marketAddress: request.marketAddress,
+      tradePositionAddresses: [request.tradePositionAddress],
+    },
+    sendTransaction,
+    session,
+  })
+}
+
+export async function sendClosePositions({
+  client,
+  request,
+  sendTransaction,
+  session,
+}: {
+  client: SolanaClient
+  request: {
+    marketAddress: Address
+    tradePositionAddresses: Array<Address>
+  }
+  sendTransaction: SendTransactionHelper
+  session: WalletSession
+}) {
+  const { marketAddress, tradePositionAddresses } = request
+  if (tradePositionAddresses.length === 0) {
+    throw new Error('Select at least one position to close.')
+  }
+  if (
+    tradePositionAddresses.length > MAX_BATCH_CLOSE_POSITIONS_PER_TRANSACTION
+  ) {
+    throw new Error(
+      `Close up to ${MAX_BATCH_CLOSE_POSITIONS_PER_TRANSACTION} positions at once.`,
+    )
+  }
+
   const walletSigner = createWalletTransactionSigner(session).signer
-  const [marketAccount, tradePositionAccount, currentSlot] = await Promise.all([
-    fetchMarket(client.runtime.rpc, marketAddress, { commitment: 'confirmed' }),
-    fetchTradePosition(client.runtime.rpc, tradePositionAddress, {
-      commitment: 'confirmed',
-    }),
-    client.runtime.rpc.getSlot({ commitment: 'confirmed' }).send(),
-  ])
+  const [marketAccount, tradePositionAccounts, currentSlot] = await Promise.all(
+    [
+      fetchMarket(client.runtime.rpc, marketAddress, {
+        commitment: 'confirmed',
+      }),
+      Promise.all(
+        tradePositionAddresses.map((tradePositionAddress) =>
+          fetchTradePosition(client.runtime.rpc, tradePositionAddress, {
+            commitment: 'confirmed',
+          }),
+        ),
+      ),
+      client.runtime.rpc.getSlot({ commitment: 'confirmed' }).send(),
+    ],
+  )
 
   const [baseTokenProgram, quoteTokenProgram] = await Promise.all([
     detectTokenProgram(
@@ -626,69 +668,75 @@ export async function sendClosePosition({
     marketAccount.data.endSlotInterval,
   )
   const previousIndex = getPreviousIndex(referenceIndex)
-  const futureIndex = getFutureIndex(
-    tradePositionAccount.data.endSlot,
-    marketAccount.data.endSlotInterval,
+
+  const [currentExits, previousExits, currentPrices, previousPrices] =
+    await Promise.all([
+      deriveExitsAddress(marketAddress, referenceIndex),
+      deriveExitsAddress(marketAddress, previousIndex),
+      derivePricesAddress(marketAddress, referenceIndex),
+      derivePricesAddress(marketAddress, previousIndex),
+    ])
+
+  const closeInstructions = await Promise.all(
+    tradePositionAccounts.map(async (tradePositionAccount, index) => {
+      const tradePositionAddress = tradePositionAddresses[index]
+      if (!tradePositionAddress) {
+        throw new Error('Failed to resolve position address.')
+      }
+
+      const futureIndex = getFutureIndex(
+        tradePositionAccount.data.endSlot,
+        marketAccount.data.endSlotInterval,
+      )
+      const [futureExits, futurePrices] = await Promise.all([
+        deriveExitsAddress(marketAddress, futureIndex),
+        derivePricesAddress(marketAddress, futureIndex),
+      ])
+      const [futureExitsAccountInfo, futurePricesAccountInfo] =
+        await Promise.all([
+          client.runtime.rpc
+            .getAccountInfo(futureExits, {
+              commitment: 'confirmed',
+              encoding: 'base64',
+            })
+            .send(),
+          client.runtime.rpc
+            .getAccountInfo(futurePrices, {
+              commitment: 'confirmed',
+              encoding: 'base64',
+            })
+            .send(),
+        ])
+
+      if (!futureExitsAccountInfo.value) {
+        throw new Error(
+          'Cannot close this position because its exits account is missing. It may have been reclaimed while the position was still open.',
+        )
+      }
+      if (!futurePricesAccountInfo.value) {
+        throw new Error(
+          'Cannot close this position because its prices account is missing. It may have been reclaimed while the position was still open.',
+        )
+      }
+
+      return getAuthorityClosePositionInstructionAsync({
+        authority: walletSigner,
+        baseMint: marketAccount.data.baseMint,
+        baseTokenProgram: baseTokenProgram.programAddress,
+        currentExits,
+        currentPrices,
+        futureExits,
+        futurePrices,
+        market: marketAddress,
+        previousExits,
+        previousPrices,
+        quoteMint: marketAccount.data.quoteMint,
+        quoteTokenProgram: quoteTokenProgram.programAddress,
+        referenceIndex,
+        tradePosition: tradePositionAddress,
+      })
+    }),
   )
-
-  const [
-    futureExits,
-    futurePrices,
-    currentExits,
-    previousExits,
-    currentPrices,
-    previousPrices,
-  ] = await Promise.all([
-    deriveExitsAddress(marketAddress, futureIndex),
-    derivePricesAddress(marketAddress, futureIndex),
-    deriveExitsAddress(marketAddress, referenceIndex),
-    deriveExitsAddress(marketAddress, previousIndex),
-    derivePricesAddress(marketAddress, referenceIndex),
-    derivePricesAddress(marketAddress, previousIndex),
-  ])
-
-  const [futureExitsAccountInfo, futurePricesAccountInfo] = await Promise.all([
-    client.runtime.rpc
-      .getAccountInfo(futureExits, {
-        commitment: 'confirmed',
-        encoding: 'base64',
-      })
-      .send(),
-    client.runtime.rpc
-      .getAccountInfo(futurePrices, {
-        commitment: 'confirmed',
-        encoding: 'base64',
-      })
-      .send(),
-  ])
-
-  if (!futureExitsAccountInfo.value) {
-    throw new Error(
-      'Cannot close this position because its exits account is missing. It may have been reclaimed while the position was still open.',
-    )
-  }
-  if (!futurePricesAccountInfo.value) {
-    throw new Error(
-      'Cannot close this position because its prices account is missing. It may have been reclaimed while the position was still open.',
-    )
-  }
-
-  const instruction = await getAuthorityClosePositionInstructionAsync({
-    authority: walletSigner,
-    baseMint: marketAccount.data.baseMint,
-    baseTokenProgram: baseTokenProgram.programAddress,
-    currentExits,
-    currentPrices,
-    futureExits,
-    futurePrices,
-    market: marketAddress,
-    previousExits,
-    previousPrices,
-    quoteMint: marketAccount.data.quoteMint,
-    quoteTokenProgram: quoteTokenProgram.programAddress,
-    referenceIndex,
-    tradePosition: tradePositionAddress,
-  })
 
   const unwrapInstructions =
     marketAccount.data.baseMint === WRAPPED_SOL_MINT ||
@@ -704,7 +752,7 @@ export async function sendClosePosition({
 
   const signature = await sendTransaction.send({
     authority: walletSigner,
-    instructions: [instruction, ...unwrapInstructions],
+    instructions: [...closeInstructions, ...unwrapInstructions],
   })
   const serializedSignature = signature.toString()
   await waitForConfirmedSignature(client.runtime.rpc, serializedSignature)
@@ -739,14 +787,14 @@ export async function sendReclaimRent({
       fetchOwnedPricesAccounts(client.runtime.rpc, owner),
     ])
 
-  const exitsAccounts: ExitsRentAccount[] = ownedExitsAccounts.map(
+  const exitsAccounts: Array<ExitsRentAccount> = ownedExitsAccounts.map(
     (account) => ({
       address: account.address,
       index: account.data.index,
       lamports: account.lamports,
     }),
   )
-  const pricesAccounts: PricesRentAccount[] = ownedPricesAccounts.map(
+  const pricesAccounts: Array<PricesRentAccount> = ownedPricesAccounts.map(
     (account) => ({
       address: account.address,
       index: account.data.index,
