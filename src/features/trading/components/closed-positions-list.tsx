@@ -3,11 +3,11 @@ import { ArrowUpRight, ChevronDown } from 'lucide-react'
 import { fetchClosedPositionMiniChart } from '../api/market-repository'
 import { useClosedPositionEvents } from '../hooks/use-closed-position-events'
 import {
-  CLOSED_POSITION_INITIAL_VISIBLE_ROW_COUNT,
   CLOSED_POSITION_MAX_CONCURRENT_CHART_LOADS,
   CLOSED_POSITION_VISIBLE_ROW_OVERSCAN_PX,
+  POSITION_PAGE_SIZE,
 } from '../constants'
-import type { MiniPriceChartPoint } from '../lib/mini-chart'
+import { clampPage, getPageCount, getPageItems } from '../lib/pagination'
 import {
   formatAtoms,
   formatExplorerTransactionUrl,
@@ -16,6 +16,8 @@ import {
 } from '../lib/format'
 import { buildClosedPositionSummary } from '../view-models/closed-position'
 import { MiniPriceChart } from './mini-price-chart'
+import { PositionPagination } from './position-pagination'
+import type { MiniPriceChartPoint } from '../lib/mini-chart'
 import type { ClosePositionEvent } from '@/integrations/supabase'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -102,6 +104,7 @@ export function ClosedPositionsList({
   const [chartStatesByEventId, setChartStatesByEventId] = useState<
     Map<number, ClosedPositionChartState>
   >(new Map())
+  const [closedPositionPage, setClosedPositionPage] = useState(0)
   const chartLoadRunRef = useRef(0)
   const rowElementByIdRef = useRef(new Map<number, HTMLDivElement>())
   const [visibleEventIds, setVisibleEventIds] = useState<Set<number>>(new Set())
@@ -109,18 +112,42 @@ export function ClosedPositionsList({
     () => events.map((event) => event.id).join('|'),
     [events],
   )
+  const closedPositionPageCount = getPageCount(
+    events.length,
+    POSITION_PAGE_SIZE,
+  )
+  const normalizedClosedPositionPage = clampPage(
+    closedPositionPage,
+    events.length,
+    POSITION_PAGE_SIZE,
+  )
+  const paginatedEvents = useMemo(
+    () =>
+      getPageItems({
+        items: events,
+        page: normalizedClosedPositionPage,
+        pageSize: POSITION_PAGE_SIZE,
+      }),
+    [events, normalizedClosedPositionPage],
+  )
+  const paginatedEventIdsKey = useMemo(
+    () => paginatedEvents.map((event) => event.id).join('|'),
+    [paginatedEvents],
+  )
 
   useEffect(() => {
-    const nextVisibleIds = new Set(
-      events
-        .slice(0, CLOSED_POSITION_INITIAL_VISIBLE_ROW_COUNT)
-        .map((event) => event.id),
+    setClosedPositionPage((current) =>
+      clampPage(current, events.length, POSITION_PAGE_SIZE),
     )
+  }, [events.length])
+
+  useEffect(() => {
+    const nextVisibleIds = new Set(paginatedEvents.map((event) => event.id))
 
     setVisibleEventIds((current) =>
       areSetsEqual(current, nextVisibleIds) ? current : nextVisibleIds,
     )
-  }, [events])
+  }, [paginatedEvents])
 
   useEffect(() => {
     chartLoadRunRef.current += 1
@@ -179,7 +206,7 @@ export function ClosedPositionsList({
     return () => {
       observer.disconnect()
     }
-  }, [eventIdsKey])
+  }, [paginatedEventIdsKey])
 
   const activeChartLoadCount = useMemo(() => {
     let count = 0
@@ -199,7 +226,7 @@ export function ClosedPositionsList({
     }
 
     const nextEvents: Array<ClosePositionEvent> = []
-    for (const event of events) {
+    for (const event of paginatedEvents) {
       if (!visibleEventIds.has(event.id)) continue
       if (!hasValidChartRange(event)) continue
       if (chartStatesByEventId.has(event.id)) continue
@@ -211,7 +238,12 @@ export function ClosedPositionsList({
     }
 
     return nextEvents
-  }, [activeChartLoadCount, chartStatesByEventId, events, visibleEventIds])
+  }, [
+    activeChartLoadCount,
+    chartStatesByEventId,
+    paginatedEvents,
+    visibleEventIds,
+  ])
 
   const registerRowElement =
     (eventId: number) => (element: HTMLDivElement | null) => {
@@ -331,7 +363,7 @@ export function ClosedPositionsList({
             No closed positions yet.
           </p>
         ) : (
-          events.map((event) => (
+          paginatedEvents.map((event) => (
             <div key={event.id} ref={registerRowElement(event.id)}>
               <ClosedPositionRow
                 baseDecimals={baseDecimals}
@@ -344,6 +376,15 @@ export function ClosedPositionsList({
             </div>
           ))
         )}
+
+        <PositionPagination
+          itemLabel="positions"
+          onPageChange={setClosedPositionPage}
+          page={normalizedClosedPositionPage}
+          pageCount={closedPositionPageCount}
+          pageSize={POSITION_PAGE_SIZE}
+          totalItems={events.length}
+        />
 
         {eventsQuery.error instanceof Error ? (
           <p className="text-sm text-destructive">

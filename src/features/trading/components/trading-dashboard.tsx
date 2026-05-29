@@ -11,6 +11,7 @@ import {
   MIN_TRADE_AMOUNT_ATOMS,
   NATIVE_FEE_BUFFER_ATOMS,
   NATIVE_SOL_DECIMALS,
+  POSITION_PAGE_SIZE,
 } from '../constants'
 import {
   atomsFromPercent,
@@ -30,6 +31,7 @@ import {
   formatExplorerTransactionUrl,
   formatUiAmount,
 } from '../lib/format'
+import { clampPage, getPageCount, getPageItems } from '../lib/pagination'
 import { useMarketAddress } from '../hooks/use-market-address'
 import { useMarketChartHistory } from '../hooks/use-market-chart-history'
 import { useMarketConfig } from '../hooks/use-market-config'
@@ -50,6 +52,7 @@ import { MarketPriceChart } from './market-price-chart'
 import { OrderEntryCard } from './order-entry-card'
 import { ActivePositionCard } from './active-position-card'
 import { ClosedPositionsList } from './closed-positions-list'
+import { PositionPagination } from './position-pagination'
 import type {
   ChartCrosshairData,
   ChartHistoryRequest,
@@ -89,6 +92,7 @@ export function TradingDashboard() {
   const [durationSeconds, setDurationSeconds] = useState(30 * 60)
   const [positionPanelTab, setPositionPanelTab] =
     useState<PositionPanelTab>('active')
+  const [activePositionPage, setActivePositionPage] = useState(0)
   const [chartTimeframe, setChartTimeframe] = useState<ChartTimeframe>('5m')
   const [chartResetSignal, setChartResetSignal] = useState(0)
   const [crosshairData, setCrosshairData] = useState<ChartCrosshairData | null>(
@@ -182,6 +186,24 @@ export function TradingDashboard() {
   const activePositions = useMemo<Array<TradePositionRecord>>(
     () => tradePositionsQuery.data ?? [],
     [tradePositionsQuery.data],
+  )
+  const activePositionPageCount = getPageCount(
+    activePositions.length,
+    POSITION_PAGE_SIZE,
+  )
+  const normalizedActivePositionPage = clampPage(
+    activePositionPage,
+    activePositions.length,
+    POSITION_PAGE_SIZE,
+  )
+  const paginatedActivePositions = useMemo(
+    () =>
+      getPageItems({
+        items: activePositions,
+        page: normalizedActivePositionPage,
+        pageSize: POSITION_PAGE_SIZE,
+      }),
+    [activePositions, normalizedActivePositionPage],
   )
   const currentSlot = streamingStateQuery.data?.currentSlot ?? null
   const endedPositions = useMemo(
@@ -280,6 +302,12 @@ export function TradingDashboard() {
                 : side === 'buy'
                   ? 'Submit buy order'
                   : 'Submit sell order'
+
+  useEffect(() => {
+    setActivePositionPage((current) =>
+      clampPage(current, activePositions.length, POSITION_PAGE_SIZE),
+    )
+  }, [activePositions.length])
 
   useEffect(() => {
     const signature = submitOrder.signature
@@ -662,7 +690,7 @@ export function TradingDashboard() {
               {positionPanelTab === 'active' ? (
                 activePositions.length > 0 && marketAddress ? (
                   <div className="grid gap-4">
-                    {activePositions.map((position) => (
+                    {paginatedActivePositions.map((position) => (
                       <ActivePositionCard
                         key={position.address}
                         baseDecimals={baseDecimals}
@@ -692,6 +720,14 @@ export function TradingDashboard() {
                         streamingState={streamingStateQuery.data ?? null}
                       />
                     ))}
+                    <PositionPagination
+                      itemLabel="positions"
+                      onPageChange={setActivePositionPage}
+                      page={normalizedActivePositionPage}
+                      pageCount={activePositionPageCount}
+                      pageSize={POSITION_PAGE_SIZE}
+                      totalItems={activePositions.length}
+                    />
                   </div>
                 ) : (
                   <EmptyState copy="Your active positions will appear here once an order is live." />
