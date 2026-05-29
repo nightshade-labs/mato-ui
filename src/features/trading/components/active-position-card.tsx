@@ -1,15 +1,17 @@
 import { useMemo } from 'react'
-import type { Address } from '@solana/kit'
 import { ArrowUpRight, Waves } from 'lucide-react'
+import { formatAtoms, formatPrice } from '../lib/format'
+import { getActivePositionMetrics } from '../lib/position-progress'
+import { useEndSlotBookkeepingSnapshot } from '../hooks/use-end-slot-bookkeeping-snapshot'
+import type { Address } from '@solana/kit'
+import type {
+  StreamingMarketState,
+  TradePositionRecord,
+} from '../domain/models'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import type { TradePositionRecord } from '../domain/models'
-import { formatAtoms, formatPrice } from '../lib/format'
-import { getActivePositionMetrics } from '../lib/position-progress'
-import { useEndSlotBookkeepingSnapshot } from '../hooks/use-end-slot-bookkeeping-snapshot'
-import type { StreamingMarketState } from '../domain/models'
 
 export function ActivePositionCard({
   baseDecimals,
@@ -102,6 +104,7 @@ export function ActivePositionCard({
         </div>
 
         <Progress
+          animated
           className="h-2.5 bg-white/8"
           indicatorClassName="bg-[linear-gradient(90deg,var(--color-accent-strong),var(--color-accent-strong-soft))]"
           value={metrics.progressPercent}
