@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import {
   CHART_TIMEFRAMES,
   DEFAULT_MARKET_UPDATES_LIMIT,
+  HIGH_PRICE_IMPACT_WARNING_THRESHOLD_PERCENT,
   MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
   MARKET_ID,
   MAX_BATCH_CLOSE_POSITIONS_PER_TRANSACTION,
@@ -32,6 +33,7 @@ import {
   formatUiAmount,
 } from '../lib/format'
 import { clampPage, getPageCount, getPageItems } from '../lib/pagination'
+import { isHighPriceImpact } from '../lib/price-impact'
 import { useMarketAddress } from '../hooks/use-market-address'
 import { useMarketChartHistory } from '../hooks/use-market-chart-history'
 import { useMarketConfig } from '../hooks/use-market-config'
@@ -53,6 +55,7 @@ import { MarketPriceChart } from './market-price-chart'
 import { OrderEntryCard } from './order-entry-card'
 import { ActivePositionCard } from './active-position-card'
 import { ClosedPositionsList } from './closed-positions-list'
+import { HighPriceImpactDialog } from './high-price-impact-dialog'
 import { PositionPagination } from './position-pagination'
 import { ReclaimRentBanner } from './reclaim-rent-banner'
 import type {
@@ -97,6 +100,8 @@ export function TradingDashboard() {
   const [activePositionPage, setActivePositionPage] = useState(0)
   const [chartTimeframe, setChartTimeframe] = useState<ChartTimeframe>('5m')
   const [chartResetSignal, setChartResetSignal] = useState(0)
+  const [highPriceImpactDialogOpen, setHighPriceImpactDialogOpen] =
+    useState(false)
   const [crosshairData, setCrosshairData] = useState<ChartCrosshairData | null>(
     null,
   )
@@ -279,8 +284,14 @@ export function TradingDashboard() {
     displayPrice,
     estimatedConversionText,
     executionPriceDisplay,
+    priceImpactPercent,
     priceImpactDisplay,
   } = dashboardViewModel
+  const hasHighPriceImpact = isHighPriceImpact(priceImpactPercent)
+  const highPriceImpactThresholdDisplay = `${HIGH_PRICE_IMPACT_WARNING_THRESHOLD_PERCENT}%`
+  const priceImpactWarningText = hasHighPriceImpact
+    ? `Price impact is above ${highPriceImpactThresholdDisplay}. Review the execution price before submitting.`
+    : null
 
   const submitDisabled =
     !walletConnection.connected ||
@@ -305,15 +316,23 @@ export function TradingDashboard() {
               ? 'Amount too small'
               : hasLowSubmitNativeSolBalance
                 ? 'Add SOL to submit'
-                : side === 'buy'
-                  ? 'Submit buy order'
-                  : 'Submit sell order'
+                : hasHighPriceImpact
+                  ? 'Review price impact'
+                  : side === 'buy'
+                    ? 'Submit buy order'
+                    : 'Submit sell order'
 
   useEffect(() => {
     setActivePositionPage((current) =>
       clampPage(current, activePositions.length, POSITION_PAGE_SIZE),
     )
   }, [activePositions.length])
+
+  useEffect(() => {
+    if (!hasHighPriceImpact || submitDisabled) {
+      setHighPriceImpactDialogOpen(false)
+    }
+  }, [hasHighPriceImpact, submitDisabled])
 
   useEffect(() => {
     const signature = submitOrder.signature
@@ -489,6 +508,20 @@ export function TradingDashboard() {
     }
   }
 
+  const handleSubmitRequest = async () => {
+    if (hasHighPriceImpact) {
+      setHighPriceImpactDialogOpen(true)
+      return
+    }
+
+    await handleSubmit()
+  }
+
+  const handleConfirmHighPriceImpact = async () => {
+    setHighPriceImpactDialogOpen(false)
+    await handleSubmit()
+  }
+
   const handleBatchClosePositions = async ({
     positions,
     validationId,
@@ -592,8 +625,9 @@ export function TradingDashboard() {
                 setAmountInput('')
               }}
               onSliderChange={handleSliderChange}
-              onSubmit={() => void handleSubmit()}
+              onSubmit={() => void handleSubmitRequest()}
               priceImpactDisplay={priceImpactDisplay}
+              priceImpactWarningText={priceImpactWarningText}
               selectedPercent={sliderValue}
               side={side}
               statusLabel={submitStatusLabel}
@@ -808,6 +842,16 @@ export function TradingDashboard() {
           </div>
         </div>
       </div>
+      <HighPriceImpactDialog
+        estimatedConversionText={estimatedConversionText}
+        executionPriceDisplay={executionPriceDisplay}
+        isSubmitting={submitOrder.isSubmitting}
+        onConfirm={() => void handleConfirmHighPriceImpact()}
+        onOpenChange={setHighPriceImpactDialogOpen}
+        open={highPriceImpactDialogOpen}
+        priceImpactDisplay={priceImpactDisplay}
+        thresholdDisplay={highPriceImpactThresholdDisplay}
+      />
     </div>
   )
 }

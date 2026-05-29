@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react'
 import { DURATION_OPTIONS } from '../constants'
 import { formatUiAmount } from '../lib/format'
 import type { OrderSide } from '../constants'
@@ -26,6 +27,7 @@ export function OrderEntryCard({
   onSliderChange,
   onSubmit,
   priceImpactDisplay,
+  priceImpactWarningText,
   selectedPercent,
   side,
   statusLabel,
@@ -48,6 +50,7 @@ export function OrderEntryCard({
   onSliderChange: (value: number) => void
   onSubmit: () => void
   priceImpactDisplay: string
+  priceImpactWarningText: string | null
   selectedPercent: number
   side: OrderSide
   statusLabel: string
@@ -185,9 +188,17 @@ export function OrderEntryCard({
           />
           <DetailMetric
             label="Price impact"
+            tone={priceImpactWarningText ? 'warning' : 'default'}
             value={`${priceImpactDisplay} (${executionPriceDisplay})`}
           />
         </div>
+
+        {priceImpactWarningText ? (
+          <div className="flex items-start gap-2 rounded-[1.25rem] border border-warning/35 bg-warning/10 px-3 py-2 text-sm leading-6 text-warning-foreground">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span>{priceImpactWarningText}</span>
+          </div>
+        ) : null}
 
         <div className="space-y-3">
           <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
@@ -222,10 +233,32 @@ export function OrderEntryCard({
   )
 }
 
-function DetailMetric({ label, value }: { label: string; value: string }) {
+function DetailMetric({
+  label,
+  tone = 'default',
+  value,
+}: {
+  label: string
+  tone?: 'default' | 'warning'
+  value: string
+}) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-      <div className="mb-1 text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+    <div
+      className={cn(
+        'rounded-2xl border p-3',
+        tone === 'warning'
+          ? 'border-warning/35 bg-warning/10 text-warning-foreground'
+          : 'border-white/10 bg-white/5',
+      )}
+    >
+      <div
+        className={cn(
+          'mb-1 text-[11px] uppercase tracking-[0.22em]',
+          tone === 'warning'
+            ? 'text-warning-foreground/80'
+            : 'text-muted-foreground',
+        )}
+      >
         {label}
       </div>
       <div className="font-medium">{value}</div>
