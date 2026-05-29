@@ -43,6 +43,7 @@ import { useWalletSolBalance } from '../hooks/use-wallet-sol-balance'
 import { useWalletTokenBalance } from '../hooks/use-wallet-token-balance'
 import { useSubmitOrder } from '../hooks/use-submit-order'
 import { useClosePosition } from '../hooks/use-close-position'
+import { useReclaimRent } from '../hooks/use-reclaim-rent'
 import {
   buildTradingDashboardViewModel,
   deriveMarketIdentity,
@@ -53,6 +54,7 @@ import { OrderEntryCard } from './order-entry-card'
 import { ActivePositionCard } from './active-position-card'
 import { ClosedPositionsList } from './closed-positions-list'
 import { PositionPagination } from './position-pagination'
+import { ReclaimRentBanner } from './reclaim-rent-banner'
 import type {
   ChartCrosshairData,
   ChartHistoryRequest,
@@ -101,6 +103,7 @@ export function TradingDashboard() {
 
   const submitOrder = useSubmitOrder()
   const closePosition = useClosePosition()
+  const reclaimRent = useReclaimRent(walletConnection.connected)
 
   const {
     baseDecimals,
@@ -176,6 +179,9 @@ export function TradingDashboard() {
     : null
   const lowMaintenanceNativeSolWarning = hasLowMaintenanceNativeSolBalance
     ? `Your wallet has ${nativeSolBalanceDisplay} SOL. Add SOL before closing positions; at least ${requiredMaintenanceNativeSolDisplay} SOL is required for fees.`
+    : null
+  const lowReclaimRentNativeSolWarning = hasLowMaintenanceNativeSolBalance
+    ? `Your wallet has ${nativeSolBalanceDisplay} SOL. Add SOL before reclaiming rent; at least ${requiredMaintenanceNativeSolDisplay} SOL is required for fees.`
     : null
 
   const amountUiValue = useMemo(() => {
@@ -371,6 +377,38 @@ export function TradingDashboard() {
     })
   }, [closePosition.error])
 
+  useEffect(() => {
+    const signature = reclaimRent.signature
+    if (reclaimRent.status !== 'success' || !signature) return
+
+    toast.success('Rent reclaimed', {
+      action: {
+        label: 'View',
+        onClick: () => {
+          window.open(
+            formatExplorerTransactionUrl(signature, endpoint),
+            '_blank',
+            'noopener,noreferrer',
+          )
+        },
+      },
+      description: `Reclaimed ${formatAtoms(
+        reclaimRent.reclaimedLamports,
+        NATIVE_SOL_DECIMALS,
+      )} SOL.`,
+      id: `reclaim-rent-success-${signature}`,
+    })
+  }, [reclaimRent.reclaimedLamports, reclaimRent.signature, reclaimRent.status])
+
+  useEffect(() => {
+    if (!reclaimRent.error) return
+
+    toast.error('Rent reclaim failed', {
+      description: reclaimRent.error,
+      id: 'reclaim-rent-error',
+    })
+  }, [reclaimRent.error])
+
   const refreshBalances = async () => {
     await Promise.allSettled([
       baseBalance.refresh(),
@@ -489,6 +527,21 @@ export function TradingDashboard() {
     }
   }
 
+  const handleReclaimRent = async () => {
+    if (lowReclaimRentNativeSolWarning) {
+      toast.warning('Not enough SOL', {
+        description: lowReclaimRentNativeSolWarning,
+        id: 'reclaim-rent-validation',
+      })
+      return
+    }
+
+    const success = await reclaimRent.reclaimRent()
+    if (success) {
+      await nativeSolBalance.refresh()
+    }
+  }
+
   return (
     <div className="relative min-h-screen bg-[color:var(--color-page-bg)] text-foreground">
       <div className="relative mx-auto max-w-[1440px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
@@ -507,6 +560,13 @@ export function TradingDashboard() {
             <span>{lowSubmitNativeSolWarning}</span>
           </Alert>
         ) : null}
+
+        <ReclaimRentBanner
+          closeableCount={reclaimRent.closeableCount}
+          isReclaiming={reclaimRent.isReclaiming}
+          nativeSolWarning={lowReclaimRentNativeSolWarning}
+          onReclaim={() => void handleReclaimRent()}
+        />
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(22rem,0.95fr)]">
           <div className="space-y-6 xl:col-start-2 xl:row-start-1">
