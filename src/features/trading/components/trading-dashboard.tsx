@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useWalletConnection, useWalletSession } from '@solana/react-hooks'
-import { AlertTriangle, RefreshCcw } from 'lucide-react'
+import { AlertTriangle, RefreshCcw, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   CHART_TIMEFRAMES,
   DEFAULT_MARKET_UPDATES_LIMIT,
   MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
   MARKET_ID,
+  MAX_BATCH_CLOSE_POSITIONS_PER_TRANSACTION,
   MIN_TRADE_AMOUNT_ATOMS,
   NATIVE_FEE_BUFFER_ATOMS,
   NATIVE_SOL_DECIMALS,
@@ -20,6 +21,10 @@ import {
   sanitizeAmountInput,
   toSliderPercent,
 } from '../lib/amounts'
+import {
+  isEndedPosition,
+  selectBatchClosePositions,
+} from '../lib/batch-close-positions'
 import {
   formatAtoms,
   formatExplorerTransactionUrl,
@@ -178,6 +183,34 @@ export function TradingDashboard() {
     () => tradePositionsQuery.data ?? [],
     [tradePositionsQuery.data],
   )
+  const currentSlot = streamingStateQuery.data?.currentSlot ?? null
+  const endedPositions = useMemo(
+    () =>
+      activePositions.filter((position) =>
+        isEndedPosition(position, currentSlot),
+      ),
+    [activePositions, currentSlot],
+  )
+  const endedBatchPositions = useMemo(
+    () =>
+      selectBatchClosePositions({
+        currentSlot,
+        maxPositions: MAX_BATCH_CLOSE_POSITIONS_PER_TRANSACTION,
+        mode: 'ended',
+        positions: activePositions,
+      }),
+    [activePositions, currentSlot],
+  )
+  const allBatchPositions = useMemo(
+    () =>
+      selectBatchClosePositions({
+        currentSlot,
+        maxPositions: MAX_BATCH_CLOSE_POSITIONS_PER_TRANSACTION,
+        mode: 'all',
+        positions: activePositions,
+      }),
+    [activePositions, currentSlot],
+  )
   const dashboardViewModel = useMemo(
     () =>
       buildTradingDashboardViewModel({
@@ -280,8 +313,9 @@ export function TradingDashboard() {
   useEffect(() => {
     const signature = closePosition.signature
     if (closePosition.status !== 'success' || !signature) return
+    const closedCount = closePosition.closedCount
 
-    toast.success('Position closed', {
+    toast.success(closedCount > 1 ? 'Positions closed' : 'Position closed', {
       action: {
         label: 'View',
         onClick: () => {
@@ -292,10 +326,13 @@ export function TradingDashboard() {
           )
         },
       },
-      description: 'The close transaction was confirmed.',
+      description:
+        closedCount > 1
+          ? `${closedCount} positions were closed.`
+          : 'The close transaction was confirmed.',
       id: `close-position-success-${signature}`,
     })
-  }, [closePosition.signature, closePosition.status])
+  }, [closePosition.closedCount, closePosition.signature, closePosition.status])
 
   useEffect(() => {
     if (!closePosition.error) return
@@ -382,6 +419,44 @@ export function TradingDashboard() {
 
     if (success) {
       setAmountInput('')
+      await refreshBalances()
+    }
+  }
+
+  const handleBatchClosePositions = async ({
+    positions,
+    validationId,
+  }: {
+    positions: Array<TradePositionRecord>
+    validationId: string
+  }) => {
+    if (!marketAddress) {
+      toast.error('Positions not ready', {
+        description: 'Market address is still loading.',
+        id: validationId,
+      })
+      return
+    }
+    if (positions.length === 0) {
+      toast.error('Positions not ready', {
+        description: 'There are no matching positions to close.',
+        id: validationId,
+      })
+      return
+    }
+    if (lowMaintenanceNativeSolWarning) {
+      toast.warning('Not enough SOL', {
+        description: lowMaintenanceNativeSolWarning,
+        id: validationId,
+      })
+      return
+    }
+
+    const success = await closePosition.closePositions({
+      marketAddress,
+      tradePositionAddresses: positions.map((position) => position.address),
+    })
+    if (success) {
       await refreshBalances()
     }
   }
@@ -517,18 +592,71 @@ export function TradingDashboard() {
             </Card>
 
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {(['active', 'closed'] as const).map((tab) => (
-                  <Button
-                    key={tab}
-                    className="rounded-full"
-                    onClick={() => setPositionPanelTab(tab)}
-                    size="xs"
-                    variant={positionPanelTab === tab ? 'default' : 'outline'}
-                  >
-                    {tab === 'active' ? 'Active positions' : 'Closed positions'}
-                  </Button>
-                ))}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap gap-2">
+                  {(['active', 'closed'] as const).map((tab) => (
+                    <Button
+                      key={tab}
+                      className="rounded-full"
+                      onClick={() => setPositionPanelTab(tab)}
+                      size="xs"
+                      variant={positionPanelTab === tab ? 'default' : 'outline'}
+                    >
+                      {tab === 'active'
+                        ? 'Active positions'
+                        : 'Closed positions'}
+                    </Button>
+                  ))}
+                </div>
+
+                {positionPanelTab === 'active' && activePositions.length > 1 ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      className="rounded-full"
+                      disabled={
+                        closePosition.isClosing ||
+                        endedBatchPositions.length === 0
+                      }
+                      onClick={() => {
+                        void handleBatchClosePositions({
+                          positions: endedBatchPositions,
+                          validationId: 'batch-close-ended-validation',
+                        })
+                      }}
+                      size="xs"
+                      variant="outline"
+                    >
+                      <X className="size-3.5" />
+                      Close ended
+                      {formatBatchCloseCount(
+                        endedBatchPositions.length,
+                        endedPositions.length,
+                      )}
+                    </Button>
+                    <Button
+                      className="rounded-full"
+                      disabled={
+                        closePosition.isClosing ||
+                        allBatchPositions.length === 0
+                      }
+                      onClick={() => {
+                        void handleBatchClosePositions({
+                          positions: allBatchPositions,
+                          validationId: 'batch-close-all-validation',
+                        })
+                      }}
+                      size="xs"
+                      variant="outline"
+                    >
+                      <X className="size-3.5" />
+                      Close all
+                      {formatBatchCloseCount(
+                        allBatchPositions.length,
+                        activePositions.length,
+                      )}
+                    </Button>
+                  </div>
+                ) : null}
               </div>
 
               {positionPanelTab === 'active' ? (
@@ -596,4 +724,10 @@ function EmptyState({ copy }: { copy: string }) {
       </CardContent>
     </Card>
   )
+}
+
+function formatBatchCloseCount(selectedCount: number, totalCount: number) {
+  if (totalCount <= 0) return ''
+  if (selectedCount >= totalCount) return ` (${totalCount})`
+  return ` (${selectedCount}/${totalCount})`
 }
