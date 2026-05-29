@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import {
   CHART_TIMEFRAMES,
   DEFAULT_MARKET_UPDATES_LIMIT,
+  MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
   MARKET_ID,
   MIN_TRADE_AMOUNT_ATOMS,
   NATIVE_FEE_BUFFER_ATOMS,
@@ -140,19 +141,32 @@ export function TradingDashboard() {
     : amountBelowMinimum
       ? `Minimum order size is ${minimumAmountDisplay} ${amountTokenTicker}.`
       : null
-  const hasLowNativeSolBalance =
+  const hasLowSubmitNativeSolBalance =
     walletConnection.connected &&
     isNativeBalanceBelowTransactionMinimum(nativeSolBalance.lamports)
-  const requiredNativeSolDisplay = formatAtoms(
+  const hasLowMaintenanceNativeSolBalance =
+    walletConnection.connected &&
+    isNativeBalanceBelowTransactionMinimum(
+      nativeSolBalance.lamports,
+      MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+    )
+  const requiredSubmitNativeSolDisplay = formatAtoms(
     NATIVE_FEE_BUFFER_ATOMS,
+    NATIVE_SOL_DECIMALS,
+  )
+  const requiredMaintenanceNativeSolDisplay = formatAtoms(
+    MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
     NATIVE_SOL_DECIMALS,
   )
   const nativeSolBalanceDisplay =
     nativeSolBalance.lamports === null
       ? null
       : formatAtoms(nativeSolBalance.lamports, NATIVE_SOL_DECIMALS)
-  const lowNativeSolWarning = hasLowNativeSolBalance
-    ? `Your wallet has ${nativeSolBalanceDisplay} SOL. Add SOL before submitting transactions; at least ${requiredNativeSolDisplay} SOL is required for fees and rent.`
+  const lowSubmitNativeSolWarning = hasLowSubmitNativeSolBalance
+    ? `Your wallet has ${nativeSolBalanceDisplay} SOL. Add SOL before submitting orders; at least ${requiredSubmitNativeSolDisplay} SOL is required for fees and rent.`
+    : null
+  const lowMaintenanceNativeSolWarning = hasLowMaintenanceNativeSolBalance
+    ? `Your wallet has ${nativeSolBalanceDisplay} SOL. Add SOL before closing positions; at least ${requiredMaintenanceNativeSolDisplay} SOL is required for fees.`
     : null
 
   const amountUiValue = useMemo(() => {
@@ -214,7 +228,7 @@ export function TradingDashboard() {
     amountAtoms <= 0n ||
     amountBelowMinimum ||
     amountExceedsAvailable ||
-    hasLowNativeSolBalance ||
+    hasLowSubmitNativeSolBalance ||
     submitOrder.isSubmitting
 
   const submitStatusLabel =
@@ -228,7 +242,7 @@ export function TradingDashboard() {
             ? 'Amount exceeds balance'
             : amountBelowMinimum
               ? 'Amount too small'
-              : hasLowNativeSolBalance
+              : hasLowSubmitNativeSolBalance
                 ? 'Add SOL to submit'
                 : side === 'buy'
                   ? 'Submit buy order'
@@ -347,9 +361,9 @@ export function TradingDashboard() {
       })
       return
     }
-    if (lowNativeSolWarning) {
+    if (lowSubmitNativeSolWarning) {
       toast.warning('Not enough SOL', {
-        description: lowNativeSolWarning,
+        description: lowSubmitNativeSolWarning,
         id: 'order-validation',
       })
       return
@@ -384,10 +398,10 @@ export function TradingDashboard() {
           </span>
         </div>
 
-        {lowNativeSolWarning ? (
+        {lowSubmitNativeSolWarning ? (
           <Alert className="mb-5 flex items-start gap-3 border-amber-400/35 bg-amber-500/10 text-amber-100">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-            <span>{lowNativeSolWarning}</span>
+            <span>{lowSubmitNativeSolWarning}</span>
           </Alert>
         ) : null}
 
@@ -528,9 +542,9 @@ export function TradingDashboard() {
                         isClosing={closePosition.isClosing}
                         marketAddress={marketAddress}
                         onClose={async (tradePositionAddress) => {
-                          if (lowNativeSolWarning) {
+                          if (lowMaintenanceNativeSolWarning) {
                             toast.warning('Not enough SOL', {
-                              description: lowNativeSolWarning,
+                              description: lowMaintenanceNativeSolWarning,
                               id: 'close-position-validation',
                             })
                             return

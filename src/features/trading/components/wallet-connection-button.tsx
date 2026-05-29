@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useWalletConnection } from '@solana/react-hooks'
 import { toast } from 'sonner'
 import {
+  AlertTriangle,
   Check,
   ChevronDown,
   Copy,
@@ -9,7 +10,13 @@ import {
   LogOut,
   Wallet,
 } from 'lucide-react'
+import {
+  MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+  NATIVE_SOL_DECIMALS,
+} from '../constants'
 import { useReclaimRent } from '../hooks/use-reclaim-rent'
+import { useWalletSolBalance } from '../hooks/use-wallet-sol-balance'
+import { isNativeBalanceBelowTransactionMinimum } from '../lib/amounts'
 import {
   formatAtoms,
   formatExplorerTransactionUrl,
@@ -35,6 +42,7 @@ export function WalletConnectionButton() {
   const [copied, setCopied] = useState(false)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
   const reclaimRent = useReclaimRent(open && connected)
+  const nativeSolBalance = useWalletSolBalance()
 
   useEffect(() => {
     if (!open) return
@@ -112,6 +120,21 @@ export function WalletConnectionButton() {
   }
 
   const address = wallet?.account.address.toString() ?? null
+  const hasLowReclaimRentNativeSolBalance =
+    connected &&
+    isNativeBalanceBelowTransactionMinimum(
+      nativeSolBalance.lamports,
+      MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+    )
+  const reclaimRentNativeSolWarning = hasLowReclaimRentNativeSolBalance
+    ? `Your wallet has ${formatAtoms(
+        nativeSolBalance.lamports ?? 0n,
+        NATIVE_SOL_DECIMALS,
+      )} SOL. Add SOL before reclaiming rent; at least ${formatAtoms(
+        MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+        NATIVE_SOL_DECIMALS,
+      )} SOL is required for fees.`
+    : null
 
   const handleCopyAddress = async () => {
     if (!address) return
@@ -122,6 +145,20 @@ export function WalletConnectionButton() {
   }
 
   const showReclaimRentButton = connected && reclaimRent.closeableCount > 0
+  const handleReclaimRent = async () => {
+    if (reclaimRentNativeSolWarning) {
+      toast.warning('Not enough SOL', {
+        description: reclaimRentNativeSolWarning,
+        id: 'reclaim-rent-validation',
+      })
+      return
+    }
+
+    const success = await reclaimRent.reclaimRent()
+    if (success) {
+      await nativeSolBalance.refresh()
+    }
+  }
 
   return (
     <div ref={dropdownRef} className="relative z-[70]">
@@ -174,19 +211,27 @@ export function WalletConnectionButton() {
                   </button>
                 </div>
                 {showReclaimRentButton ? (
-                  <Button
-                    className="w-full justify-between rounded-xl"
-                    disabled={reclaimRent.isReclaiming}
-                    variant="outline"
-                    onClick={() => {
-                      void reclaimRent.reclaimRent()
-                    }}
-                  >
-                    {reclaimRent.isReclaiming
-                      ? 'Reclaiming rent...'
-                      : 'Reclaim Rent'}
-                    <HandCoins className="size-4" />
-                  </Button>
+                  <>
+                    <Button
+                      className="w-full justify-between rounded-xl"
+                      disabled={reclaimRent.isReclaiming}
+                      variant="outline"
+                      onClick={() => {
+                        void handleReclaimRent()
+                      }}
+                    >
+                      {reclaimRent.isReclaiming
+                        ? 'Reclaiming rent...'
+                        : 'Reclaim Rent'}
+                      <HandCoins className="size-4" />
+                    </Button>
+                    {reclaimRentNativeSolWarning ? (
+                      <div className="flex items-start gap-2 rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-100">
+                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                        <span>{reclaimRentNativeSolWarning}</span>
+                      </div>
+                    ) : null}
+                  </>
                 ) : null}
                 <Button
                   className="w-full justify-between rounded-xl"
@@ -232,7 +277,6 @@ export function WalletConnectionButton() {
                 </div>
               </>
             )}
-
           </CardContent>
         </Card>
       ) : null}

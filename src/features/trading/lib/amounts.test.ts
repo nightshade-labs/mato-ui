@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { NATIVE_FEE_BUFFER_ATOMS } from '../constants'
+import {
+  MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+  NATIVE_FEE_BUFFER_ATOMS,
+} from '../constants'
 import {
   getSpendableNativeAtoms,
   isNativeBalanceBelowTransactionMinimum,
@@ -19,6 +22,21 @@ describe('native SOL transaction minimum', () => {
   it('allows the exact required fee and rent buffer', () => {
     expect(
       isNativeBalanceBelowTransactionMinimum(NATIVE_FEE_BUFFER_ATOMS),
+    ).toBe(false)
+  })
+
+  it('accepts a lower minimum for maintenance transactions', () => {
+    expect(
+      isNativeBalanceBelowTransactionMinimum(
+        MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS - 1n,
+        MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+      ),
+    ).toBe(true)
+    expect(
+      isNativeBalanceBelowTransactionMinimum(
+        MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+        MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+      ),
     ).toBe(false)
   })
 })
