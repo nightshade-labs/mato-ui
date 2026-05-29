@@ -226,7 +226,7 @@ export function WalletConnectionButton() {
                       <HandCoins className="size-4" />
                     </Button>
                     {reclaimRentNativeSolWarning ? (
-                      <div className="flex items-start gap-2 rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-100">
+                      <div className="flex items-start gap-2 rounded-xl border border-warning/35 bg-warning/10 px-3 py-2 text-xs leading-5 text-warning-foreground">
                         <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                         <span>{reclaimRentNativeSolWarning}</span>
                       </div>
