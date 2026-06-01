@@ -16,6 +16,7 @@ import { Progress } from '@/components/ui/progress'
 export function ActivePositionCard({
   baseDecimals,
   baseTicker,
+  isCloseDisabled,
   isClosing,
   marketAddress,
   onClose,
@@ -26,6 +27,7 @@ export function ActivePositionCard({
 }: {
   baseDecimals: number
   baseTicker: string
+  isCloseDisabled: boolean
   isClosing: boolean
   marketAddress: Address
   onClose: (tradePositionAddress: Address) => void
@@ -163,7 +165,7 @@ export function ActivePositionCard({
 
         <Button
           className="w-full rounded-xl bg-destructive/85 text-white hover:bg-destructive"
-          disabled={isClosing}
+          disabled={isCloseDisabled}
           onClick={() => onClose(position.address)}
         >
           {isClosing ? 'Closing position...' : 'Close position'}
