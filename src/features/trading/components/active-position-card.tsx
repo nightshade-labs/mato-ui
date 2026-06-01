@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { ArrowUpRight, Waves } from 'lucide-react'
+import { useId, useMemo, useState } from 'react'
+import { ArrowUpRight, ChevronDown, Waves } from 'lucide-react'
 import { formatAtoms, formatPrice } from '../lib/format'
 import { getActivePositionMetrics } from '../lib/position-progress'
 import { useEndSlotBookkeepingSnapshot } from '../hooks/use-end-slot-bookkeeping-snapshot'
@@ -34,6 +34,8 @@ export function ActivePositionCard({
   quoteTicker: string
   streamingState: StreamingMarketState | null
 }) {
+  const [expanded, setExpanded] = useState(false)
+  const detailsId = useId()
   const snapshotQuery = useEndSlotBookkeepingSnapshot({
     currentSlot: streamingState?.currentSlot ?? null,
     enabled: Boolean(
@@ -73,35 +75,47 @@ export function ActivePositionCard({
   return (
     <Card className="border-white/10 bg-black/15">
       <CardContent className="space-y-4 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Badge
-              variant={position.data.isBuy === 1 ? 'positive' : 'negative'}
-            >
-              {metrics.sideLabel}
-            </Badge>
-            <div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Waves className="size-4" />
-                <span>{metrics.flowLabel}</span>
+        <button
+          aria-controls={detailsId}
+          aria-expanded={expanded}
+          className="w-full text-left"
+          onClick={() => setExpanded((previous) => !previous)}
+          type="button"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Badge
+                variant={position.data.isBuy === 1 ? 'positive' : 'negative'}
+              >
+                {metrics.sideLabel}
+              </Badge>
+              <div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Waves className="size-4" />
+                  <span>{metrics.flowLabel}</span>
+                </div>
+                <p className="mt-1 text-lg font-semibold">
+                  {formatAtoms(metrics.amountAtoms, metrics.depositedDecimals)}{' '}
+                  {metrics.depositedToken}
+                </p>
               </div>
-              <p className="mt-1 text-lg font-semibold">
-                {formatAtoms(metrics.amountAtoms, metrics.depositedDecimals)}{' '}
-                {metrics.depositedToken}
-              </p>
+            </div>
+
+            <div className="flex items-center gap-3 text-right">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                  Remaining
+                </p>
+                <p className="font-medium">
+                  {metrics.remainingPercent.toFixed(1)}%
+                </p>
+              </div>
+              <ChevronDown
+                className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              />
             </div>
           </div>
-          <div className="flex items-center gap-3 text-right">
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                Remaining
-              </p>
-              <p className="font-medium">
-                {metrics.remainingPercent.toFixed(1)}%
-              </p>
-            </div>
-          </div>
-        </div>
+        </button>
 
         <Progress
           animated
@@ -110,40 +124,43 @@ export function ActivePositionCard({
           value={metrics.progressPercent}
         />
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            label="Deposited"
-            value={`${formatAtoms(metrics.amountAtoms, metrics.depositedDecimals)} ${metrics.depositedToken}`}
-          />
-          <MetricCard
-            label="Remaining"
-            value={`${formatAtoms(metrics.remainingAtoms, metrics.depositedDecimals)} ${metrics.depositedToken}`}
-          />
-          <MetricCard
-            label="Flow"
-            value={`${formatAtoms(metrics.flowAtomsPerSlot, metrics.depositedDecimals)} ${metrics.depositedToken}/slot`}
-          />
-          <MetricCard
-            label="Swapped"
-            value={
-              metrics.swappedAtoms === null
-                ? '—'
-                : `${formatAtoms(metrics.swappedAtoms, metrics.swappedDecimals)} ${metrics.swappedToken}`
-            }
-          />
-        </div>
+        {expanded ? (
+          <div className="grid gap-3" id={detailsId}>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <MetricCard
+                label="Deposited"
+                value={`${formatAtoms(metrics.amountAtoms, metrics.depositedDecimals)} ${metrics.depositedToken}`}
+              />
+              <MetricCard
+                label="Remaining"
+                value={`${formatAtoms(metrics.remainingAtoms, metrics.depositedDecimals)} ${metrics.depositedToken}`}
+              />
+              <MetricCard
+                label="Flow"
+                value={`${formatAtoms(metrics.flowAtomsPerSlot, metrics.depositedDecimals)} ${metrics.depositedToken}/slot`}
+              />
+              <MetricCard
+                label="Swapped"
+                value={
+                  metrics.swappedAtoms === null
+                    ? '—'
+                    : `${formatAtoms(metrics.swappedAtoms, metrics.swappedDecimals)} ${metrics.swappedToken}`
+                }
+              />
+            </div>
 
-        <div className="grid gap-3">
-          <MetricCard
-            icon={<ArrowUpRight className="size-4" />}
-            label="Average Price"
-            value={
-              metrics.averagePrice === null
-                ? '—'
-                : `${formatPrice(metrics.averagePrice)} ${quoteTicker}/${baseTicker}`
-            }
-          />
-        </div>
+            <MetricCard
+              icon={<ArrowUpRight className="size-4" />}
+              label="Average Price"
+              value={
+                metrics.averagePrice === null
+                  ? '—'
+                  : `${formatPrice(metrics.averagePrice)} ${quoteTicker}/${baseTicker}`
+              }
+            />
+          </div>
+        ) : null}
+
         <Button
           className="w-full rounded-xl bg-destructive/85 text-white hover:bg-destructive"
           disabled={isClosing}
