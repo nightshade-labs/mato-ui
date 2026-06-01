@@ -35,6 +35,46 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       {
         title: 'Mato',
       },
+      {
+        name: 'description',
+        content: 'Continuous Clearing Auctions',
+      },
+      {
+        property: 'og:title',
+        content: 'Mato',
+      },
+      {
+        property: 'og:description',
+        content: 'Continuous Clearing Auctions',
+      },
+      {
+        property: 'og:image',
+        content: 'https://www.mato.finance/icon-512.png',
+      },
+      {
+        property: 'og:url',
+        content: 'https://www.mato.finance',
+      },
+      {
+        property: 'og:type',
+        content: 'website',
+      },
+      {
+        name: 'twitter:card',
+        content: 'summary',
+      },
+      {
+        name: 'twitter:title',
+        content: 'Mato',
+      },
+      {
+        name: 'twitter:description',
+        content: 'Continuous Clearing Auctions',
+      },
+      {
+        name: 'twitter:image',
+        content: 'https://www.mato.finance/icon-512.png',
+      },
     ],
     links: [
       {
