@@ -789,7 +789,10 @@ export function TradingDashboard() {
                         key={position.address}
                         baseDecimals={baseDecimals}
                         baseTicker={baseTicker}
-                        isClosing={closePosition.isClosing}
+                        isCloseDisabled={closePosition.isClosing}
+                        isClosing={closePosition.isClosingPosition(
+                          position.address,
+                        )}
                         marketAddress={marketAddress}
                         onClose={async (tradePositionAddress) => {
                           if (lowMaintenanceNativeSolWarning) {

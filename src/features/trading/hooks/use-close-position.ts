@@ -26,6 +26,9 @@ export function useClosePosition() {
   const [error, setError] = useState<string | null>(null)
   const [signature, setSignature] = useState<string | null>(null)
   const [closedCount, setClosedCount] = useState(0)
+  const [closingPositionAddresses, setClosingPositionAddresses] = useState<
+    Array<string>
+  >([])
 
   const closePosition = useCallback(
     async ({
@@ -38,6 +41,7 @@ export function useClosePosition() {
       if (!session) {
         setStatus('error')
         setError('Connect a wallet to close a position.')
+        setClosingPositionAddresses([])
         return false
       }
 
@@ -45,6 +49,7 @@ export function useClosePosition() {
       setError(null)
       setSignature(null)
       setClosedCount(0)
+      setClosingPositionAddresses([tradePositionAddress.toString()])
 
       try {
         setStatus('submitting')
@@ -85,6 +90,7 @@ export function useClosePosition() {
         setError(
           formatTransactionError(caughtError, 'Failed to close position.'),
         )
+        setClosingPositionAddresses([])
         return false
       }
     },
@@ -102,11 +108,13 @@ export function useClosePosition() {
       if (!session) {
         setStatus('error')
         setError('Connect a wallet to close positions.')
+        setClosingPositionAddresses([])
         return false
       }
       if (tradePositionAddresses.length === 0) {
         setStatus('error')
         setError('Select at least one position to close.')
+        setClosingPositionAddresses([])
         return false
       }
 
@@ -114,6 +122,9 @@ export function useClosePosition() {
       setError(null)
       setSignature(null)
       setClosedCount(0)
+      setClosingPositionAddresses(
+        tradePositionAddresses.map((address) => address.toString()),
+      )
 
       try {
         setStatus('submitting')
@@ -154,6 +165,7 @@ export function useClosePosition() {
         setError(
           formatTransactionError(caughtError, 'Failed to close positions.'),
         )
+        setClosingPositionAddresses([])
         return false
       }
     },
@@ -166,14 +178,24 @@ export function useClosePosition() {
     setError(null)
     setSignature(null)
     setClosedCount(0)
+    setClosingPositionAddresses([])
   }, [sendTransaction])
+
+  const isClosing = status === 'building' || status === 'submitting'
+  const isClosingPosition = useCallback(
+    (tradePositionAddress: Address) =>
+      isClosing &&
+      closingPositionAddresses.includes(tradePositionAddress.toString()),
+    [closingPositionAddresses, isClosing],
+  )
 
   return {
     closePosition,
     closePositions,
     closedCount,
     error,
-    isClosing: status === 'building' || status === 'submitting',
+    isClosing,
+    isClosingPosition,
     reset,
     signature,
     status,
