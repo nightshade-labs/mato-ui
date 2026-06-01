@@ -22,8 +22,8 @@ export function buildClosedPositionSummary({
   const isBuy = event.is_buy === 1
   const sideLabel = isBuy ? 'Buy' : 'Sell'
   const flowLabel = isBuy
-    ? `${quoteTicker} -> ${baseTicker}`
-    : `${baseTicker} -> ${quoteTicker}`
+    ? `${quoteTicker} → ${baseTicker}`
+    : `${baseTicker} → ${quoteTicker}`
   const depositToken = isBuy ? quoteTicker : baseTicker
   const depositDecimals = isBuy ? quoteDecimals : baseDecimals
   const swappedToken = isBuy ? baseTicker : quoteTicker

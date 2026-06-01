@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUpRight, ChevronDown } from 'lucide-react'
+import {ChevronDown } from 'lucide-react'
 import { fetchClosedPositionMiniChart } from '../api/market-repository'
 import { useClosedPositionEvents } from '../hooks/use-closed-position-events'
 import {
@@ -10,9 +10,9 @@ import {
 import { clampPage, getPageCount, getPageItems } from '../lib/pagination'
 import {
   formatAtoms,
-  formatExplorerTransactionUrl,
+
   formatPrice,
-  shortenAddress,
+
 } from '../lib/format'
 import { buildClosedPositionSummary } from '../view-models/closed-position'
 import { MiniPriceChart } from './mini-price-chart'
@@ -21,7 +21,6 @@ import type { MiniPriceChartPoint } from '../lib/mini-chart'
 import type { ClosePositionEvent } from '@/integrations/supabase'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { endpoint } from '@/integrations/solana'
 
 interface ClosedPositionChartState {
   error: string | null
@@ -441,9 +440,6 @@ const ClosedPositionRow = memo(function ClosedPositionRow({
               {summary.sideLabel}
             </Badge>
             <div>
-              <div className="text-sm text-muted-foreground">
-                {summary.flowLabel}
-              </div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
                 <span className="font-medium">
                   {formatAtoms(summary.consumedAtoms, summary.depositDecimals)}{' '}
@@ -459,16 +455,6 @@ const ClosedPositionRow = memo(function ClosedPositionRow({
           </div>
 
           <div className="flex items-center gap-3 text-right">
-            <a
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground transition hover:text-foreground"
-              href={formatExplorerTransactionUrl(event.signature, endpoint)}
-              rel="noreferrer"
-              target="_blank"
-              onClick={(clickEvent) => clickEvent.stopPropagation()}
-            >
-              {shortenAddress(event.signature, 6, 4)}
-              <ArrowUpRight className="size-3" />
-            </a>
             <ChevronDown
               className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
             />
