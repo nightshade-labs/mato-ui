@@ -12,7 +12,6 @@ import {
   computePrependedLogicalRange,
 } from '../lib/chart-history'
 import { CHART_HISTORY_REQUEST_DEBOUNCE_MS } from '../constants'
-import { computeOhlcAveragePrice } from '../lib/market'
 import type {
   CandlestickData,
   HistogramData,
@@ -172,19 +171,9 @@ function sanitizeChartCandles(data: Array<TradingViewAggregatedCandle>) {
         isSafeChartNumber(candle.volume) && candle.volume >= 0
           ? candle.volume
           : 0
-      const normalizedAveragePrice =
-        isSafeChartNumber(candle.averagePrice) && candle.averagePrice > 0
-          ? candle.averagePrice
-          : computeOhlcAveragePrice({
-              close: candle.close,
-              high: normalizedHigh,
-              low: normalizedLow,
-              open: candle.open,
-            })
 
       return {
         ...candle,
-        averagePrice: normalizedAveragePrice,
         high: normalizedHigh,
         low: normalizedLow,
         time,
@@ -438,7 +427,7 @@ export function MarketPriceChart({
     () =>
       chartData.map<LineData<UTCTimestamp>>((candle) => ({
         time: candle.time as UTCTimestamp,
-        value: candle.averagePrice,
+        value: candle.close,
       })),
     [chartData],
   )

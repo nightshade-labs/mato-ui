@@ -8,7 +8,6 @@ import type { TradingViewAggregatedCandle } from './market'
 
 function candle(slot: number): TradingViewAggregatedCandle {
   return {
-    averagePrice: 100 + slot,
     close: 100 + slot,
     endSlot: slot + 9,
     high: 101 + slot,

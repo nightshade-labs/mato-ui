@@ -2,7 +2,6 @@ import type { MarketUpdateEvent } from '@/integrations/supabase'
 import type { MarketPriceSnapshot } from '../domain/models'
 
 export interface TradingViewAggregatedCandle {
-  averagePrice: number
   endSlot: number
   time: number
   startSlot: number
@@ -14,7 +13,6 @@ export interface TradingViewAggregatedCandle {
 }
 
 interface SlotPricePoint {
-  baseVolume: number
   slot: number
   createdAtMs: number
   price: number
@@ -22,7 +20,6 @@ interface SlotPricePoint {
 }
 
 interface TimeBucketCandle {
-  baseVolume: number
   bucketStartMs: number
   endSlot: number
   startSlot: number
@@ -34,7 +31,6 @@ interface TimeBucketCandle {
 }
 
 interface NormalizedCandle {
-  averagePrice: number
   endSlot: number
   timestampMs: number
   startSlot: number
@@ -48,20 +44,6 @@ interface NormalizedCandle {
 export interface MarketTimeAnchor {
   slot: number
   timeMs: number
-}
-
-export function computeOhlcAveragePrice({
-  close,
-  high,
-  low,
-  open,
-}: {
-  close: number
-  high: number
-  low: number
-  open: number
-}) {
-  return (open + high + low + close) / 4
 }
 
 export function marketPriceFromFlows(
@@ -93,7 +75,6 @@ function normalizePoints(
     if (!Number.isFinite(base) || !Number.isFinite(quote) || base === 0)
       continue
     const price = Math.abs(quote) / Math.abs(base)
-    const baseVolume = Math.abs(base)
     const quoteVolume = Math.abs(Number(event.quote_flow) / quoteScale)
     const createdAtMs = new Date(event.created_at).getTime()
     if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(createdAtMs))
@@ -102,7 +83,6 @@ function normalizePoints(
     const previous = latestPerSlot.get(event.slot)
     if (!previous || createdAtMs >= previous.createdAtMs) {
       latestPerSlot.set(event.slot, {
-        baseVolume,
         slot: event.slot,
         createdAtMs,
         price,
@@ -167,7 +147,6 @@ function aggregateSparseSlotCandles(
     const bucketSeedSlot = lastKnownSlot ?? nextPoint.slot
 
     const bucket: TimeBucketCandle = {
-      baseVolume: 0,
       bucketStartMs: bucketStart,
       endSlot: bucketSeedSlot,
       startSlot: bucketSeedSlot,
@@ -191,7 +170,6 @@ function aggregateSparseSlotCandles(
       bucket.high = Math.max(bucket.high, point.price)
       bucket.low = Math.min(bucket.low, point.price)
       bucket.close = point.price
-      bucket.baseVolume += point.baseVolume
       bucket.volume += point.quoteVolume
       bucket.endSlot = point.slot
       lastKnownPrice = point.price
@@ -204,10 +182,6 @@ function aggregateSparseSlotCandles(
   }
 
   return buckets.map((bucket) => ({
-    averagePrice:
-      bucket.baseVolume > 0
-        ? bucket.volume / bucket.baseVolume
-        : computeOhlcAveragePrice(bucket),
     endSlot: bucket.endSlot,
     startSlot: bucket.startSlot,
     timestampMs: bucket.bucketStartMs,
@@ -236,7 +210,6 @@ export function aggregateTradingViewCandles(
     timeAnchor,
   )
   return candles.map<TradingViewAggregatedCandle>((candle) => ({
-    averagePrice: candle.averagePrice,
     endSlot: candle.endSlot,
     time: Math.floor(candle.timestampMs / 1000),
     startSlot: candle.startSlot,
@@ -282,7 +255,6 @@ export function mergeLivePriceIntoCandles({
   if (!latestCandle) {
     return [
       {
-        averagePrice: price,
         close: price,
         endSlot: slot,
         high: price,
@@ -307,10 +279,8 @@ export function mergeLivePriceIntoCandles({
       high: Math.max(latestCandle.high, price),
       low: Math.min(latestCandle.low, price),
     }
-    updatedCandle.averagePrice = computeOhlcAveragePrice(updatedCandle)
 
     if (
-      updatedCandle.averagePrice === latestCandle.averagePrice &&
       updatedCandle.close === latestCandle.close &&
       updatedCandle.endSlot === latestCandle.endSlot &&
       updatedCandle.high === latestCandle.high &&
@@ -323,16 +293,9 @@ export function mergeLivePriceIntoCandles({
   }
 
   const open = latestCandle.close
-  const averagePrice = computeOhlcAveragePrice({
-    close: price,
-    high: Math.max(open, price),
-    low: Math.min(open, price),
-    open,
-  })
   return [
     ...candles,
     {
-      averagePrice,
       close: price,
       endSlot: slot,
       high: Math.max(open, price),

@@ -28,7 +28,6 @@ describe('buildTradingDashboardViewModel', () => {
   it('prefers the latest market price and derives execution preview', () => {
     const chartCandles: Array<TradingViewAggregatedCandle> = [
       {
-        averagePrice: 18.5,
         close: 19,
         endSlot: 11,
         high: 19,
