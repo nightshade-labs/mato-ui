@@ -977,7 +977,10 @@ export function MarketPriceChart({
   }, [chartData, positionOverlays])
 
   return (
-    <div className="relative h-full min-h-[420px] w-full touch-none">
+    <div
+      className="relative h-full min-h-[420px] w-full touch-none"
+      data-base-ui-swipe-ignore=""
+    >
       <div ref={containerRef} className="h-full min-h-[420px] w-full" />
       {projectedPositionOverlays.length > 0 ? (
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
