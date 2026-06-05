@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useWalletConnection, useWalletSession } from '@solana/react-hooks'
-import { AlertTriangle, RefreshCcw, X } from 'lucide-react'
+import { AlertTriangle, ChartCandlestick, RefreshCcw, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   CHART_TIMEFRAMES,
@@ -58,16 +58,27 @@ import { ClosedPositionsList } from './closed-positions-list'
 import { HighPriceImpactDialog } from './high-price-impact-dialog'
 import { PositionPagination } from './position-pagination'
 import { ReclaimRentBanner } from './reclaim-rent-banner'
+import type { ReactNode } from 'react'
 import type {
   ChartCrosshairData,
   ChartHistoryRequest,
 } from './market-price-chart'
 import type { ChartTimeframe, OrderSide, PositionPanelTab } from '../constants'
 import type { TradePositionRecord } from '../domain/models'
+import type { TradingViewAggregatedCandle } from '../lib/market'
 import { endpoint } from '@/integrations/solana'
 import { Alert } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer'
+import { cn } from '@/lib/utils'
 
 const DEFAULT_VISIBLE_BARS_BY_TIMEFRAME: Record<ChartTimeframe, number> = {
   '1m': 120,
@@ -578,13 +589,60 @@ export function TradingDashboard() {
   return (
     <div className="relative min-h-screen bg-[color:var(--color-page-bg)] text-foreground">
       <div className="relative mx-auto max-w-[1440px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
-        <div className="mb-5 flex items-baseline gap-3">
-          <h1 className="text-xl font-semibold tracking-[-0.04em] sm:text-2xl">
-            {baseTicker}/{quoteTicker}
-          </h1>
-          <span className="text-xl font-semibold tracking-[-0.04em] text-[color:var(--color-accent-strong)] sm:text-2xl">
-            {formatDashboardPrice(displayPrice)}
-          </span>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-baseline gap-3">
+            <h1 className="text-xl font-semibold tracking-[-0.04em] sm:text-2xl">
+              {baseTicker}/{quoteTicker}
+            </h1>
+            <span className="text-xl font-semibold tracking-[-0.04em] text-[color:var(--color-accent-strong)] sm:text-2xl">
+              {formatDashboardPrice(displayPrice)}
+            </span>
+          </div>
+          <Drawer>
+            <DrawerTrigger
+              render={
+                <Button
+                  className="rounded-full xl:hidden"
+                  size="sm"
+                  variant="outline"
+                />
+              }
+            >
+              <ChartCandlestick className="size-4" />
+              Chart
+            </DrawerTrigger>
+            <DrawerContent className="xl:hidden">
+              <DrawerHeader>
+                <DrawerTitle>
+                  {baseTicker}/{quoteTicker}
+                </DrawerTitle>
+                <DrawerDescription>
+                  {formatDashboardPrice(displayPrice)}
+                </DrawerDescription>
+              </DrawerHeader>
+              <PriceChartPanel
+                chartCandles={chartCandles}
+                chartHeight={360}
+                chartTimeframe={chartTimeframe}
+                hasMoreHistory={marketChartHistory.hasMoreHistory}
+                isLoadingMoreHistory={marketChartHistory.isLoadingMoreHistory}
+                isMarketUpdatesLoading={marketUpdates.isLoading}
+                marketAddressError={
+                  marketAddressQuery.error instanceof Error
+                    ? marketAddressQuery.error.message
+                    : null
+                }
+                marketChartHistoryError={marketChartHistory.error}
+                marketUpdatesError={marketUpdates.error}
+                onCrosshairMove={setCrosshairData}
+                onNeedOlderHistory={handleNeedOlderChartHistory}
+                onReset={() => setChartResetSignal((previous) => previous + 1)}
+                onTimeframeChange={setChartTimeframe}
+                resetSignal={chartResetSignal}
+                statusMinHeightClassName="min-h-[360px]"
+              />
+            </DrawerContent>
+          </Drawer>
         </div>
 
         {lowSubmitNativeSolWarning ? (
@@ -636,80 +694,28 @@ export function TradingDashboard() {
 
           <div className="space-y-6 xl:col-start-1 xl:row-start-1">
             <Card className="hidden border-white/10 bg-black/15 xl:block">
-              <CardContent className="space-y-4 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap gap-2">
-                    {CHART_TIMEFRAMES.map((timeframe) => (
-                      <Button
-                        key={timeframe.label}
-                        className="rounded-full"
-                        onClick={() => setChartTimeframe(timeframe.label)}
-                        size="xs"
-                        variant={
-                          chartTimeframe === timeframe.label
-                            ? 'default'
-                            : 'outline'
-                        }
-                      >
-                        {timeframe.label}
-                      </Button>
-                    ))}
-                  </div>
-                  <Button
-                    className="rounded-full"
-                    onClick={() =>
-                      setChartResetSignal((previous) => previous + 1)
-                    }
-                    size="xs"
-                    variant="outline"
-                  >
-                    <RefreshCcw className="size-3.5" />
-                    Reset
-                  </Button>
-                </div>
-
-                {marketUpdates.isLoading && chartCandles.length === 0 ? (
-                  <div className="flex min-h-[420px] items-center justify-center rounded-[1.5rem] border border-white/8 bg-white/5 text-sm text-muted-foreground">
-                    Loading market history...
-                  </div>
-                ) : chartCandles.length === 0 ? (
-                  <div className="flex min-h-[420px] items-center justify-center rounded-[1.5rem] border border-white/8 bg-white/5 text-sm text-muted-foreground">
-                    Not enough market updates to render the chart yet.
-                  </div>
-                ) : (
-                  <div className="overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),rgba(255,255,255,0)_55%)]">
-                    <MarketPriceChart
-                      defaultVisibleBars={
-                        DEFAULT_VISIBLE_BARS_BY_TIMEFRAME[chartTimeframe]
-                      }
-                      data={chartCandles}
-                      hasMoreHistory={marketChartHistory.hasMoreHistory}
-                      isLoadingMoreHistory={
-                        marketChartHistory.isLoadingMoreHistory
-                      }
-                      onCrosshairMove={setCrosshairData}
-                      onNeedOlderHistory={handleNeedOlderChartHistory}
-                      resetSignal={chartResetSignal}
-                      viewportPresetKey={chartTimeframe}
-                    />
-                  </div>
-                )}
-
-                {marketUpdates.error ? (
-                  <p className="text-sm text-destructive">
-                    {marketUpdates.error}
-                  </p>
-                ) : null}
-                {marketChartHistory.error ? (
-                  <p className="text-sm text-destructive">
-                    {marketChartHistory.error}
-                  </p>
-                ) : null}
-                {marketAddressQuery.error instanceof Error ? (
-                  <p className="text-sm text-destructive">
-                    {marketAddressQuery.error.message}
-                  </p>
-                ) : null}
+              <CardContent className="p-4">
+                <PriceChartPanel
+                  chartCandles={chartCandles}
+                  chartTimeframe={chartTimeframe}
+                  hasMoreHistory={marketChartHistory.hasMoreHistory}
+                  isLoadingMoreHistory={marketChartHistory.isLoadingMoreHistory}
+                  isMarketUpdatesLoading={marketUpdates.isLoading}
+                  marketAddressError={
+                    marketAddressQuery.error instanceof Error
+                      ? marketAddressQuery.error.message
+                      : null
+                  }
+                  marketChartHistoryError={marketChartHistory.error}
+                  marketUpdatesError={marketUpdates.error}
+                  onCrosshairMove={setCrosshairData}
+                  onNeedOlderHistory={handleNeedOlderChartHistory}
+                  onReset={() =>
+                    setChartResetSignal((previous) => previous + 1)
+                  }
+                  onTimeframeChange={setChartTimeframe}
+                  resetSignal={chartResetSignal}
+                />
               </CardContent>
             </Card>
 
@@ -866,6 +872,128 @@ function EmptyState({ copy }: { copy: string }) {
         {copy}
       </CardContent>
     </Card>
+  )
+}
+
+function PriceChartPanel({
+  chartCandles,
+  chartHeight = 420,
+  chartTimeframe,
+  className,
+  hasMoreHistory,
+  isLoadingMoreHistory,
+  isMarketUpdatesLoading,
+  marketAddressError,
+  marketChartHistoryError,
+  marketUpdatesError,
+  onCrosshairMove,
+  onNeedOlderHistory,
+  onReset,
+  onTimeframeChange,
+  resetSignal,
+  statusMinHeightClassName = 'min-h-[420px]',
+}: {
+  chartCandles: Array<TradingViewAggregatedCandle>
+  chartHeight?: number
+  chartTimeframe: ChartTimeframe
+  className?: string
+  hasMoreHistory: boolean
+  isLoadingMoreHistory: boolean
+  isMarketUpdatesLoading: boolean
+  marketAddressError: string | null
+  marketChartHistoryError: string | null
+  marketUpdatesError: string | null
+  onCrosshairMove: (value: ChartCrosshairData | null) => void
+  onNeedOlderHistory: (request: ChartHistoryRequest) => void
+  onReset: () => void
+  onTimeframeChange: (timeframe: ChartTimeframe) => void
+  resetSignal: number
+  statusMinHeightClassName?: string
+}) {
+  return (
+    <div className={cn('space-y-4', className)}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          {CHART_TIMEFRAMES.map((timeframe) => (
+            <Button
+              key={timeframe.label}
+              className="rounded-full"
+              onClick={() => onTimeframeChange(timeframe.label)}
+              size="xs"
+              variant={
+                chartTimeframe === timeframe.label ? 'default' : 'outline'
+              }
+            >
+              {timeframe.label}
+            </Button>
+          ))}
+        </div>
+        <Button
+          className="rounded-full"
+          onClick={onReset}
+          size="xs"
+          variant="outline"
+        >
+          <RefreshCcw className="size-3.5" />
+          Reset
+        </Button>
+      </div>
+
+      {isMarketUpdatesLoading && chartCandles.length === 0 ? (
+        <ChartState className={statusMinHeightClassName}>
+          Loading market history...
+        </ChartState>
+      ) : chartCandles.length === 0 ? (
+        <ChartState className={statusMinHeightClassName}>
+          Not enough market updates to render the chart yet.
+        </ChartState>
+      ) : (
+        <div className="overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),rgba(255,255,255,0)_55%)]">
+          <MarketPriceChart
+            defaultVisibleBars={
+              DEFAULT_VISIBLE_BARS_BY_TIMEFRAME[chartTimeframe]
+            }
+            data={chartCandles}
+            hasMoreHistory={hasMoreHistory}
+            height={chartHeight}
+            isLoadingMoreHistory={isLoadingMoreHistory}
+            onCrosshairMove={onCrosshairMove}
+            onNeedOlderHistory={onNeedOlderHistory}
+            resetSignal={resetSignal}
+            viewportPresetKey={chartTimeframe}
+          />
+        </div>
+      )}
+
+      {marketUpdatesError ? (
+        <p className="text-sm text-destructive">{marketUpdatesError}</p>
+      ) : null}
+      {marketChartHistoryError ? (
+        <p className="text-sm text-destructive">{marketChartHistoryError}</p>
+      ) : null}
+      {marketAddressError ? (
+        <p className="text-sm text-destructive">{marketAddressError}</p>
+      ) : null}
+    </div>
+  )
+}
+
+function ChartState({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-center rounded-[1.5rem] border border-white/8 bg-white/5 text-center text-sm text-muted-foreground',
+        className,
+      )}
+    >
+      {children}
+    </div>
   )
 }
 
