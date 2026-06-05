@@ -85,10 +85,12 @@ const POSITION_BADGE_HEIGHT = 24
 const POSITION_BADGE_GAP = 4
 
 interface ProjectedPositionOverlay extends ChartPositionOverlay {
+  badgeAnchorX: number
   badgeLeft: number
   badgeTop: number
   endX: number
   lineColor: string
+  showBadge: boolean
   startX: number
   width: number
   y: number
@@ -271,6 +273,11 @@ function stackPositionBadges({
   bounds: { height: number; width: number }
   overlays: Array<Omit<ProjectedPositionOverlay, 'badgeLeft' | 'badgeTop'>>
 }): Array<ProjectedPositionOverlay> {
+  const stackedOverlays = overlays.map((overlay) => ({
+    ...overlay,
+    badgeLeft: 0,
+    badgeTop: 0,
+  }))
   const occupied: Array<{
     bottom: number
     left: number
@@ -278,24 +285,31 @@ function stackPositionBadges({
     top: number
   }> = []
 
-  return [...overlays]
+  stackedOverlays
+    .filter((overlay) => overlay.showBadge)
     .sort((left, right) => {
-      if (Math.abs(left.startX - right.startX) < 1) return left.y - right.y
-      return left.startX - right.startX
+      if (Math.abs(left.badgeAnchorX - right.badgeAnchorX) < 1) {
+        return left.y - right.y
+      }
+      return left.badgeAnchorX - right.badgeAnchorX
     })
-    .map((overlay) => {
+    .forEach((overlay) => {
       const badgeWidth = estimateBadgeWidth(overlay.label)
       const badgeLeft = Math.min(
-        Math.max(overlay.startX - badgeWidth / 2, 4),
+        Math.max(overlay.badgeAnchorX - badgeWidth / 2, 4),
         Math.max(4, bounds.width - badgeWidth - 4),
       )
       const preferredTop = Math.min(
-        Math.max(overlay.y - POSITION_BADGE_HEIGHT - 8, 4),
+        Math.max(overlay.y - POSITION_BADGE_HEIGHT - 14, 4),
         Math.max(4, bounds.height - POSITION_BADGE_HEIGHT - 4),
       )
       let badgeTop = preferredTop
 
       for (let attempt = 0; attempt < 12; attempt += 1) {
+        badgeTop = Math.max(
+          4,
+          preferredTop - attempt * (POSITION_BADGE_HEIGHT + POSITION_BADGE_GAP),
+        )
         const candidate = {
           bottom: badgeTop + POSITION_BADGE_HEIGHT,
           left: badgeLeft,
@@ -304,24 +318,11 @@ function stackPositionBadges({
         }
         if (!occupied.some((box) => boxesOverlap(candidate, box))) {
           occupied.push(candidate)
-          return {
-            ...overlay,
-            badgeLeft,
-            badgeTop,
-            width: badgeWidth,
-          }
+          overlay.badgeLeft = badgeLeft
+          overlay.badgeTop = badgeTop
+          overlay.width = badgeWidth
+          return
         }
-
-        const nextTop =
-          attempt < 6
-            ? preferredTop -
-              (attempt + 1) * (POSITION_BADGE_HEIGHT + POSITION_BADGE_GAP)
-            : preferredTop +
-              (attempt - 5) * (POSITION_BADGE_HEIGHT + POSITION_BADGE_GAP)
-        badgeTop = Math.min(
-          Math.max(nextTop, 4),
-          Math.max(4, bounds.height - POSITION_BADGE_HEIGHT - 4),
-        )
       }
 
       occupied.push({
@@ -330,13 +331,12 @@ function stackPositionBadges({
         right: badgeLeft + badgeWidth,
         top: badgeTop,
       })
-      return {
-        ...overlay,
-        badgeLeft,
-        badgeTop,
-        width: badgeWidth,
-      }
+      overlay.badgeLeft = badgeLeft
+      overlay.badgeTop = badgeTop
+      overlay.width = badgeWidth
     })
+
+  return stackedOverlays
 }
 
 export function MarketPriceChart({
@@ -446,32 +446,46 @@ export function MarketPriceChart({
     const projected = positionOverlays.flatMap<
       Omit<ProjectedPositionOverlay, 'badgeLeft' | 'badgeTop'>
     >((overlay) => {
-      const startX = getInterpolatedTimeCoordinate({
+      const rawStartX = getInterpolatedTimeCoordinate({
         chartData,
         time: overlay.startTime,
         timeScale,
       })
-      const endX = getInterpolatedTimeCoordinate({
+      const rawEndX = getInterpolatedTimeCoordinate({
         chartData,
         time: overlay.endTime,
         timeScale,
       })
       const y = candleSeriesRef.current?.priceToCoordinate(overlay.averagePrice)
 
-      if (startX === null || endX === null || y === null) {
+      if (rawStartX === null || rawEndX === null || y === null) {
         return []
       }
 
-      const lineEndX = endX <= startX ? startX + 8 : endX
+      const rawLineEndX = rawEndX <= rawStartX ? rawStartX + 8 : rawEndX
+      const minLineX = Math.min(rawStartX, rawLineEndX)
+      const maxLineX = Math.max(rawStartX, rawLineEndX)
+
+      if (
+        maxLineX < 0 ||
+        minLineX > bounds.width ||
+        y < 0 ||
+        y > bounds.height
+      ) {
+        return []
+      }
+
       return [
         {
           ...overlay,
-          endX: lineEndX,
+          badgeAnchorX: rawStartX,
+          endX: Math.min(Math.max(rawLineEndX, 0), bounds.width),
           lineColor:
             overlay.side === 'buy'
               ? seriesColors.positive
               : seriesColors.negative,
-          startX,
+          showBadge: rawStartX >= 0 && rawStartX <= bounds.width,
+          startX: Math.min(Math.max(rawStartX, 0), bounds.width),
           width: 0,
           y,
         },
@@ -930,23 +944,25 @@ export function MarketPriceChart({
               />
             ))}
           </svg>
-          {projectedPositionOverlays.map((overlay) => (
-            <div
-              className={`absolute flex h-6 items-center justify-center rounded-full border px-2 text-[11px] font-semibold shadow-[0_8px_24px_-16px_rgba(0,0,0,0.9)] backdrop-blur-sm ${
-                overlay.side === 'buy'
-                  ? 'border-positive/60 bg-positive/90 text-background'
-                  : 'border-negative/60 bg-negative/90 text-white'
-              }`}
-              key={`${overlay.id}-badge`}
-              style={{
-                left: overlay.badgeLeft,
-                top: overlay.badgeTop,
-                width: overlay.width,
-              }}
-            >
-              <span className="truncate">{overlay.label}</span>
-            </div>
-          ))}
+          {projectedPositionOverlays
+            .filter((overlay) => overlay.showBadge)
+            .map((overlay) => (
+              <div
+                className={`absolute z-10 flex h-6 items-center justify-center rounded-full border px-2 text-[11px] font-semibold shadow-[0_8px_24px_-16px_rgba(0,0,0,0.9)] backdrop-blur-sm ${
+                  overlay.side === 'buy'
+                    ? 'border-positive/60 bg-positive/90 text-background'
+                    : 'border-negative/60 bg-negative/90 text-white'
+                }`}
+                key={`${overlay.id}-badge`}
+                style={{
+                  left: overlay.badgeLeft,
+                  top: overlay.badgeTop,
+                  width: overlay.width,
+                }}
+              >
+                <span className="truncate">{overlay.label}</span>
+              </div>
+            ))}
         </div>
       ) : null}
       {isLoadingMoreHistory ? (
