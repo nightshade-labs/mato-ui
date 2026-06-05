@@ -50,11 +50,11 @@ function DrawerContent({
       <DrawerOverlay />
       <DrawerPrimitive.Viewport
         data-slot="drawer-viewport"
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[calc(100dvh-1rem)] justify-center overflow-y-auto p-2 pt-12 duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0"
+        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[100dvh] overflow-y-auto pt-12 duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0"
       >
         <DrawerPrimitive.Popup
           data-slot="drawer-popup"
-          className="w-full outline-none duration-200 data-ending-style:translate-y-full data-starting-style:translate-y-full sm:max-w-2xl"
+          className="w-full outline-none duration-200 data-ending-style:translate-y-full data-starting-style:translate-y-full"
           {...props}
         >
           <DrawerPrimitive.Content

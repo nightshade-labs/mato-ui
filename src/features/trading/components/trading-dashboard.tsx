@@ -614,7 +614,7 @@ export function TradingDashboard() {
             <DrawerContent className="xl:hidden">
               <DrawerHeader>
                 <DrawerTitle>
-                  {baseTicker}/{quoteTicker} price chart
+                  {baseTicker}/{quoteTicker}
                 </DrawerTitle>
                 <DrawerDescription>
                   {formatDashboardPrice(displayPrice)}
