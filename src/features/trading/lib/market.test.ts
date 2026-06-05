@@ -10,13 +10,14 @@ function marketEvent(
   slot: number,
   createdAtMs: number,
   price = slot + 100,
+  baseAtoms = 1_000_000_000n,
 ): MarketUpdateEvent {
   return {
-    base_flow: 1_000_000_000n,
+    base_flow: baseAtoms,
     created_at: new Date(createdAtMs).toISOString(),
     id: slot,
     market_id: 1,
-    quote_flow: BigInt(price * 1_000_000_000),
+    quote_flow: BigInt(price) * baseAtoms,
     signature: `sig-${slot}`,
     slot,
   }
@@ -90,9 +91,33 @@ describe('aggregateTradingViewCandles', () => {
     ])
     expect(candles.map((candle) => candle.open)).toEqual([100, 100, 100])
     expect(candles.map((candle) => candle.close)).toEqual([100, 100, 200])
+    expect(candles.map((candle) => candle.averagePrice)).toEqual([
+      100, 100, 200,
+    ])
     expect(candles.map((candle) => candle.high)).toEqual([100, 100, 200])
     expect(candles.map((candle) => candle.low)).toEqual([100, 100, 100])
     expect(candles.map((candle) => candle.volume)).toEqual([100, 0, 200])
+  })
+
+  it('uses a flow-weighted average price for buckets with multiple updates', () => {
+    const slotDurationMs = 400
+    const intervalMs = 60_000
+    const baseTimeMs = Date.parse('2026-03-27T10:00:00.000Z')
+
+    const candles = aggregateTradingViewCandles(
+      [
+        marketEvent(1, baseTimeMs + 5_000, 100, 1_000_000_000n),
+        marketEvent(2, baseTimeMs + 10_000, 200, 3_000_000_000n),
+      ],
+      intervalMs,
+      9,
+      9,
+      slotDurationMs,
+    )
+
+    expect(candles).toHaveLength(1)
+    expect(candles[0]?.averagePrice).toBe(175)
+    expect(candles[0]?.close).toBe(200)
   })
 })
 
@@ -101,6 +126,7 @@ function chartCandle(
   overrides: Partial<TradingViewAggregatedCandle> = {},
 ): TradingViewAggregatedCandle {
   return {
+    averagePrice: 100,
     close: 102,
     endSlot: 10,
     high: 105,
@@ -131,6 +157,7 @@ describe('mergeLivePriceIntoCandles', () => {
 
     expect(merged).toHaveLength(1)
     expect(merged[0]).toMatchObject({
+      averagePrice: 103.75,
       close: 110,
       endSlot: 11,
       high: 110,
@@ -157,6 +184,7 @@ describe('mergeLivePriceIntoCandles', () => {
 
     expect(merged).toHaveLength(2)
     expect(merged[1]).toEqual({
+      averagePrice: 100,
       close: 98,
       endSlot: 12,
       high: 102,

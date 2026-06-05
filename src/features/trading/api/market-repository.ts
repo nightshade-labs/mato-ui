@@ -26,6 +26,7 @@ interface ReadApiPriceResponse {
 }
 
 interface ReadApiCandleItem {
+  average_price?: number | null
   time: number
   start_slot: number
   end_slot: number
@@ -87,6 +88,7 @@ interface ReadApiClosedPositionMiniChartResponse {
 }
 
 export interface MarketCandle {
+  averagePrice: number
   time: number
   startSlot: number
   endSlot: number
@@ -133,6 +135,20 @@ function isSafeChartNumber(value: number) {
   return (
     Number.isFinite(value) && Math.abs(value) <= MAX_LIGHTWEIGHT_CHART_ABS_VALUE
   )
+}
+
+function computeOhlcAveragePrice({
+  close,
+  high,
+  low,
+  open,
+}: {
+  close: number
+  high: number
+  low: number
+  open: number
+}) {
+  return (open + high + low + close) / 4
 }
 
 function stableEventIdFromUid(eventUid: string) {
@@ -320,8 +336,20 @@ export async function fetchMarketCandles({
       const normalizedLow = Math.min(item.open, item.high, item.low, item.close)
       const normalizedVolume =
         isSafeChartNumber(item.volume) && item.volume >= 0 ? item.volume : 0
+      const averagePrice =
+        typeof item.average_price === 'number' &&
+        isSafeChartNumber(item.average_price) &&
+        item.average_price > 0
+          ? item.average_price
+          : computeOhlcAveragePrice({
+              close: item.close,
+              high: normalizedHigh,
+              low: normalizedLow,
+              open: item.open,
+            })
 
       return {
+        averagePrice,
         close: item.close,
         endSlot: item.end_slot,
         high: normalizedHigh,

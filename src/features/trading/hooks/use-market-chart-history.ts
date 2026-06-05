@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  fetchMarketCandles,
-  type CandleInterval,
-  type MarketCandle,
-} from '../api/market-repository'
+import { fetchMarketCandles } from '../api/market-repository'
 import { CHART_TIMEFRAMES } from '../constants'
-import type { OlderChartHistoryRequest } from '../lib/chart-history'
+import { mergeLivePriceIntoCandles } from '../lib/market'
+import type { CandleInterval, MarketCandle } from '../api/market-repository'
 import type { ChartTimeframe } from '../constants'
-import {
-  mergeLivePriceIntoCandles,
-  type TradingViewAggregatedCandle,
-} from '../lib/market'
 import type { MarketPriceSnapshot } from '../domain/models'
+import type { OlderChartHistoryRequest } from '../lib/chart-history'
+import type { TradingViewAggregatedCandle } from '../lib/market'
 
 interface UseMarketChartHistoryOptions {
   latestPrice?: MarketPriceSnapshot | null
@@ -45,6 +40,7 @@ function toTradingViewCandle(
   candle: MarketCandle,
 ): TradingViewAggregatedCandle {
   return {
+    averagePrice: candle.averagePrice,
     close: candle.close,
     endSlot: candle.endSlot,
     high: candle.high,
@@ -203,11 +199,7 @@ export function useMarketChartHistory({
       }
 
       const currentOldestTime =
-        oldestLoadedCandleTimeRef.current ?? existingCandles[0]?.time ?? null
-      if (currentOldestTime === null) {
-        setHasMoreHistory(false)
-        return
-      }
+        oldestLoadedCandleTimeRef.current ?? existingCandles[0].time
 
       const barsToLoad = Math.min(
         MAX_POINTS,
@@ -251,11 +243,10 @@ export function useMarketChartHistory({
         setCandles(mergedCandles)
         candlesRef.current = mergedCandles
 
-        const nextOldestTime = mergedCandles[0]?.time ?? null
+        const nextOldestTime = mergedCandles[0].time
         oldestLoadedCandleTimeRef.current = nextOldestTime
 
-        const extendedOldestPoint =
-          nextOldestTime !== null && nextOldestTime < currentOldestTime
+        const extendedOldestPoint = nextOldestTime < currentOldestTime
         setHasMoreHistory(extendedOldestPoint)
       } catch (fetchError) {
         if (requestEpochRef.current !== requestEpoch) {
