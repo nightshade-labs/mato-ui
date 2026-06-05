@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useWalletConnection, useWalletSession } from '@solana/react-hooks'
-import { AlertTriangle, ChartCandlestick, RefreshCcw, X } from 'lucide-react'
+import {
+  AlertTriangle,
+  ChartCandlestick,
+  ChartLine,
+  RefreshCcw,
+  X,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import {
   CHART_TIMEFRAMES,
@@ -67,6 +73,7 @@ import { ReclaimRentBanner } from './reclaim-rent-banner'
 import type { ReactNode } from 'react'
 import type {
   ChartCrosshairData,
+  ChartDisplayMode,
   ChartHistoryRequest,
 } from './market-price-chart'
 import type { ChartPositionOverlay } from '../lib/chart-positions'
@@ -92,6 +99,10 @@ const DEFAULT_VISIBLE_BARS_BY_TIMEFRAME: Record<ChartTimeframe, number> = {
   '5m': 96,
   '1h': 72,
 }
+const CHART_DISPLAY_MODES = [
+  { icon: ChartCandlestick, label: 'Candles', mode: 'candles' },
+  { icon: ChartLine, label: 'Line', mode: 'line' },
+] as const
 const CHART_POSITION_CLOSED_LOOKBACK_DAYS = 30
 const CHART_POSITION_CLOSED_LIMIT = 1000
 
@@ -132,6 +143,8 @@ export function TradingDashboard() {
     useState<PositionPanelTab>('active')
   const [activePositionPage, setActivePositionPage] = useState(0)
   const [chartTimeframe, setChartTimeframe] = useState<ChartTimeframe>('5m')
+  const [chartDisplayMode, setChartDisplayMode] =
+    useState<ChartDisplayMode>('candles')
   const [chartResetSignal, setChartResetSignal] = useState(0)
   const [highPriceImpactDialogOpen, setHighPriceImpactDialogOpen] =
     useState(false)
@@ -727,6 +740,7 @@ export function TradingDashboard() {
               </DrawerHeader>
               <PriceChartPanel
                 chartCandles={chartCandles}
+                chartDisplayMode={chartDisplayMode}
                 chartHeight={360}
                 chartTimeframe={chartTimeframe}
                 hasMoreHistory={marketChartHistory.hasMoreHistory}
@@ -740,6 +754,7 @@ export function TradingDashboard() {
                 marketChartHistoryError={marketChartHistory.error}
                 marketUpdatesError={marketUpdates.error}
                 onCrosshairMove={setCrosshairData}
+                onDisplayModeChange={setChartDisplayMode}
                 onNeedOlderHistory={handleNeedOlderChartHistory}
                 onReset={() => setChartResetSignal((previous) => previous + 1)}
                 onTimeframeChange={setChartTimeframe}
@@ -808,6 +823,7 @@ export function TradingDashboard() {
               <CardContent className="p-4">
                 <PriceChartPanel
                   chartCandles={chartCandles}
+                  chartDisplayMode={chartDisplayMode}
                   chartTimeframe={chartTimeframe}
                   hasMoreHistory={marketChartHistory.hasMoreHistory}
                   isLoadingMoreHistory={marketChartHistory.isLoadingMoreHistory}
@@ -820,6 +836,7 @@ export function TradingDashboard() {
                   marketChartHistoryError={marketChartHistory.error}
                   marketUpdatesError={marketUpdates.error}
                   onCrosshairMove={setCrosshairData}
+                  onDisplayModeChange={setChartDisplayMode}
                   onNeedOlderHistory={handleNeedOlderChartHistory}
                   onReset={() =>
                     setChartResetSignal((previous) => previous + 1)
@@ -994,6 +1011,7 @@ function EmptyState({ copy }: { copy: string }) {
 
 function PriceChartPanel({
   chartCandles,
+  chartDisplayMode,
   chartHeight = 420,
   chartTimeframe,
   className,
@@ -1004,6 +1022,7 @@ function PriceChartPanel({
   marketChartHistoryError,
   marketUpdatesError,
   onCrosshairMove,
+  onDisplayModeChange,
   onNeedOlderHistory,
   onReset,
   onTimeframeChange,
@@ -1013,6 +1032,7 @@ function PriceChartPanel({
   statusMinHeightClassName = 'min-h-[420px]',
 }: {
   chartCandles: Array<TradingViewAggregatedCandle>
+  chartDisplayMode: ChartDisplayMode
   chartHeight?: number
   chartTimeframe: ChartTimeframe
   className?: string
@@ -1023,6 +1043,7 @@ function PriceChartPanel({
   marketChartHistoryError: string | null
   marketUpdatesError: string | null
   onCrosshairMove: (value: ChartCrosshairData | null) => void
+  onDisplayModeChange: (mode: ChartDisplayMode) => void
   onNeedOlderHistory: (request: ChartHistoryRequest) => void
   onReset: () => void
   onTimeframeChange: (timeframe: ChartTimeframe) => void
@@ -1034,20 +1055,37 @@ function PriceChartPanel({
   return (
     <div className={cn('space-y-4', className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {CHART_TIMEFRAMES.map((timeframe) => (
-            <Button
-              key={timeframe.label}
-              className="rounded-full"
-              onClick={() => onTimeframeChange(timeframe.label)}
-              size="xs"
-              variant={
-                chartTimeframe === timeframe.label ? 'default' : 'outline'
-              }
-            >
-              {timeframe.label}
-            </Button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap gap-2">
+            {CHART_TIMEFRAMES.map((timeframe) => (
+              <Button
+                key={timeframe.label}
+                className="rounded-full"
+                onClick={() => onTimeframeChange(timeframe.label)}
+                size="xs"
+                variant={
+                  chartTimeframe === timeframe.label ? 'default' : 'outline'
+                }
+              >
+                {timeframe.label}
+              </Button>
+            ))}
+          </div>
+          <div className="flex rounded-full border border-white/10 bg-white/5 p-0.5">
+            {CHART_DISPLAY_MODES.map(({ icon: Icon, label, mode }) => (
+              <Button
+                key={mode}
+                aria-pressed={chartDisplayMode === mode}
+                className="rounded-full"
+                onClick={() => onDisplayModeChange(mode)}
+                size="xs"
+                variant={chartDisplayMode === mode ? 'default' : 'ghost'}
+              >
+                <Icon className="size-3.5" />
+                {label}
+              </Button>
+            ))}
+          </div>
         </div>
         <Button
           className="rounded-full"
@@ -1075,6 +1113,7 @@ function PriceChartPanel({
               DEFAULT_VISIBLE_BARS_BY_TIMEFRAME[chartTimeframe]
             }
             data={chartCandles}
+            displayMode={chartDisplayMode}
             hasMoreHistory={hasMoreHistory}
             height={chartHeight}
             isLoadingMoreHistory={isLoadingMoreHistory}
