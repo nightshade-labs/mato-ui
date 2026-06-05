@@ -41,11 +41,17 @@ import { useMarketPrice } from '../hooks/use-market-price'
 import { useMarketUpdates } from '../hooks/use-market-updates'
 import { useStreamingMarketState } from '../hooks/use-streaming-market-state'
 import { useTradePositions } from '../hooks/use-trade-positions'
+import { useClosedPositionEvents } from '../hooks/use-closed-position-events'
 import { useWalletSolBalance } from '../hooks/use-wallet-sol-balance'
 import { useWalletTokenBalance } from '../hooks/use-wallet-token-balance'
 import { useSubmitOrder } from '../hooks/use-submit-order'
 import { useClosePosition } from '../hooks/use-close-position'
 import { useReclaimRent } from '../hooks/use-reclaim-rent'
+import {
+  buildChartPositionOverlays,
+  buildChartPositionSlotRanges,
+  buildMarketTimeAnchors,
+} from '../lib/chart-positions'
 import {
   buildTradingDashboardViewModel,
   deriveMarketIdentity,
@@ -63,6 +69,7 @@ import type {
   ChartCrosshairData,
   ChartHistoryRequest,
 } from './market-price-chart'
+import type { ChartPositionOverlay } from '../lib/chart-positions'
 import type { ChartTimeframe, OrderSide, PositionPanelTab } from '../constants'
 import type { TradePositionRecord } from '../domain/models'
 import type { TradingViewAggregatedCandle } from '../lib/market'
@@ -85,6 +92,8 @@ const DEFAULT_VISIBLE_BARS_BY_TIMEFRAME: Record<ChartTimeframe, number> = {
   '5m': 96,
   '1h': 72,
 }
+const CHART_POSITION_CLOSED_LOOKBACK_DAYS = 30
+const CHART_POSITION_CLOSED_LIMIT = 1000
 
 export function TradingDashboard() {
   const session = useWalletSession()
@@ -102,6 +111,19 @@ export function TradingDashboard() {
   })
   const streamingStateQuery = useStreamingMarketState(marketAddress)
   const tradePositionsQuery = useTradePositions(address)
+  const closedPositionChartLookbackStart = useMemo(
+    () =>
+      new Date(
+        Date.now() - CHART_POSITION_CLOSED_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+    [],
+  )
+  const closedPositionChartQuery = useClosedPositionEvents({
+    createdAfter: closedPositionChartLookbackStart,
+    limit: CHART_POSITION_CLOSED_LIMIT,
+    marketId: MARKET_ID,
+    positionAuthority: address ?? '',
+  })
 
   const [side, setSide] = useState<OrderSide>('buy')
   const [amountInput, setAmountInput] = useState('')
@@ -209,6 +231,10 @@ export function TradingDashboard() {
     () => tradePositionsQuery.data ?? [],
     [tradePositionsQuery.data],
   )
+  const closedChartPositions = useMemo(
+    () => closedPositionChartQuery.data ?? [],
+    [closedPositionChartQuery.data],
+  )
   const activePositionPageCount = getPageCount(
     activePositions.length,
     POSITION_PAGE_SIZE,
@@ -228,6 +254,77 @@ export function TradingDashboard() {
     [activePositions, normalizedActivePositionPage],
   )
   const currentSlot = streamingStateQuery.data?.currentSlot ?? null
+  const chartPositionSlotRanges = useMemo(
+    () =>
+      buildChartPositionSlotRanges({
+        activePositions,
+        closedPositions: closedChartPositions,
+        currentSlot,
+      }),
+    [activePositions, closedChartPositions, currentSlot],
+  )
+  const chartPositionTimeAnchors = useMemo(
+    () =>
+      buildMarketTimeAnchors({
+        candles: marketChartHistory.candles,
+        chartIntervalMs: marketChartHistory.chartIntervalMs,
+        events: marketUpdates.sharedEvents,
+        extraAnchors: [
+          ...(marketPriceQuery.data?.slot !== null &&
+          marketPriceQuery.data?.slot !== undefined &&
+          marketPriceQuery.data.eventTimeMs !== null
+            ? [
+                {
+                  slot: marketPriceQuery.data.slot,
+                  timeMs: marketPriceQuery.data.eventTimeMs,
+                },
+              ]
+            : []),
+          ...(currentSlot !== null
+            ? [
+                {
+                  slot: currentSlot,
+                  timeMs: Date.now(),
+                },
+              ]
+            : []),
+        ],
+      }),
+    [
+      currentSlot,
+      marketChartHistory.candles,
+      marketChartHistory.chartIntervalMs,
+      marketPriceQuery.data,
+      marketUpdates.sharedEvents,
+    ],
+  )
+  const chartPositionOverlays = useMemo(
+    () =>
+      buildChartPositionOverlays({
+        activePositions,
+        anchors: chartPositionTimeAnchors,
+        baseDecimals,
+        baseTicker,
+        closedPositions: closedChartPositions,
+        currentSlot,
+        marketAddress,
+        quoteDecimals,
+        quoteTicker,
+        streamingState: streamingStateQuery.data ?? null,
+      }),
+    [
+      activePositions,
+      baseDecimals,
+      baseTicker,
+      chartPositionTimeAnchors,
+      closedChartPositions,
+      currentSlot,
+      marketAddress,
+      quoteDecimals,
+      quoteTicker,
+      streamingStateQuery.data,
+    ],
+  )
   const endedPositions = useMemo(
     () =>
       activePositions.filter((position) =>
@@ -344,6 +441,14 @@ export function TradingDashboard() {
       setHighPriceImpactDialogOpen(false)
     }
   }, [hasHighPriceImpact, submitDisabled])
+
+  useEffect(() => {
+    if (chartPositionSlotRanges.length === 0) return
+
+    void marketUpdates.ensureRanges(chartPositionSlotRanges, {
+      reason: 'main-chart',
+    })
+  }, [chartPositionSlotRanges, marketUpdates.ensureRanges])
 
   useEffect(() => {
     const signature = submitOrder.signature
@@ -638,6 +743,12 @@ export function TradingDashboard() {
                 onNeedOlderHistory={handleNeedOlderChartHistory}
                 onReset={() => setChartResetSignal((previous) => previous + 1)}
                 onTimeframeChange={setChartTimeframe}
+                positionOverlayError={
+                  closedPositionChartQuery.error instanceof Error
+                    ? closedPositionChartQuery.error.message
+                    : null
+                }
+                positionOverlays={chartPositionOverlays}
                 resetSignal={chartResetSignal}
                 statusMinHeightClassName="min-h-[360px]"
               />
@@ -714,6 +825,12 @@ export function TradingDashboard() {
                     setChartResetSignal((previous) => previous + 1)
                   }
                   onTimeframeChange={setChartTimeframe}
+                  positionOverlayError={
+                    closedPositionChartQuery.error instanceof Error
+                      ? closedPositionChartQuery.error.message
+                      : null
+                  }
+                  positionOverlays={chartPositionOverlays}
                   resetSignal={chartResetSignal}
                 />
               </CardContent>
@@ -890,6 +1007,8 @@ function PriceChartPanel({
   onNeedOlderHistory,
   onReset,
   onTimeframeChange,
+  positionOverlayError,
+  positionOverlays,
   resetSignal,
   statusMinHeightClassName = 'min-h-[420px]',
 }: {
@@ -907,6 +1026,8 @@ function PriceChartPanel({
   onNeedOlderHistory: (request: ChartHistoryRequest) => void
   onReset: () => void
   onTimeframeChange: (timeframe: ChartTimeframe) => void
+  positionOverlayError: string | null
+  positionOverlays: Array<ChartPositionOverlay>
   resetSignal: number
   statusMinHeightClassName?: string
 }) {
@@ -959,6 +1080,7 @@ function PriceChartPanel({
             isLoadingMoreHistory={isLoadingMoreHistory}
             onCrosshairMove={onCrosshairMove}
             onNeedOlderHistory={onNeedOlderHistory}
+            positionOverlays={positionOverlays}
             resetSignal={resetSignal}
             viewportPresetKey={chartTimeframe}
           />
@@ -973,6 +1095,11 @@ function PriceChartPanel({
       ) : null}
       {marketAddressError ? (
         <p className="text-sm text-destructive">{marketAddressError}</p>
+      ) : null}
+      {positionOverlayError ? (
+        <p className="text-sm text-destructive">
+          Position history unavailable: {positionOverlayError}
+        </p>
       ) : null}
     </div>
   )

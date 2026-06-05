@@ -1,14 +1,14 @@
+import { readApiUrl } from './read-api'
 import type {
   MarketConfigRow,
   MarketUpdateEvent,
 } from '@/integrations/supabase'
+import type { MarketPriceSnapshot } from '../domain/models'
 import {
   parseClosePositionEvent,
   parseMarketUpdateEvent,
   supabase,
 } from '@/integrations/supabase'
-import { readApiUrl } from './read-api'
-import type { MarketPriceSnapshot } from '../domain/models'
 
 export type CandleInterval = '1m' | '5m' | '1h'
 const MAX_LIGHTWEIGHT_CHART_ABS_VALUE = 90_071_992_547_409.91
@@ -476,10 +476,12 @@ async function fetchMarketUpdateRangeFromReadApi({
 }
 
 export async function fetchClosedPositionEvents({
+  createdAfter,
   limit = 50,
   marketId,
   positionAuthority,
 }: {
+  createdAfter?: string
   limit?: number
   marketId?: number
   positionAuthority: string
@@ -493,6 +495,10 @@ export async function fetchClosedPositionEvents({
 
   if (marketId !== undefined) {
     request = request.eq('market_id', marketId)
+  }
+
+  if (createdAfter !== undefined) {
+    request = request.gte('created_at', createdAfter)
   }
 
   const { data, error } = await request
