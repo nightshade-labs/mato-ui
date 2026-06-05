@@ -45,6 +45,8 @@ export const tradingQueryKeys = {
       limit,
       normalizeKeyPart(createdAfter),
     ] as const,
+  closedPositionsForAuthority: (authority: string | null | undefined) =>
+    ['trading', 'closed-positions', normalizeKeyPart(authority)] as const,
   streamingMarket: (marketAddress: string | null | undefined) =>
     ['trading', 'streaming-market', normalizeKeyPart(marketAddress)] as const,
   endSlotSnapshot: (

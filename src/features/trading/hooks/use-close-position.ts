@@ -9,6 +9,9 @@ import { sendClosePosition, sendClosePositions } from '../api/twob-client'
 import { formatTransactionError } from '../lib/transaction-errors'
 import { tradingQueryKeys } from '../query-keys'
 import type { Address } from '@solana/kit'
+import type { QueryClient } from '@tanstack/react-query'
+
+const CLOSED_POSITION_REFRESH_DELAYS_MS = [1_500, 5_000, 10_000]
 
 type ClosePositionStatus =
   | 'idle'
@@ -16,6 +19,29 @@ type ClosePositionStatus =
   | 'submitting'
   | 'success'
   | 'error'
+
+function invalidateClosedPositionQueries({
+  authority,
+  queryClient,
+}: {
+  authority: string
+  queryClient: QueryClient
+}) {
+  const queryKey = tradingQueryKeys.closedPositionsForAuthority(authority)
+  const invalidate = () =>
+    queryClient.invalidateQueries({
+      queryKey,
+    })
+
+  const immediateInvalidation = invalidate()
+  for (const delayMs of CLOSED_POSITION_REFRESH_DELAYS_MS) {
+    window.setTimeout(() => {
+      void invalidate()
+    }, delayMs)
+  }
+
+  return immediateInvalidation
+}
 
 export function useClosePosition() {
   const client = useSolanaClient()
@@ -70,12 +96,9 @@ export function useClosePosition() {
           queryClient.invalidateQueries({
             queryKey: tradingQueryKeys.tradePositions(connectedAddress),
           }),
-          queryClient.invalidateQueries({
-            queryKey: tradingQueryKeys.closedPositions(
-              connectedAddress,
-              undefined,
-              50,
-            ),
+          invalidateClosedPositionQueries({
+            authority: connectedAddress,
+            queryClient,
           }),
           queryClient.invalidateQueries({
             queryKey: tradingQueryKeys.ownedExitsAccounts(connectedAddress),
@@ -145,12 +168,9 @@ export function useClosePosition() {
           queryClient.invalidateQueries({
             queryKey: tradingQueryKeys.tradePositions(connectedAddress),
           }),
-          queryClient.invalidateQueries({
-            queryKey: tradingQueryKeys.closedPositions(
-              connectedAddress,
-              undefined,
-              50,
-            ),
+          invalidateClosedPositionQueries({
+            authority: connectedAddress,
+            queryClient,
           }),
           queryClient.invalidateQueries({
             queryKey: tradingQueryKeys.ownedExitsAccounts(connectedAddress),
