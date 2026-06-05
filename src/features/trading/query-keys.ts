@@ -35,6 +35,7 @@ export const tradingQueryKeys = {
     authority: string | null | undefined,
     marketId: number | undefined,
     limit: number,
+    createdAfter?: string,
   ) =>
     [
       'trading',
@@ -42,6 +43,7 @@ export const tradingQueryKeys = {
       normalizeKeyPart(authority),
       normalizeKeyPart(marketId),
       limit,
+      normalizeKeyPart(createdAfter),
     ] as const,
   streamingMarket: (marketAddress: string | null | undefined) =>
     ['trading', 'streaming-market', normalizeKeyPart(marketAddress)] as const,

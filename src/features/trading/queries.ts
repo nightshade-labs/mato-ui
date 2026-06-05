@@ -1,6 +1,4 @@
-import type { SolanaClient } from '@solana/client'
 import { queryOptions } from '@tanstack/react-query'
-import type { Address } from '@solana/kit'
 import {
   fetchClosedPositionEvents,
   fetchMarketConfig,
@@ -20,6 +18,8 @@ import {
   resolveSnapshotLocation,
 } from './api/twob-client'
 import { tradingQueryKeys } from './query-keys'
+import type { Address } from '@solana/kit'
+import type { SolanaClient } from '@solana/client'
 
 export const MARKET_UPDATE_RANGE_STALE_TIME = 5 * 60_000
 
@@ -121,10 +121,12 @@ export const tradingQueries = {
       refetchIntervalInBackground: true,
     }),
   closedPositions: ({
+    createdAfter,
     limit = 50,
     marketId,
     positionAuthority,
   }: {
+    createdAfter?: string
     limit?: number
     marketId?: number
     positionAuthority: string
@@ -134,9 +136,15 @@ export const tradingQueries = {
         positionAuthority,
         marketId,
         limit,
+        createdAfter,
       ),
       queryFn: () =>
-        fetchClosedPositionEvents({ limit, marketId, positionAuthority }),
+        fetchClosedPositionEvents({
+          createdAfter,
+          limit,
+          marketId,
+          positionAuthority,
+        }),
     }),
   streamingMarket: ({
     client,

@@ -5,7 +5,7 @@ import {
   HistogramSeries,
   createChart,
 } from 'lightweight-charts'
-import { useEffect, useEffectEvent, useMemo, useRef } from 'react'
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import {
   buildOlderChartHistoryRequest,
   computePrependedLogicalRange,
@@ -16,11 +16,13 @@ import type {
   HistogramData,
   IChartApi,
   ISeriesApi,
+  ITimeScaleApi,
   Logical,
   LogicalRange,
   UTCTimestamp,
 } from 'lightweight-charts'
 import type { LogicalRangeLike } from '../lib/chart-history'
+import type { ChartPositionOverlay } from '../lib/chart-positions'
 import type { TradingViewAggregatedCandle } from '../lib/market'
 
 export interface ChartCrosshairData {
@@ -79,6 +81,20 @@ function isSameCrosshairData(
 const MIN_VALID_UNIX_TIME_SECONDS = 946684800 // 2000-01-01T00:00:00Z
 const MAX_VALID_UNIX_TIME_SECONDS = 4102444800 // 2100-01-01T00:00:00Z
 const MAX_LIGHTWEIGHT_CHART_ABS_VALUE = 90_071_992_547_409.91
+const POSITION_BADGE_HEIGHT = 24
+const POSITION_BADGE_GAP = 4
+
+interface ProjectedPositionOverlay extends ChartPositionOverlay {
+  badgeAnchorX: number
+  badgeLeft: number
+  badgeTop: number
+  endX: number
+  lineColor: string
+  showBadge: boolean
+  startX: number
+  width: number
+  y: number
+}
 
 function normalizeUnixTimeSeconds(rawTime: number) {
   if (!Number.isFinite(rawTime) || rawTime <= 0) {
@@ -184,6 +200,145 @@ function sanitizeChartCandles(data: Array<TradingViewAggregatedCandle>) {
   return deduped
 }
 
+function getInterpolatedTimeCoordinate({
+  chartData,
+  time,
+  timeScale,
+}: {
+  chartData: Array<TradingViewAggregatedCandle>
+  time: number
+  timeScale: ITimeScaleApi<UTCTimestamp>
+}) {
+  const directCoordinate = timeScale.timeToCoordinate(time as UTCTimestamp)
+  if (directCoordinate !== null) {
+    return directCoordinate
+  }
+
+  if (chartData.length === 0) return null
+
+  const upperIndex = chartData.findIndex((candle) => candle.time >= time)
+  if (upperIndex >= 0 && chartData[upperIndex].time === time) {
+    return timeScale.timeToCoordinate(
+      chartData[upperIndex].time as UTCTimestamp,
+    )
+  }
+
+  const left =
+    upperIndex < 0
+      ? chartData.at(-2)
+      : upperIndex === 0
+        ? chartData[0]
+        : chartData[upperIndex - 1]
+  const right =
+    upperIndex < 0
+      ? chartData.at(-1)
+      : upperIndex === 0
+        ? chartData[1]
+        : chartData[upperIndex]
+
+  if (!left || !right || left.time === right.time) {
+    return null
+  }
+
+  const leftX = timeScale.timeToCoordinate(left.time as UTCTimestamp)
+  const rightX = timeScale.timeToCoordinate(right.time as UTCTimestamp)
+  if (leftX === null || rightX === null) {
+    return null
+  }
+
+  const ratio = (time - left.time) / (right.time - left.time)
+  return leftX + (rightX - leftX) * ratio
+}
+
+function estimateBadgeWidth(label: string) {
+  return Math.min(168, Math.max(80, label.length * 7 + 24))
+}
+
+function boxesOverlap(
+  left: { bottom: number; left: number; right: number; top: number },
+  right: { bottom: number; left: number; right: number; top: number },
+) {
+  return (
+    left.left < right.right &&
+    left.right > right.left &&
+    left.top < right.bottom &&
+    left.bottom > right.top
+  )
+}
+
+function stackPositionBadges({
+  bounds,
+  overlays,
+}: {
+  bounds: { height: number; width: number }
+  overlays: Array<Omit<ProjectedPositionOverlay, 'badgeLeft' | 'badgeTop'>>
+}): Array<ProjectedPositionOverlay> {
+  const stackedOverlays = overlays.map((overlay) => ({
+    ...overlay,
+    badgeLeft: 0,
+    badgeTop: 0,
+  }))
+  const occupied: Array<{
+    bottom: number
+    left: number
+    right: number
+    top: number
+  }> = []
+
+  stackedOverlays
+    .filter((overlay) => overlay.showBadge)
+    .sort((left, right) => {
+      if (Math.abs(left.badgeAnchorX - right.badgeAnchorX) < 1) {
+        return left.y - right.y
+      }
+      return left.badgeAnchorX - right.badgeAnchorX
+    })
+    .forEach((overlay) => {
+      const badgeWidth = estimateBadgeWidth(overlay.label)
+      const badgeLeft = Math.min(
+        Math.max(overlay.badgeAnchorX - badgeWidth / 2, 4),
+        Math.max(4, bounds.width - badgeWidth - 4),
+      )
+      const preferredTop = Math.min(
+        Math.max(overlay.y - POSITION_BADGE_HEIGHT - 14, 4),
+        Math.max(4, bounds.height - POSITION_BADGE_HEIGHT - 4),
+      )
+      let badgeTop = preferredTop
+
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        badgeTop = Math.max(
+          4,
+          preferredTop - attempt * (POSITION_BADGE_HEIGHT + POSITION_BADGE_GAP),
+        )
+        const candidate = {
+          bottom: badgeTop + POSITION_BADGE_HEIGHT,
+          left: badgeLeft,
+          right: badgeLeft + badgeWidth,
+          top: badgeTop,
+        }
+        if (!occupied.some((box) => boxesOverlap(candidate, box))) {
+          occupied.push(candidate)
+          overlay.badgeLeft = badgeLeft
+          overlay.badgeTop = badgeTop
+          overlay.width = badgeWidth
+          return
+        }
+      }
+
+      occupied.push({
+        bottom: badgeTop + POSITION_BADGE_HEIGHT,
+        left: badgeLeft,
+        right: badgeLeft + badgeWidth,
+        top: badgeTop,
+      })
+      overlay.badgeLeft = badgeLeft
+      overlay.badgeTop = badgeTop
+      overlay.width = badgeWidth
+    })
+
+  return stackedOverlays
+}
+
 export function MarketPriceChart({
   defaultVisibleBars = 120,
   data,
@@ -192,6 +347,7 @@ export function MarketPriceChart({
   isLoadingMoreHistory = false,
   onCrosshairMove,
   onNeedOlderHistory,
+  positionOverlays = [],
   resetSignal = 0,
   viewportPresetKey = 'default',
 }: {
@@ -202,6 +358,7 @@ export function MarketPriceChart({
   isLoadingMoreHistory?: boolean
   onCrosshairMove?: (value: ChartCrosshairData | null) => void
   onNeedOlderHistory?: (request: ChartHistoryRequest) => void
+  positionOverlays?: Array<ChartPositionOverlay>
   resetSignal?: number
   viewportPresetKey?: string
 }) {
@@ -231,6 +388,9 @@ export function MarketPriceChart({
   const lastCrosshairDataRef = useRef<ChartCrosshairData | null>(null)
   const previousViewportPresetKeyRef = useRef(viewportPresetKey)
   const chartData = useMemo(() => sanitizeChartCandles(data), [data])
+  const [projectedPositionOverlays, setProjectedPositionOverlays] = useState<
+    Array<ProjectedPositionOverlay>
+  >([])
 
   const histogramData = useMemo(
     () =>
@@ -266,6 +426,76 @@ export function MarketPriceChart({
       onCrosshairMove?.(payload)
     },
   )
+  const updatePositionOverlayCoordinates = useEffectEvent(() => {
+    if (
+      !chartRef.current ||
+      !candleSeriesRef.current ||
+      !containerRef.current ||
+      chartData.length === 0 ||
+      positionOverlays.length === 0
+    ) {
+      setProjectedPositionOverlays([])
+      return
+    }
+
+    const timeScale = chartRef.current.timeScale()
+    const bounds = {
+      height: containerRef.current.clientHeight,
+      width: containerRef.current.clientWidth,
+    }
+    const projected = positionOverlays.flatMap<
+      Omit<ProjectedPositionOverlay, 'badgeLeft' | 'badgeTop'>
+    >((overlay) => {
+      const rawStartX = getInterpolatedTimeCoordinate({
+        chartData,
+        time: overlay.startTime,
+        timeScale,
+      })
+      const rawEndX = getInterpolatedTimeCoordinate({
+        chartData,
+        time: overlay.endTime,
+        timeScale,
+      })
+      const y = candleSeriesRef.current?.priceToCoordinate(overlay.averagePrice)
+
+      if (rawStartX === null || rawEndX === null || y === null) {
+        return []
+      }
+
+      const rawLineEndX = rawEndX <= rawStartX ? rawStartX + 8 : rawEndX
+      const minLineX = Math.min(rawStartX, rawLineEndX)
+      const maxLineX = Math.max(rawStartX, rawLineEndX)
+
+      if (
+        maxLineX < 0 ||
+        minLineX > bounds.width ||
+        y < 0 ||
+        y > bounds.height
+      ) {
+        return []
+      }
+
+      return [
+        {
+          ...overlay,
+          badgeAnchorX: rawStartX,
+          endX: Math.min(Math.max(rawLineEndX, 0), bounds.width),
+          lineColor:
+            overlay.side === 'buy'
+              ? seriesColors.positive
+              : seriesColors.negative,
+          showBadge: rawStartX >= 0 && rawStartX <= bounds.width,
+          startX: Math.min(Math.max(rawStartX, 0), bounds.width),
+          width: 0,
+          y,
+        },
+      ]
+    })
+
+    setProjectedPositionOverlays(
+      stackPositionBadges({ bounds, overlays: projected }),
+    )
+  })
   const handleNeedOlderHistory = useEffectEvent(
     (range: LogicalRange | null) => {
       if (
@@ -447,9 +677,14 @@ export function MarketPriceChart({
         volume: volume?.value ?? null,
       })
     })
-    chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+    const handleVisibleLogicalRangeChange = (range: LogicalRange | null) => {
       handleNeedOlderHistory(range)
-    })
+      updatePositionOverlayCoordinates()
+    }
+    chart
+      .timeScale()
+      .subscribeVisibleLogicalRangeChange(handleVisibleLogicalRangeChange)
+    chart.timeScale().subscribeSizeChange(updatePositionOverlayCoordinates)
 
     chartRef.current = chart
     candleSeriesRef.current = candleSeries
@@ -512,6 +747,7 @@ export function MarketPriceChart({
 
     const resizeObserver = new ResizeObserver(() => {
       chart.timeScale().applyOptions({ rightOffset: 8 })
+      updatePositionOverlayCoordinates()
     })
     resizeObserver.observe(containerRef.current)
 
@@ -523,6 +759,10 @@ export function MarketPriceChart({
       )
       window.removeEventListener('pointerup', clearPanGesture)
       window.removeEventListener('pointercancel', clearPanGesture)
+      chart
+        .timeScale()
+        .unsubscribeVisibleLogicalRangeChange(handleVisibleLogicalRangeChange)
+      chart.timeScale().unsubscribeSizeChange(updatePositionOverlayCoordinates)
       containerRef.current?.removeEventListener('wheel', handleWheel)
       containerRef.current?.removeEventListener('touchstart', handleTouchStart)
       containerRef.current?.removeEventListener('touchend', handleTouchEnd)
@@ -544,6 +784,7 @@ export function MarketPriceChart({
         window.clearTimeout(wheelGestureTimeoutRef.current)
         wheelGestureTimeoutRef.current = null
       }
+      setProjectedPositionOverlays([])
     }
   }, [height, seriesColors])
 
@@ -625,6 +866,7 @@ export function MarketPriceChart({
           lastLogicalRangeRef.current = chartRef.current
             .timeScale()
             .getVisibleLogicalRange()
+          updatePositionOverlayCoordinates()
           return
         }
       }
@@ -645,6 +887,7 @@ export function MarketPriceChart({
       lastLogicalRangeRef.current = chartRef.current
         .timeScale()
         .getVisibleLogicalRange()
+      updatePositionOverlayCoordinates()
       return
     }
 
@@ -654,6 +897,7 @@ export function MarketPriceChart({
     previousLastTimeRef.current = null
     lastLogicalRangeRef.current = null
     handleCrosshairMove(null)
+    updatePositionOverlayCoordinates()
   }, [
     candleData,
     chartData,
@@ -667,15 +911,60 @@ export function MarketPriceChart({
     if (!chartRef.current) return
     hasUserInteractedRef.current = false
     applyDefaultViewport()
+    updatePositionOverlayCoordinates()
   }, [resetSignal])
 
   useEffect(() => {
     hasUserInteractedRef.current = false
   }, [viewportPresetKey])
 
+  useEffect(() => {
+    updatePositionOverlayCoordinates()
+  }, [chartData, positionOverlays])
+
   return (
     <div className="relative h-full min-h-[420px] w-full">
       <div ref={containerRef} className="h-full min-h-[420px] w-full" />
+      {projectedPositionOverlays.length > 0 ? (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <svg aria-hidden className="absolute inset-0 size-full">
+            {projectedPositionOverlays.map((overlay) => (
+              <line
+                key={`${overlay.id}-line`}
+                stroke={overlay.lineColor}
+                strokeDasharray={
+                  overlay.status === 'active' ? '5 4' : undefined
+                }
+                strokeLinecap="round"
+                strokeWidth="2"
+                x1={overlay.startX}
+                x2={overlay.endX}
+                y1={overlay.y}
+                y2={overlay.y}
+              />
+            ))}
+          </svg>
+          {projectedPositionOverlays
+            .filter((overlay) => overlay.showBadge)
+            .map((overlay) => (
+              <div
+                className={`absolute z-10 flex h-6 items-center justify-center rounded-full border px-2 text-[11px] font-semibold shadow-[0_8px_24px_-16px_rgba(0,0,0,0.9)] backdrop-blur-sm ${
+                  overlay.side === 'buy'
+                    ? 'border-positive/60 bg-positive/90 text-background'
+                    : 'border-negative/60 bg-negative/90 text-white'
+                }`}
+                key={`${overlay.id}-badge`}
+                style={{
+                  left: overlay.badgeLeft,
+                  top: overlay.badgeTop,
+                  width: overlay.width,
+                }}
+              >
+                <span className="truncate">{overlay.label}</span>
+              </div>
+            ))}
+        </div>
+      ) : null}
       {isLoadingMoreHistory ? (
         <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs text-muted-foreground backdrop-blur-sm">
           Loading older history...
