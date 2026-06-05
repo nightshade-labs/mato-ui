@@ -644,7 +644,9 @@ export function MarketPriceChart({
         horzTouchDrag: true,
         mouseWheel: true,
         pressedMouseMove: true,
-        vertTouchDrag: false,
+        // lightweight-charts only forwards touch moves on the price axis when
+        // vertical touch drag is allowed.
+        vertTouchDrag: true,
       },
       handleScale: {
         axisPressedMouseMove: true,
@@ -975,7 +977,7 @@ export function MarketPriceChart({
   }, [chartData, positionOverlays])
 
   return (
-    <div className="relative h-full min-h-[420px] w-full">
+    <div className="relative h-full min-h-[420px] w-full touch-none">
       <div ref={containerRef} className="h-full min-h-[420px] w-full" />
       {projectedPositionOverlays.length > 0 ? (
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
