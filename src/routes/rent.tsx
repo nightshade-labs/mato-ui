@@ -76,7 +76,7 @@ function RentPage() {
     ownerAddress !== null && (pricesQuery.isFetching || exitsQuery.isFetching)
 
   return (
-    <div className="relative min-h-screen bg-[color:var(--color-page-bg)] text-foreground">
+    <div className="relative min-h-[calc(100dvh-3.5rem)] bg-[color:var(--color-page-bg)] text-foreground">
       <div className="relative mx-auto max-w-[1440px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-[-0.04em]">

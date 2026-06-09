@@ -705,7 +705,7 @@ export function TradingDashboard() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[color:var(--color-page-bg)] text-foreground">
+    <div className="relative min-h-[calc(100dvh-3.5rem)] bg-[color:var(--color-page-bg)] text-foreground">
       <div className="relative mx-auto max-w-[1440px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-baseline gap-3">
