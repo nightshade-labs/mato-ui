@@ -44,6 +44,7 @@ import { useMarketAddress } from '../hooks/use-market-address'
 import { useMarketChartHistory } from '../hooks/use-market-chart-history'
 import { useMarketConfig } from '../hooks/use-market-config'
 import { useMarketPrice } from '../hooks/use-market-price'
+import { useMarketPriceChange24h } from '../hooks/use-market-price-change'
 import { useMarketUpdates } from '../hooks/use-market-updates'
 import { useStreamingMarketState } from '../hooks/use-streaming-market-state'
 import { useTradePositions } from '../hooks/use-trade-positions'
@@ -82,6 +83,7 @@ import type { TradePositionRecord } from '../domain/models'
 import type { TradingViewAggregatedCandle } from '../lib/market'
 import { endpoint } from '@/integrations/solana'
 import { Alert } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -116,6 +118,7 @@ export function TradingDashboard() {
   const marketConfigQuery = useMarketConfig(MARKET_ID)
   const marketConfig = marketConfigQuery.data ?? null
   const marketPriceQuery = useMarketPrice(MARKET_ID)
+  const marketPriceChange24hQuery = useMarketPriceChange24h(MARKET_ID)
   const marketUpdates = useMarketUpdates({
     limit: DEFAULT_MARKET_UPDATES_LIMIT,
     marketId: MARKET_ID,
@@ -377,6 +380,7 @@ export function TradingDashboard() {
         durationSeconds,
         marketPrice: marketPriceQuery.data,
         marketUpdates: marketUpdates.events,
+        priceChangeHistory: marketPriceChange24hQuery.data ?? [],
         quoteDecimals,
         quoteTicker,
         side,
@@ -393,6 +397,7 @@ export function TradingDashboard() {
       durationSeconds,
       marketChartHistory.candles,
       marketPriceQuery.data,
+      marketPriceChange24hQuery.data,
       marketUpdates.events,
       quoteDecimals,
       quoteTicker,
@@ -407,6 +412,8 @@ export function TradingDashboard() {
     executionPriceDisplay,
     priceImpactPercent,
     priceImpactDisplay,
+    priceChange24hDisplay,
+    priceChange24hPercent,
   } = dashboardViewModel
   const hasHighPriceImpact = isHighPriceImpact(priceImpactPercent)
   const highPriceImpactThresholdDisplay = `${HIGH_PRICE_IMPACT_WARNING_THRESHOLD_PERCENT}%`
@@ -708,13 +715,17 @@ export function TradingDashboard() {
     <div className="relative min-h-[calc(100dvh-3.5rem)] bg-[color:var(--color-page-bg)] text-foreground">
       <div className="relative mx-auto max-w-[1440px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-baseline gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <h1 className="text-xl font-semibold tracking-[-0.04em] sm:text-2xl">
               {baseTicker}/{quoteTicker}
             </h1>
             <span className="text-xl font-semibold tracking-[-0.04em] text-[color:var(--color-accent-strong)] sm:text-2xl">
               {formatDashboardPrice(displayPrice)}
             </span>
+            <PriceChangeBadge
+              display={priceChange24hDisplay}
+              value={priceChange24hPercent}
+            />
           </div>
           <Drawer>
             <DrawerTrigger
@@ -735,7 +746,13 @@ export function TradingDashboard() {
                   {baseTicker}/{quoteTicker}
                 </DrawerTitle>
                 <DrawerDescription>
-                  {formatDashboardPrice(displayPrice)}
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span>{formatDashboardPrice(displayPrice)}</span>
+                    <PriceChangeBadge
+                      display={priceChange24hDisplay}
+                      value={priceChange24hPercent}
+                    />
+                  </span>
                 </DrawerDescription>
               </DrawerHeader>
               <PriceChartPanel
@@ -1006,6 +1023,27 @@ function EmptyState({ copy }: { copy: string }) {
         {copy}
       </CardContent>
     </Card>
+  )
+}
+
+function PriceChangeBadge({
+  display,
+  value,
+}: {
+  display: string
+  value: number | null
+}) {
+  const variant =
+    value === null || value === 0
+      ? 'muted'
+      : value > 0
+        ? 'positive'
+        : 'negative'
+
+  return (
+    <Badge className="normal-case tracking-normal" variant={variant}>
+      {display}
+    </Badge>
   )
 }
 
