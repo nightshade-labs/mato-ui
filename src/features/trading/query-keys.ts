@@ -25,6 +25,8 @@ export const tradingQueryKeys = {
     ] as const,
   marketPrice: (marketId: number) =>
     ['trading', 'market-price', marketId] as const,
+  marketPriceChange24h: (marketId: number) =>
+    ['trading', 'market-price-change-24h', marketId] as const,
   tradePositions: (authority: string | null | undefined) =>
     ['trading', 'trade-positions', normalizeKeyPart(authority)] as const,
   ownedPricesAccounts: (authority: string | null | undefined) =>

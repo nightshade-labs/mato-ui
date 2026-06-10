@@ -17,6 +17,8 @@ import type {
   TradePositionRecord,
 } from '../domain/models'
 
+const PRICE_CHANGE_24H_LOOKBACK_SECONDS = 24 * 60 * 60
+
 export interface DashboardChartFocus {
   close: number
   high: number
@@ -46,6 +48,57 @@ function resolveTicker(
   )
 }
 
+function findPriceAtOrBefore(
+  candles: Array<TradingViewAggregatedCandle>,
+  targetTime: number,
+) {
+  let candidate: TradingViewAggregatedCandle | null = null
+
+  for (const candle of candles) {
+    if (candle.time > targetTime) {
+      break
+    }
+    candidate = candle
+  }
+
+  return candidate?.close ?? null
+}
+
+export function calculateRelativePriceChangePercent({
+  currentPrice,
+  priceHistory,
+  referenceTime,
+}: {
+  currentPrice: number | null
+  priceHistory: Array<TradingViewAggregatedCandle>
+  referenceTime: number | null
+}) {
+  if (
+    currentPrice === null ||
+    referenceTime === null ||
+    !Number.isFinite(currentPrice) ||
+    !Number.isFinite(referenceTime) ||
+    currentPrice <= 0
+  ) {
+    return null
+  }
+
+  const referencePrice = findPriceAtOrBefore(
+    priceHistory,
+    referenceTime - PRICE_CHANGE_24H_LOOKBACK_SECONDS,
+  )
+
+  if (
+    referencePrice === null ||
+    !Number.isFinite(referencePrice) ||
+    referencePrice <= 0
+  ) {
+    return null
+  }
+
+  return ((currentPrice - referencePrice) / referencePrice) * 100
+}
+
 export function deriveMarketIdentity(
   marketConfig: MarketConfigRow | null | undefined,
 ): TradingMarketIdentity {
@@ -72,6 +125,7 @@ export function buildTradingDashboardViewModel({
   durationSeconds,
   marketPrice,
   marketUpdates,
+  priceChangeHistory,
   quoteDecimals,
   quoteTicker,
   side,
@@ -85,8 +139,13 @@ export function buildTradingDashboardViewModel({
   chartCandles: Array<TradingViewAggregatedCandle>
   crosshairData: DashboardChartFocus | null
   durationSeconds: number
-  marketPrice?: { price: number | null; slot: number | null }
+  marketPrice?: {
+    eventTimeMs?: number | null
+    price: number | null
+    slot: number | null
+  }
   marketUpdates: Array<MarketUpdateEvent>
+  priceChangeHistory: Array<TradingViewAggregatedCandle>
   quoteDecimals: number
   quoteTicker: string
   side: OrderSide
@@ -135,6 +194,16 @@ export function buildTradingDashboardViewModel({
     priceDelta !== null && displayPrice !== null && displayPrice > 0
       ? (priceDelta / displayPrice) * 100
       : null
+  const priceChangeReferenceTime =
+    typeof marketPrice?.eventTimeMs === 'number' &&
+    Number.isFinite(marketPrice.eventTimeMs)
+      ? Math.floor(marketPrice.eventTimeMs / 1000)
+      : (priceChangeHistory.at(-1)?.time ?? latestChartCandle?.time ?? null)
+  const priceChange24hPercent = calculateRelativePriceChangePercent({
+    currentPrice: displayPrice,
+    priceHistory: priceChangeHistory,
+    referenceTime: priceChangeReferenceTime,
+  })
 
   const marketStats = computeMarketStats(
     marketUpdates,
@@ -215,6 +284,10 @@ export function buildTradingDashboardViewModel({
     onChainIndicativePrice,
     priceDelta,
     priceDeltaPercent,
+    priceChange24hDisplay: formatDashboardPriceChangePercent(
+      priceChange24hPercent,
+    ),
+    priceChange24hPercent,
     priceImpactDisplay:
       priceImpactPercent === null
         ? '0%'
@@ -226,4 +299,14 @@ export function buildTradingDashboardViewModel({
 
 export function formatDashboardPrice(value: number | null) {
   return value === null ? '—' : `$${formatPrice(value)}`
+}
+
+export function formatDashboardPriceChangePercent(value: number | null) {
+  if (value === null || !Number.isFinite(value)) return '24h —'
+
+  const absolute = Math.abs(value)
+  const formatted =
+    absolute > 0 && absolute < 0.01 ? '<0.01' : absolute.toFixed(2)
+  const sign = value > 0 ? '+' : value < 0 ? '-' : ''
+  return `${sign}${formatted}% 24h`
 }

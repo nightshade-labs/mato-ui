@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import {
   fetchClosedPositionEvents,
+  fetchMarketCandles,
   fetchMarketConfig,
   fetchMarketPrice,
   fetchMarketUpdateRange,
@@ -22,6 +23,9 @@ import type { Address } from '@solana/kit'
 import type { SolanaClient } from '@solana/client'
 
 export const MARKET_UPDATE_RANGE_STALE_TIME = 5 * 60_000
+const MARKET_PRICE_CHANGE_24H_INTERVAL = '5m'
+const MARKET_PRICE_CHANGE_24H_WINDOW_MS = 25 * 60 * 60_000
+const MARKET_PRICE_CHANGE_24H_MAX_POINTS = 320
 
 export const tradingQueries = {
   marketAddress: (marketId: number) =>
@@ -73,6 +77,23 @@ export const tradingQueries = {
       queryFn: async () => fetchMarketPrice({ marketId }),
       refetchInterval: 5_000,
       refetchIntervalInBackground: true,
+    }),
+  marketPriceChange24h: (marketId: number) =>
+    queryOptions({
+      queryKey: tradingQueryKeys.marketPriceChange24h(marketId),
+      queryFn: async () => {
+        const now = Date.now()
+        return fetchMarketCandles({
+          from: new Date(now - MARKET_PRICE_CHANGE_24H_WINDOW_MS),
+          interval: MARKET_PRICE_CHANGE_24H_INTERVAL,
+          marketId,
+          maxPoints: MARKET_PRICE_CHANGE_24H_MAX_POINTS,
+          to: new Date(now + 5 * 60_000),
+        })
+      },
+      refetchInterval: 60_000,
+      refetchIntervalInBackground: true,
+      staleTime: 60_000,
     }),
   tradePositions: ({
     authority,
