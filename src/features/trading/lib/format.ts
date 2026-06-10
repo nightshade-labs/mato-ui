@@ -74,6 +74,22 @@ export function formatExplorerTransactionUrl(
   return `https://explorer.solana.com/tx/${encodeURIComponent(signature)}?cluster=${encodeURIComponent(cluster)}`
 }
 
+export function formatExplorerAddressUrl(address: string, endpoint: string) {
+  const cluster = endpoint.includes('mainnet')
+    ? 'mainnet-beta'
+    : endpoint.includes('testnet')
+      ? 'testnet'
+      : endpoint.includes('localhost') || endpoint.includes('127.0.0.1')
+        ? 'custom'
+        : 'devnet'
+
+  if (cluster === 'custom') {
+    return `https://explorer.solana.com/address/${encodeURIComponent(address)}?cluster=custom`
+  }
+
+  return `https://explorer.solana.com/address/${encodeURIComponent(address)}?cluster=${encodeURIComponent(cluster)}`
+}
+
 export function formatCrosshairTimeLabel(value: number | string | null) {
   if (value === null) return null
   const numeric = typeof value === 'number' ? value : Number(value)

@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   ChartCandlestick,
   ChartLine,
+  ListOrdered,
   RefreshCcw,
   X,
 } from 'lucide-react'
@@ -46,6 +47,7 @@ import { useMarketConfig } from '../hooks/use-market-config'
 import { useMarketPrice } from '../hooks/use-market-price'
 import { useMarketPriceChange24h } from '../hooks/use-market-price-change'
 import { useMarketUpdates } from '../hooks/use-market-updates'
+import { useMarketTradePositions } from '../hooks/use-market-trade-positions'
 import { useStreamingMarketState } from '../hooks/use-streaming-market-state'
 import { useTradePositions } from '../hooks/use-trade-positions'
 import { useClosedPositionEvents } from '../hooks/use-closed-position-events'
@@ -66,6 +68,7 @@ import {
 } from '../view-models/trading-dashboard'
 import { MarketPriceChart } from './market-price-chart'
 import { OrderEntryCard } from './order-entry-card'
+import { OrderBookTable } from './order-book-table'
 import { ActivePositionCard } from './active-position-card'
 import { ClosedPositionsList } from './closed-positions-list'
 import { HighPriceImpactDialog } from './high-price-impact-dialog'
@@ -78,7 +81,12 @@ import type {
   ChartHistoryRequest,
 } from './market-price-chart'
 import type { ChartPositionOverlay } from '../lib/chart-positions'
-import type { ChartTimeframe, OrderSide, PositionPanelTab } from '../constants'
+import type {
+  ChartTimeframe,
+  MarketPanelTab,
+  OrderSide,
+  PositionPanelTab,
+} from '../constants'
 import type { TradePositionRecord } from '../domain/models'
 import type { TradingViewAggregatedCandle } from '../lib/market'
 import { endpoint } from '@/integrations/solana'
@@ -105,6 +113,14 @@ const CHART_DISPLAY_MODES = [
   { icon: ChartCandlestick, label: 'Candles', mode: 'candles' },
   { icon: ChartLine, label: 'Line', mode: 'line' },
 ] as const
+const MARKET_PANEL_TABS = [
+  { icon: ChartCandlestick, label: 'Chart', tab: 'chart' },
+  { icon: ListOrdered, label: 'Order book', tab: 'order-book' },
+] as const satisfies Array<{
+  icon: typeof ChartCandlestick
+  label: string
+  tab: MarketPanelTab
+}>
 const CHART_POSITION_CLOSED_LOOKBACK_DAYS = 30
 const CHART_POSITION_CLOSED_LIMIT = 1000
 
@@ -125,6 +141,7 @@ export function TradingDashboard() {
   })
   const streamingStateQuery = useStreamingMarketState(marketAddress)
   const tradePositionsQuery = useTradePositions(address)
+  const orderBookPositionsQuery = useMarketTradePositions(marketAddress)
   const closedPositionChartLookbackStart = useMemo(
     () =>
       new Date(
@@ -144,6 +161,7 @@ export function TradingDashboard() {
   const [durationSeconds, setDurationSeconds] = useState(30 * 60)
   const [positionPanelTab, setPositionPanelTab] =
     useState<PositionPanelTab>('active')
+  const [marketPanelTab, setMarketPanelTab] = useState<MarketPanelTab>('chart')
   const [activePositionPage, setActivePositionPage] = useState(0)
   const [chartTimeframe, setChartTimeframe] = useState<ChartTimeframe>('5m')
   const [chartDisplayMode, setChartDisplayMode] =
@@ -247,6 +265,10 @@ export function TradingDashboard() {
     () => tradePositionsQuery.data ?? [],
     [tradePositionsQuery.data],
   )
+  const orderBookPositions = useMemo<Array<TradePositionRecord>>(
+    () => orderBookPositionsQuery.data ?? [],
+    [orderBookPositionsQuery.data],
+  )
   const closedChartPositions = useMemo(
     () => closedPositionChartQuery.data ?? [],
     [closedPositionChartQuery.data],
@@ -270,6 +292,7 @@ export function TradingDashboard() {
     [activePositions, normalizedActivePositionPage],
   )
   const currentSlot = streamingStateQuery.data?.currentSlot ?? null
+  const isOrderBookLoading = orderBookPositionsQuery.isLoading
   const chartPositionSlotRanges = useMemo(
     () =>
       buildChartPositionSlotRanges({
@@ -737,8 +760,12 @@ export function TradingDashboard() {
                 />
               }
             >
-              <ChartCandlestick className="size-4" />
-              Chart
+              {marketPanelTab === 'chart' ? (
+                <ChartCandlestick className="size-4" />
+              ) : (
+                <ListOrdered className="size-4" />
+              )}
+              {marketPanelTab === 'chart' ? 'Chart' : 'Orders'}
             </DrawerTrigger>
             <DrawerContent className="xl:hidden">
               <DrawerHeader>
@@ -755,35 +782,57 @@ export function TradingDashboard() {
                   </span>
                 </DrawerDescription>
               </DrawerHeader>
-              <PriceChartPanel
-                chartCandles={chartCandles}
-                chartDisplayMode={chartDisplayMode}
-                chartHeight={360}
-                chartTimeframe={chartTimeframe}
-                hasMoreHistory={marketChartHistory.hasMoreHistory}
-                isLoadingMoreHistory={marketChartHistory.isLoadingMoreHistory}
-                isMarketUpdatesLoading={marketUpdates.isLoading}
-                marketAddressError={
-                  marketAddressQuery.error instanceof Error
-                    ? marketAddressQuery.error.message
-                    : null
-                }
-                marketChartHistoryError={marketChartHistory.error}
-                marketUpdatesError={marketUpdates.error}
-                onCrosshairMove={setCrosshairData}
-                onDisplayModeChange={setChartDisplayMode}
-                onNeedOlderHistory={handleNeedOlderChartHistory}
-                onReset={() => setChartResetSignal((previous) => previous + 1)}
-                onTimeframeChange={setChartTimeframe}
-                positionOverlayError={
-                  closedPositionChartQuery.error instanceof Error
-                    ? closedPositionChartQuery.error.message
-                    : null
-                }
-                positionOverlays={chartPositionOverlays}
-                resetSignal={chartResetSignal}
-                statusMinHeightClassName="min-h-[360px]"
-              />
+              <div className="space-y-4">
+                <MarketPanelTabs
+                  activeTab={marketPanelTab}
+                  onTabChange={setMarketPanelTab}
+                />
+                {marketPanelTab === 'chart' ? (
+                  <PriceChartPanel
+                    chartCandles={chartCandles}
+                    chartDisplayMode={chartDisplayMode}
+                    chartHeight={360}
+                    chartTimeframe={chartTimeframe}
+                    hasMoreHistory={marketChartHistory.hasMoreHistory}
+                    isLoadingMoreHistory={
+                      marketChartHistory.isLoadingMoreHistory
+                    }
+                    isMarketUpdatesLoading={marketUpdates.isLoading}
+                    marketAddressError={
+                      marketAddressQuery.error instanceof Error
+                        ? marketAddressQuery.error.message
+                        : null
+                    }
+                    marketChartHistoryError={marketChartHistory.error}
+                    marketUpdatesError={marketUpdates.error}
+                    onCrosshairMove={setCrosshairData}
+                    onDisplayModeChange={setChartDisplayMode}
+                    onNeedOlderHistory={handleNeedOlderChartHistory}
+                    onReset={() =>
+                      setChartResetSignal((previous) => previous + 1)
+                    }
+                    onTimeframeChange={setChartTimeframe}
+                    positionOverlayError={
+                      closedPositionChartQuery.error instanceof Error
+                        ? closedPositionChartQuery.error.message
+                        : null
+                    }
+                    positionOverlays={chartPositionOverlays}
+                    resetSignal={chartResetSignal}
+                    statusMinHeightClassName="min-h-[360px]"
+                  />
+                ) : (
+                  <OrderBookTable
+                    baseDecimals={baseDecimals}
+                    baseTicker={baseTicker}
+                    currentSlot={currentSlot}
+                    isLoading={isOrderBookLoading}
+                    positions={orderBookPositions}
+                    quoteDecimals={quoteDecimals}
+                    quoteTicker={quoteTicker}
+                  />
+                )}
+              </div>
             </DrawerContent>
           </Drawer>
         </div>
@@ -837,36 +886,54 @@ export function TradingDashboard() {
 
           <div className="space-y-6 xl:col-start-1 xl:row-start-1">
             <Card className="hidden border-white/10 bg-black/15 xl:block">
-              <CardContent className="p-4">
-                <PriceChartPanel
-                  chartCandles={chartCandles}
-                  chartDisplayMode={chartDisplayMode}
-                  chartTimeframe={chartTimeframe}
-                  hasMoreHistory={marketChartHistory.hasMoreHistory}
-                  isLoadingMoreHistory={marketChartHistory.isLoadingMoreHistory}
-                  isMarketUpdatesLoading={marketUpdates.isLoading}
-                  marketAddressError={
-                    marketAddressQuery.error instanceof Error
-                      ? marketAddressQuery.error.message
-                      : null
-                  }
-                  marketChartHistoryError={marketChartHistory.error}
-                  marketUpdatesError={marketUpdates.error}
-                  onCrosshairMove={setCrosshairData}
-                  onDisplayModeChange={setChartDisplayMode}
-                  onNeedOlderHistory={handleNeedOlderChartHistory}
-                  onReset={() =>
-                    setChartResetSignal((previous) => previous + 1)
-                  }
-                  onTimeframeChange={setChartTimeframe}
-                  positionOverlayError={
-                    closedPositionChartQuery.error instanceof Error
-                      ? closedPositionChartQuery.error.message
-                      : null
-                  }
-                  positionOverlays={chartPositionOverlays}
-                  resetSignal={chartResetSignal}
+              <CardContent className="space-y-4 p-4">
+                <MarketPanelTabs
+                  activeTab={marketPanelTab}
+                  onTabChange={setMarketPanelTab}
                 />
+                {marketPanelTab === 'chart' ? (
+                  <PriceChartPanel
+                    chartCandles={chartCandles}
+                    chartDisplayMode={chartDisplayMode}
+                    chartTimeframe={chartTimeframe}
+                    hasMoreHistory={marketChartHistory.hasMoreHistory}
+                    isLoadingMoreHistory={
+                      marketChartHistory.isLoadingMoreHistory
+                    }
+                    isMarketUpdatesLoading={marketUpdates.isLoading}
+                    marketAddressError={
+                      marketAddressQuery.error instanceof Error
+                        ? marketAddressQuery.error.message
+                        : null
+                    }
+                    marketChartHistoryError={marketChartHistory.error}
+                    marketUpdatesError={marketUpdates.error}
+                    onCrosshairMove={setCrosshairData}
+                    onDisplayModeChange={setChartDisplayMode}
+                    onNeedOlderHistory={handleNeedOlderChartHistory}
+                    onReset={() =>
+                      setChartResetSignal((previous) => previous + 1)
+                    }
+                    onTimeframeChange={setChartTimeframe}
+                    positionOverlayError={
+                      closedPositionChartQuery.error instanceof Error
+                        ? closedPositionChartQuery.error.message
+                        : null
+                    }
+                    positionOverlays={chartPositionOverlays}
+                    resetSignal={chartResetSignal}
+                  />
+                ) : (
+                  <OrderBookTable
+                    baseDecimals={baseDecimals}
+                    baseTicker={baseTicker}
+                    currentSlot={currentSlot}
+                    isLoading={isOrderBookLoading}
+                    positions={orderBookPositions}
+                    quoteDecimals={quoteDecimals}
+                    quoteTicker={quoteTicker}
+                  />
+                )}
               </CardContent>
             </Card>
 
@@ -1044,6 +1111,32 @@ function PriceChangeBadge({
     <Badge className="normal-case tracking-normal" variant={variant}>
       {display}
     </Badge>
+  )
+}
+
+function MarketPanelTabs({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: MarketPanelTab
+  onTabChange: (tab: MarketPanelTab) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {MARKET_PANEL_TABS.map(({ icon: Icon, label, tab }) => (
+        <Button
+          aria-pressed={activeTab === tab}
+          className="rounded-full"
+          key={tab}
+          onClick={() => onTabChange(tab)}
+          size="xs"
+          variant={activeTab === tab ? 'default' : 'outline'}
+        >
+          <Icon className="size-3.5" />
+          {label}
+        </Button>
+      ))}
+    </div>
   )
 }
 

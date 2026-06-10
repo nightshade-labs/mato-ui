@@ -312,6 +312,21 @@ export async function fetchTradePositions(
   rpcClient: TwobRpcClient,
   authority: string,
 ): Promise<Array<TradePositionRecord>> {
+  return fetchTradePositionAccounts(rpcClient, [
+    {
+      memcmp: {
+        bytes: authority as never,
+        encoding: 'base58',
+        offset: 8n,
+      },
+    },
+  ])
+}
+
+async function fetchTradePositionAccounts(
+  rpcClient: TwobRpcClient,
+  extraFilters: Array<unknown> = [],
+): Promise<Array<TradePositionRecord>> {
   const response = (await rpcClient
     .getProgramAccounts(TWOB_ANCHOR_PROGRAM_ADDRESS, {
       commitment: 'confirmed',
@@ -326,13 +341,7 @@ export async function fetchTradePositions(
             offset: 0n,
           },
         },
-        {
-          memcmp: {
-            bytes: authority as never,
-            encoding: 'base58',
-            offset: 8n,
-          },
-        },
+        ...extraFilters,
       ],
     })
     .send()) as any
@@ -353,6 +362,12 @@ export async function fetchTradePositions(
       if (left.data.id === right.data.id) return 0
       return left.data.id > right.data.id ? -1 : 1
     })
+}
+
+export async function fetchMarketTradePositions(
+  rpcClient: TwobRpcClient,
+): Promise<Array<TradePositionRecord>> {
+  return fetchTradePositionAccounts(rpcClient)
 }
 
 export async function fetchEndSlotBookkeepingSnapshot({

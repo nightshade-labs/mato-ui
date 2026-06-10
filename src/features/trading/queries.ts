@@ -14,6 +14,7 @@ import {
 import {
   deriveMarketAddress,
   fetchEndSlotBookkeepingSnapshot,
+  fetchMarketTradePositions,
   fetchStreamingMarketState,
   fetchTradePositions,
   resolveSnapshotLocation,
@@ -107,6 +108,20 @@ export const tradingQueries = {
       queryFn: async () => {
         if (!authority) return []
         return fetchTradePositions(client.runtime.rpc, authority)
+      },
+    }),
+  marketTradePositions: ({
+    client,
+    marketAddress,
+  }: {
+    client: SolanaClient
+    marketAddress: Address | undefined
+  }) =>
+    queryOptions({
+      queryKey: tradingQueryKeys.marketTradePositions(marketAddress),
+      queryFn: async () => {
+        if (!marketAddress) return []
+        return fetchMarketTradePositions(client.runtime.rpc, marketAddress)
       },
     }),
   ownedPricesAccounts: ({
