@@ -144,7 +144,7 @@ export function OrderBookTable({
 
   if (rows.length === 0) {
     return (
-      <div className="space-y-3">
+      <div className="min-w-0 space-y-3">
         <DirectionFilterControls
           directionFilter={directionFilter}
           onDirectionFilterChange={setDirectionFilter}
@@ -159,13 +159,13 @@ export function OrderBookTable({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
       <DirectionFilterControls
         directionFilter={directionFilter}
         onDirectionFilterChange={setDirectionFilter}
       />
-      <div className="overflow-hidden rounded-[1.5rem] border border-white/8 bg-black/20">
-        <div className="max-h-[420px] overflow-auto">
+      <div className="max-w-full overflow-hidden rounded-[1.5rem] border border-white/8 bg-black/20">
+        <div className="max-h-[420px] w-full overflow-x-auto overflow-y-auto overscroll-contain">
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[color:var(--color-page-bg)]/95 text-xs uppercase tracking-[0.18em] text-muted-foreground backdrop-blur">
               <tr>

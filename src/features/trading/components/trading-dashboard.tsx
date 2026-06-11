@@ -767,7 +767,7 @@ export function TradingDashboard() {
               )}
               {marketPanelTab === 'chart' ? 'Chart' : 'Orders'}
             </DrawerTrigger>
-            <DrawerContent className="xl:hidden">
+            <DrawerContent className="overflow-hidden xl:hidden">
               <DrawerHeader>
                 <DrawerTitle>
                   {baseTicker}/{quoteTicker}
@@ -782,7 +782,7 @@ export function TradingDashboard() {
                   </span>
                 </DrawerDescription>
               </DrawerHeader>
-              <div className="space-y-4">
+              <div className="min-w-0 space-y-4">
                 <MarketPanelTabs
                   activeTab={marketPanelTab}
                   onTabChange={setMarketPanelTab}
