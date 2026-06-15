@@ -742,7 +742,7 @@ export function TradingDashboard() {
             <h1 className="text-xl font-semibold tracking-[-0.04em] sm:text-2xl">
               {baseTicker}/{quoteTicker}
             </h1>
-            <span className="text-xl font-semibold tracking-[-0.04em] text-[color:var(--color-accent-strong)] sm:text-2xl">
+            <span className="text-xl font-semibold tracking-[-0.04em] text-[color:var(--color-accent-warm)] sm:text-2xl">
               {formatDashboardPrice(displayPrice)}
             </span>
             <PriceChangeBadge
