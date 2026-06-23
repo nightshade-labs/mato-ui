@@ -5,7 +5,7 @@ This feature is organized around four layers:
 1. `api/`
    Owns protocol and persistence access.
    `twob-client.ts` contains PDA derivation, on-chain reads, and transaction construction.
-   `market-repository.ts` contains Supabase reads and realtime subscriptions.
+   `market-repository.ts` contains read API requests and price stream subscriptions.
 
 2. `queries.ts`
    Centralizes TanStack Query option builders so route loaders, hooks, and ad hoc prefetches share the same query keys and fetch behavior.

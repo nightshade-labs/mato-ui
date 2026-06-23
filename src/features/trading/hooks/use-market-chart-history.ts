@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  fetchMarketCandles,
-  type CandleInterval,
-  type MarketCandle,
-} from '../api/market-repository'
+import { fetchMarketCandles } from '../api/market-repository'
 import { CHART_TIMEFRAMES } from '../constants'
-import type { OlderChartHistoryRequest } from '../lib/chart-history'
+import { mergeLivePriceIntoCandles } from '../lib/market'
+import type { CandleInterval, MarketCandle } from '../api/market-repository'
 import type { ChartTimeframe } from '../constants'
-import {
-  mergeLivePriceIntoCandles,
-  type TradingViewAggregatedCandle,
-} from '../lib/market'
 import type { MarketPriceSnapshot } from '../domain/models'
+import type { OlderChartHistoryRequest } from '../lib/chart-history'
+import type { TradingViewAggregatedCandle } from '../lib/market'
 
 interface UseMarketChartHistoryOptions {
   latestPrice?: MarketPriceSnapshot | null
@@ -46,11 +41,9 @@ function toTradingViewCandle(
 ): TradingViewAggregatedCandle {
   return {
     close: candle.close,
-    endSlot: candle.endSlot,
     high: candle.high,
     low: candle.low,
     open: candle.open,
-    startSlot: candle.startSlot,
     time: candle.time,
     volume: candle.volume,
   }
@@ -60,20 +53,15 @@ function mergeCandlesAscending(
   existing: Array<TradingViewAggregatedCandle>,
   incoming: Array<TradingViewAggregatedCandle>,
 ) {
-  const combined = [...incoming, ...existing].sort((left, right) => {
-    if (left.time === right.time) {
-      return left.endSlot - right.endSlot
-    }
-    return left.time - right.time
-  })
+  const combined = [...incoming, ...existing].sort(
+    (left, right) => left.time - right.time,
+  )
 
   const deduped: Array<TradingViewAggregatedCandle> = []
   for (const candle of combined) {
     const previous = deduped.at(-1)
     if (previous && previous.time === candle.time) {
-      if (candle.endSlot >= previous.endSlot) {
-        deduped[deduped.length - 1] = candle
-      }
+      deduped[deduped.length - 1] = candle
       continue
     }
     deduped.push(candle)
@@ -203,11 +191,7 @@ export function useMarketChartHistory({
       }
 
       const currentOldestTime =
-        oldestLoadedCandleTimeRef.current ?? existingCandles[0]?.time ?? null
-      if (currentOldestTime === null) {
-        setHasMoreHistory(false)
-        return
-      }
+        oldestLoadedCandleTimeRef.current ?? existingCandles[0].time
 
       const barsToLoad = Math.min(
         MAX_POINTS,
@@ -251,12 +235,10 @@ export function useMarketChartHistory({
         setCandles(mergedCandles)
         candlesRef.current = mergedCandles
 
-        const nextOldestTime = mergedCandles[0]?.time ?? null
+        const nextOldestTime = mergedCandles[0].time
         oldestLoadedCandleTimeRef.current = nextOldestTime
 
-        const extendedOldestPoint =
-          nextOldestTime !== null && nextOldestTime < currentOldestTime
-        setHasMoreHistory(extendedOldestPoint)
+        setHasMoreHistory(nextOldestTime < currentOldestTime)
       } catch (fetchError) {
         if (requestEpochRef.current !== requestEpoch) {
           return

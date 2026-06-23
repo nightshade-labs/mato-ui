@@ -1,5 +1,5 @@
-import type { ClosePositionEvent } from '@/integrations/supabase'
 import { computeAveragePrice } from '../lib/market'
+import type { ClosePositionEvent } from '@/integrations/read-api'
 
 function subtractFloorZero(minuend: bigint, subtrahend: bigint) {
   if (minuend <= subtrahend) return 0n

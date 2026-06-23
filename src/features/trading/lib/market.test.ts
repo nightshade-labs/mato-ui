@@ -3,7 +3,7 @@ import {
   aggregateTradingViewCandles,
   mergeLivePriceIntoCandles,
 } from './market'
-import type { MarketUpdateEvent } from '@/integrations/supabase'
+import type { MarketUpdateEvent } from '@/integrations/read-api'
 import type { TradingViewAggregatedCandle } from './market'
 
 function marketEvent(

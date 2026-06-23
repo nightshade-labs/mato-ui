@@ -67,6 +67,12 @@ const SYSTEM_PROGRAM_ADDRESS =
 export type TwobRpcClient = SolanaClient['runtime']['rpc']
 
 type SendTransactionHelper = Pick<UseSendTransactionReturnType, 'send'>
+type GetProgramAccountsConfig = NonNullable<
+  Parameters<TwobRpcClient['getProgramAccounts']>[1]
+>
+type GetProgramAccountsFilter = NonNullable<
+  GetProgramAccountsConfig['filters']
+>[number]
 
 function seed(value: string) {
   return getBytesEncoder().encode(textEncoder.encode(value))
@@ -325,7 +331,7 @@ export async function fetchTradePositions(
 
 async function fetchTradePositionAccounts(
   rpcClient: TwobRpcClient,
-  extraFilters: Array<unknown> = [],
+  extraFilters: Array<GetProgramAccountsFilter> = [],
 ): Promise<Array<TradePositionRecord>> {
   const response = (await rpcClient
     .getProgramAccounts(TWOB_ANCHOR_PROGRAM_ADDRESS, {

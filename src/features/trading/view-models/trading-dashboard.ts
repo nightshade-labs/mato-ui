@@ -9,7 +9,7 @@ import {
 import type {
   MarketConfigRow,
   MarketUpdateEvent,
-} from '@/integrations/supabase'
+} from '@/integrations/read-api'
 import type { OrderSide } from '../constants'
 import type { TradingViewAggregatedCandle } from '../lib/market'
 import type {
@@ -25,7 +25,6 @@ export interface DashboardChartFocus {
   low: number
   open: number
   time: number
-  volume: number | null
 }
 
 export interface TradingMarketIdentity {

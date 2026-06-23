@@ -3,7 +3,8 @@ import {
   buildChartPositionSlotRanges,
   estimateTimeMsForSlot,
 } from './chart-positions'
-import type { ClosePositionEvent } from '@/integrations/supabase'
+import type { Address } from '@solana/kit'
+import type { ClosePositionEvent } from '@/integrations/read-api'
 import type { TradePositionRecord } from '../domain/models'
 
 function activePosition({
@@ -14,11 +15,11 @@ function activePosition({
   startSlot: bigint
 }): TradePositionRecord {
   return {
-    address: '11111111111111111111111111111111',
+    address: '11111111111111111111111111111111' as Address,
     data: {
       discriminator: new Uint8Array(),
       amount: 1_000_000n,
-      authority: '22222222222222222222222222222222',
+      authority: '22222222222222222222222222222222' as Address,
       bookkeepingSnapshot: 0n,
       bump: 255,
       endSlot,

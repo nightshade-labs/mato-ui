@@ -13,7 +13,7 @@ import {
 import { tradingQueries } from '../queries'
 import type { SlotRange } from '../lib/slot-ranges'
 import type { EnsureHistoryOptions } from '../lib/market-history-store'
-import type { MarketUpdateEvent } from '@/integrations/supabase'
+import type { MarketUpdateEvent } from '@/integrations/read-api'
 
 interface UseMarketUpdatesOptions {
   marketId: number

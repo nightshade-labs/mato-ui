@@ -51,7 +51,7 @@ export interface MarketUpdateEventRow {
 }
 
 export interface MarketConfigRow {
-  id: number
+  id?: number
   market_id: number
   base_ticker: string
   quote_ticker: string
@@ -59,29 +59,7 @@ export interface MarketConfigRow {
   quote_mint: string
   base_decimals: number
   quote_decimals: number
-  created_at: string
-}
-
-export interface Database {
-  public: {
-    Tables: {
-      market_configs: {
-        Row: MarketConfigRow
-        Insert: Omit<MarketConfigRow, 'id' | 'created_at'>
-        Update: Partial<Omit<MarketConfigRow, 'id'>>
-      }
-      close_position_events: {
-        Row: ClosePositionEventRow
-        Insert: Omit<ClosePositionEventRow, 'id' | 'created_at'>
-        Update: Partial<Omit<ClosePositionEventRow, 'id'>>
-      }
-      market_update_events: {
-        Row: MarketUpdateEventRow
-        Insert: Omit<MarketUpdateEventRow, 'id' | 'created_at'>
-        Update: Partial<Omit<MarketUpdateEventRow, 'id'>>
-      }
-    }
-  }
+  created_at?: string
 }
 
 export function parseClosePositionEvent(

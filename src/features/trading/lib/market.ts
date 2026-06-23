@@ -1,10 +1,10 @@
-import type { MarketUpdateEvent } from '@/integrations/supabase'
+import type { MarketUpdateEvent } from '@/integrations/read-api'
 import type { MarketPriceSnapshot } from '../domain/models'
 
 export interface TradingViewAggregatedCandle {
-  endSlot: number
+  endSlot?: number
   time: number
-  startSlot: number
+  startSlot?: number
   open: number
   high: number
   low: number
@@ -233,16 +233,14 @@ export function mergeLivePriceIntoCandles({
   const price = priceSnapshot?.price
   const slot = priceSnapshot?.slot
   const eventTimeMs = priceSnapshot?.eventTimeMs
+  const hasSlot = typeof slot === 'number' && Number.isFinite(slot) && slot >= 0
 
   if (
     typeof price !== 'number' ||
-    typeof slot !== 'number' ||
     typeof eventTimeMs !== 'number' ||
     !Number.isFinite(price) ||
-    !Number.isFinite(slot) ||
     !Number.isFinite(eventTimeMs) ||
     price <= 0 ||
-    slot < 0 ||
     intervalMs <= 0
   ) {
     return candles
@@ -256,18 +254,22 @@ export function mergeLivePriceIntoCandles({
     return [
       {
         close: price,
-        endSlot: slot,
         high: price,
         low: price,
         open: price,
-        startSlot: slot,
+        ...(hasSlot ? { endSlot: slot, startSlot: slot } : {}),
         time: bucketTime,
         volume: 0,
       },
     ]
   }
 
-  if (bucketTime < latestCandle.time || slot < latestCandle.endSlot) {
+  if (
+    bucketTime < latestCandle.time ||
+    (hasSlot &&
+      latestCandle.endSlot !== undefined &&
+      slot < latestCandle.endSlot)
+  ) {
     return candles
   }
 
@@ -275,14 +277,13 @@ export function mergeLivePriceIntoCandles({
     const updatedCandle = {
       ...latestCandle,
       close: price,
-      endSlot: slot,
+      ...(hasSlot ? { endSlot: slot } : {}),
       high: Math.max(latestCandle.high, price),
       low: Math.min(latestCandle.low, price),
     }
 
     if (
       updatedCandle.close === latestCandle.close &&
-      updatedCandle.endSlot === latestCandle.endSlot &&
       updatedCandle.high === latestCandle.high &&
       updatedCandle.low === latestCandle.low
     ) {
@@ -297,11 +298,10 @@ export function mergeLivePriceIntoCandles({
     ...candles,
     {
       close: price,
-      endSlot: slot,
       high: Math.max(open, price),
       low: Math.min(open, price),
       open,
-      startSlot: slot,
+      ...(hasSlot ? { endSlot: slot, startSlot: slot } : {}),
       time: bucketTime,
       volume: 0,
     },
