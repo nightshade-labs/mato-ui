@@ -1,4 +1,17 @@
-export const MARKET_ID = Number(import.meta.env.VITE_MARKET_ID ?? '1')
+function readMarketId() {
+  const rawMarketId = import.meta.env.VITE_MARKET_ID ?? '1'
+  const marketId = Number(rawMarketId)
+
+  if (!Number.isInteger(marketId) || marketId < 0) {
+    throw new Error(
+      `VITE_MARKET_ID must be a non-negative integer, got "${rawMarketId}"`,
+    )
+  }
+
+  return marketId
+}
+
+export const MARKET_ID = readMarketId()
 export const ARRAY_LENGTH = 10
 export const SLOT_DURATION_MS = 400
 export const SLOT_DURATION_SECONDS = SLOT_DURATION_MS / 1000

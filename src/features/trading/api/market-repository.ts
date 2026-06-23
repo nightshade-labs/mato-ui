@@ -194,7 +194,8 @@ export function dedupeMarketUpdatesById(events: Array<MarketUpdateEvent>) {
 }
 
 export async function fetchMarketConfig(marketId: number) {
-  const response = await fetch(readApiUrl(`/v1/markets/${marketId}/config`), {
+  const url = readApiUrl(`/v1/markets/${marketId}/config`)
+  const response = await fetch(url, {
     headers: {
       Accept: 'application/json',
     },
@@ -203,7 +204,7 @@ export async function fetchMarketConfig(marketId: number) {
   if (!response.ok) {
     const body = await response.text()
     throw new Error(
-      `Failed to fetch market config (${response.status}): ${body || response.statusText}`,
+      `Failed to fetch market config from ${url} (${response.status}): ${body || response.statusText}`,
     )
   }
 
