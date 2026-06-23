@@ -1,0 +1,285 @@
+import { useEffect, useRef, useState } from 'react'
+import { useWalletConnection } from '@solana/react-hooks'
+import { toast } from 'sonner'
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  Copy,
+  HandCoins,
+  LogOut,
+  Wallet,
+} from 'lucide-react'
+import {
+  MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+  NATIVE_SOL_DECIMALS,
+} from '../constants'
+import { useReclaimRent } from '../hooks/use-reclaim-rent'
+import { useWalletSolBalance } from '../hooks/use-wallet-sol-balance'
+import { isNativeBalanceBelowTransactionMinimum } from '../lib/amounts'
+import {
+  formatAtoms,
+  formatExplorerTransactionUrl,
+  shortenAddress,
+} from '../lib/format'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { endpoint } from '@/integrations/solana'
+
+export function WalletConnectionButton() {
+  const {
+    connect,
+    connected,
+    connectors,
+    currentConnector,
+    disconnect,
+    isReady,
+    status,
+    wallet,
+  } = useWalletConnection()
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement | null>(null)
+  const reclaimRent = useReclaimRent(open && connected)
+  const nativeSolBalance = useWalletSolBalance()
+
+  useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (dropdownRef.current?.contains(target)) return
+
+      setOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (open) return
+    reclaimRent.clearFeedback()
+  }, [open, reclaimRent.clearFeedback])
+
+  useEffect(() => {
+    if (status !== 'error') return
+
+    toast.error('Wallet connection failed', {
+      description: 'Try another connector.',
+      id: 'wallet-connection-error',
+    })
+  }, [status])
+
+  useEffect(() => {
+    const signature = reclaimRent.signature
+    if (reclaimRent.status !== 'success' || !signature) return
+
+    toast.success('Rent reclaimed', {
+      action: {
+        label: 'View',
+        onClick: () => {
+          window.open(
+            formatExplorerTransactionUrl(signature, endpoint),
+            '_blank',
+            'noopener,noreferrer',
+          )
+        },
+      },
+      description: `Reclaimed ${formatAtoms(
+        reclaimRent.reclaimedLamports,
+        9,
+      )} SOL.`,
+      id: `reclaim-rent-success-${signature}`,
+    })
+  }, [reclaimRent.reclaimedLamports, reclaimRent.signature, reclaimRent.status])
+
+  useEffect(() => {
+    if (!reclaimRent.error) return
+
+    toast.error('Rent reclaim failed', {
+      description: reclaimRent.error,
+      id: 'reclaim-rent-error',
+    })
+  }, [reclaimRent.error])
+
+  if (!isReady) {
+    return (
+      <Button
+        size="lg"
+        variant="outline"
+        className="min-w-[9rem] justify-between rounded-full px-5 sm:min-w-[13rem]"
+      >
+        <span className="text-sm text-muted-foreground">Loading wallets</span>
+      </Button>
+    )
+  }
+
+  const address = wallet?.account.address.toString() ?? null
+  const hasLowReclaimRentNativeSolBalance =
+    connected &&
+    isNativeBalanceBelowTransactionMinimum(
+      nativeSolBalance.lamports,
+      MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+    )
+  const reclaimRentNativeSolWarning = hasLowReclaimRentNativeSolBalance
+    ? `Your wallet has ${formatAtoms(
+        nativeSolBalance.lamports ?? 0n,
+        NATIVE_SOL_DECIMALS,
+      )} SOL. Add SOL before reclaiming rent; at least ${formatAtoms(
+        MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
+        NATIVE_SOL_DECIMALS,
+      )} SOL is required for fees.`
+    : null
+
+  const handleCopyAddress = async () => {
+    if (!address) return
+
+    await navigator.clipboard.writeText(address)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1_500)
+  }
+
+  const showReclaimRentButton = connected && reclaimRent.closeableCount > 0
+  const handleReclaimRent = async () => {
+    if (reclaimRentNativeSolWarning) {
+      toast.warning('Not enough SOL', {
+        description: reclaimRentNativeSolWarning,
+        id: 'reclaim-rent-validation',
+      })
+      return
+    }
+
+    const success = await reclaimRent.reclaimRent()
+    if (success) {
+      await nativeSolBalance.refresh()
+    }
+  }
+
+  return (
+    <div ref={dropdownRef} className="relative z-[70]">
+      <Button
+        size="lg"
+        variant="outline"
+        className="max-w-full min-w-[9rem] justify-between rounded-full border-white/10 bg-white/5 px-5 hover:bg-white/10 sm:min-w-[13rem]"
+        onClick={() => setOpen((previous) => !previous)}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <Wallet className="size-4" />
+          <span className="truncate">
+            {connected ? shortenAddress(address, 4, 4) : 'Connect wallet'}
+          </span>
+        </span>
+        <ChevronDown
+          className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </Button>
+
+      {open ? (
+        <Card className="absolute right-0 z-[80] mt-3 w-[19rem] border-white/10 bg-[color:var(--color-elevated)]/95 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.75)]">
+          <CardContent className="space-y-3 p-4">
+            {connected ? (
+              <>
+                <div className="max-w-full rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <Badge variant="accent">Connected</Badge>
+                    {currentConnector ? (
+                      <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                        {currentConnector.name}
+                      </span>
+                    ) : null}
+                  </div>
+                  <button
+                    className="flex max-w-full items-center gap-2 text-left font-mono text-sm leading-6 text-foreground transition-colors hover:text-[color:var(--color-accent-strong)]"
+                    onClick={() => {
+                      void handleCopyAddress()
+                    }}
+                    type="button"
+                  >
+                    {copied ? (
+                      <Check className="size-4 shrink-0" />
+                    ) : (
+                      <Copy className="size-4 shrink-0" />
+                    )}
+                    <span className="truncate">
+                      {shortenAddress(address, 4, 4)}
+                    </span>
+                  </button>
+                </div>
+                {showReclaimRentButton ? (
+                  <>
+                    <Button
+                      className="w-full justify-between rounded-xl"
+                      disabled={reclaimRent.isReclaiming}
+                      variant="outline"
+                      onClick={() => {
+                        void handleReclaimRent()
+                      }}
+                    >
+                      {reclaimRent.isReclaiming
+                        ? 'Reclaiming rent...'
+                        : 'Reclaim Rent'}
+                      <HandCoins className="size-4" />
+                    </Button>
+                    {reclaimRentNativeSolWarning ? (
+                      <div className="flex items-start gap-2 rounded-xl border border-warning/35 bg-warning/10 px-3 py-2 text-xs leading-5 text-warning-foreground">
+                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                        <span>{reclaimRentNativeSolWarning}</span>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+                <Button
+                  className="w-full justify-between rounded-xl"
+                  variant="outline"
+                  onClick={() => {
+                    reclaimRent.reset()
+                    void disconnect()
+                    setOpen(false)
+                  }}
+                >
+                  Disconnect
+                  <LogOut className="size-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                    Wallet Standard
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Choose a desktop wallet. The web app uses Wallet Standard
+                    instead of the mobile adapter.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {connectors.map((connector) => (
+                    <Button
+                      key={connector.id}
+                      className="w-full justify-between rounded-xl"
+                      variant="outline"
+                      onClick={() => {
+                        void connect(connector.id, { autoConnect: true })
+                        setOpen(false)
+                      }}
+                    >
+                      {connector.name}
+                      <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                        Connect
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  )
+}

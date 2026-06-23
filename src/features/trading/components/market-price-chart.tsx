@@ -1,0 +1,961 @@
+import {
+  CandlestickSeries,
+  ColorType,
+  CrosshairMode,
+  LineSeries,
+  createChart,
+} from 'lightweight-charts'
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
+import {
+  buildOlderChartHistoryRequest,
+  computePrependedLogicalRange,
+} from '../lib/chart-history'
+import { CHART_HISTORY_REQUEST_DEBOUNCE_MS } from '../constants'
+import type {
+  CandlestickData,
+  IChartApi,
+  ISeriesApi,
+  ITimeScaleApi,
+  LineData,
+  Logical,
+  LogicalRange,
+  Time,
+  UTCTimestamp,
+} from 'lightweight-charts'
+import type { LogicalRangeLike } from '../lib/chart-history'
+import type { ChartPositionOverlay } from '../lib/chart-positions'
+import type { TradingViewAggregatedCandle } from '../lib/market'
+
+export interface ChartCrosshairData {
+  close: number
+  high: number
+  low: number
+  open: number
+  time: number
+}
+
+export interface ChartHistoryRequest {
+  visibleBarCount: number
+}
+
+export type ChartDisplayMode = 'candles' | 'line'
+
+function buildDefaultLogicalRange(
+  dataLength: number,
+  visibleBars: number,
+): LogicalRange | null {
+  if (dataLength <= 0 || visibleBars <= 0) {
+    return null
+  }
+
+  if (dataLength <= visibleBars) {
+    return null
+  }
+
+  return {
+    from: Math.max(-0.5, dataLength - visibleBars) as Logical,
+    to: (dataLength - 1 + 8) as Logical,
+  }
+}
+
+function isSameCrosshairData(
+  left: ChartCrosshairData | null,
+  right: ChartCrosshairData | null,
+) {
+  if (left === right) {
+    return true
+  }
+
+  if (left === null || right === null) {
+    return false
+  }
+
+  return (
+    left.close === right.close &&
+    left.high === right.high &&
+    left.low === right.low &&
+    left.open === right.open &&
+    left.time === right.time
+  )
+}
+
+const MIN_VALID_UNIX_TIME_SECONDS = 946684800 // 2000-01-01T00:00:00Z
+const MAX_VALID_UNIX_TIME_SECONDS = 4102444800 // 2100-01-01T00:00:00Z
+const MAX_LIGHTWEIGHT_CHART_ABS_VALUE = 90_071_992_547_409.91
+const POSITION_BADGE_HEIGHT = 24
+const POSITION_BADGE_GAP = 4
+
+interface ProjectedPositionOverlay extends ChartPositionOverlay {
+  badgeAnchorX: number
+  badgeLeft: number
+  badgeTop: number
+  endX: number
+  lineColor: string
+  showBadge: boolean
+  startX: number
+  width: number
+  y: number
+}
+
+function normalizeUnixTimeSeconds(rawTime: number) {
+  if (!Number.isFinite(rawTime) || rawTime <= 0) {
+    return null
+  }
+
+  const candidates = [
+    rawTime,
+    rawTime / 1_000,
+    rawTime / 1_000_000,
+    rawTime / 1_000_000_000,
+  ]
+
+  for (const candidate of candidates) {
+    const normalized = Math.floor(candidate)
+    if (
+      normalized >= MIN_VALID_UNIX_TIME_SECONDS &&
+      normalized <= MAX_VALID_UNIX_TIME_SECONDS
+    ) {
+      return normalized
+    }
+  }
+
+  return null
+}
+
+function isSafeChartNumber(value: number) {
+  return (
+    Number.isFinite(value) && Math.abs(value) <= MAX_LIGHTWEIGHT_CHART_ABS_VALUE
+  )
+}
+
+function sanitizeChartCandles(data: Array<TradingViewAggregatedCandle>) {
+  const normalized = data
+    .map<TradingViewAggregatedCandle | null>((candle) => {
+      const time = normalizeUnixTimeSeconds(candle.time)
+      if (time === null) {
+        return null
+      }
+      if (
+        !isSafeChartNumber(candle.open) ||
+        !isSafeChartNumber(candle.high) ||
+        !isSafeChartNumber(candle.low) ||
+        !isSafeChartNumber(candle.close)
+      ) {
+        return null
+      }
+      if (
+        candle.open <= 0 ||
+        candle.high <= 0 ||
+        candle.low <= 0 ||
+        candle.close <= 0
+      ) {
+        return null
+      }
+
+      const normalizedHigh = Math.max(
+        candle.open,
+        candle.high,
+        candle.low,
+        candle.close,
+      )
+      const normalizedLow = Math.min(
+        candle.open,
+        candle.high,
+        candle.low,
+        candle.close,
+      )
+      return {
+        ...candle,
+        high: normalizedHigh,
+        low: normalizedLow,
+        time,
+      }
+    })
+    .filter((candle): candle is TradingViewAggregatedCandle => candle !== null)
+    .sort((left, right) => left.time - right.time)
+
+  const deduped: Array<TradingViewAggregatedCandle> = []
+  for (const candle of normalized) {
+    const previous = deduped.at(-1)
+    if (previous && previous.time === candle.time) {
+      deduped[deduped.length - 1] = candle
+      continue
+    }
+
+    deduped.push(candle)
+  }
+
+  return deduped
+}
+
+function getInterpolatedTimeCoordinate({
+  chartData,
+  time,
+  timeScale,
+}: {
+  chartData: Array<TradingViewAggregatedCandle>
+  time: number
+  timeScale: ITimeScaleApi<Time>
+}) {
+  const directCoordinate = timeScale.timeToCoordinate(time as UTCTimestamp)
+  if (directCoordinate !== null) {
+    return directCoordinate
+  }
+
+  if (chartData.length === 0) return null
+
+  const upperIndex = chartData.findIndex((candle) => candle.time >= time)
+  if (upperIndex >= 0 && chartData[upperIndex].time === time) {
+    return timeScale.timeToCoordinate(
+      chartData[upperIndex].time as UTCTimestamp,
+    )
+  }
+
+  const left =
+    upperIndex < 0
+      ? chartData.at(-2)
+      : upperIndex === 0
+        ? chartData[0]
+        : chartData[upperIndex - 1]
+  const right =
+    upperIndex < 0
+      ? chartData.at(-1)
+      : upperIndex === 0
+        ? chartData[1]
+        : chartData[upperIndex]
+
+  if (!left || !right || left.time === right.time) {
+    return null
+  }
+
+  const leftX = timeScale.timeToCoordinate(left.time as UTCTimestamp)
+  const rightX = timeScale.timeToCoordinate(right.time as UTCTimestamp)
+  if (leftX === null || rightX === null) {
+    return null
+  }
+
+  const ratio = (time - left.time) / (right.time - left.time)
+  return leftX + (rightX - leftX) * ratio
+}
+
+function estimateBadgeWidth(label: string) {
+  return Math.min(168, Math.max(80, label.length * 7 + 24))
+}
+
+function boxesOverlap(
+  left: { bottom: number; left: number; right: number; top: number },
+  right: { bottom: number; left: number; right: number; top: number },
+) {
+  return (
+    left.left < right.right &&
+    left.right > right.left &&
+    left.top < right.bottom &&
+    left.bottom > right.top
+  )
+}
+
+function stackPositionBadges({
+  bounds,
+  overlays,
+}: {
+  bounds: { height: number; width: number }
+  overlays: Array<Omit<ProjectedPositionOverlay, 'badgeLeft' | 'badgeTop'>>
+}): Array<ProjectedPositionOverlay> {
+  const stackedOverlays = overlays.map((overlay) => ({
+    ...overlay,
+    badgeLeft: 0,
+    badgeTop: 0,
+  }))
+  const occupied: Array<{
+    bottom: number
+    left: number
+    right: number
+    top: number
+  }> = []
+
+  stackedOverlays
+    .filter((overlay) => overlay.showBadge)
+    .sort((left, right) => {
+      if (Math.abs(left.badgeAnchorX - right.badgeAnchorX) < 1) {
+        return left.y - right.y
+      }
+      return left.badgeAnchorX - right.badgeAnchorX
+    })
+    .forEach((overlay) => {
+      const badgeWidth = estimateBadgeWidth(overlay.label)
+      const badgeLeft = Math.min(
+        Math.max(overlay.badgeAnchorX - badgeWidth / 2, 4),
+        Math.max(4, bounds.width - badgeWidth - 4),
+      )
+      const preferredTop = Math.min(
+        Math.max(overlay.y - POSITION_BADGE_HEIGHT - 14, 4),
+        Math.max(4, bounds.height - POSITION_BADGE_HEIGHT - 4),
+      )
+      let badgeTop = preferredTop
+
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        badgeTop = Math.max(
+          4,
+          preferredTop - attempt * (POSITION_BADGE_HEIGHT + POSITION_BADGE_GAP),
+        )
+        const candidate = {
+          bottom: badgeTop + POSITION_BADGE_HEIGHT,
+          left: badgeLeft,
+          right: badgeLeft + badgeWidth,
+          top: badgeTop,
+        }
+        if (!occupied.some((box) => boxesOverlap(candidate, box))) {
+          occupied.push(candidate)
+          overlay.badgeLeft = badgeLeft
+          overlay.badgeTop = badgeTop
+          overlay.width = badgeWidth
+          return
+        }
+      }
+
+      occupied.push({
+        bottom: badgeTop + POSITION_BADGE_HEIGHT,
+        left: badgeLeft,
+        right: badgeLeft + badgeWidth,
+        top: badgeTop,
+      })
+      overlay.badgeLeft = badgeLeft
+      overlay.badgeTop = badgeTop
+      overlay.width = badgeWidth
+    })
+
+  return stackedOverlays
+}
+
+export function MarketPriceChart({
+  defaultVisibleBars = 120,
+  data,
+  displayMode = 'candles',
+  height = 420,
+  hasMoreHistory = false,
+  isLoadingMoreHistory = false,
+  onCrosshairMove,
+  onNeedOlderHistory,
+  positionOverlays = [],
+  resetSignal = 0,
+  viewportPresetKey = 'default',
+}: {
+  defaultVisibleBars?: number
+  data: Array<TradingViewAggregatedCandle>
+  displayMode?: ChartDisplayMode
+  height?: number
+  hasMoreHistory?: boolean
+  isLoadingMoreHistory?: boolean
+  onCrosshairMove?: (value: ChartCrosshairData | null) => void
+  onNeedOlderHistory?: (request: ChartHistoryRequest) => void
+  positionOverlays?: Array<ChartPositionOverlay>
+  resetSignal?: number
+  viewportPresetKey?: string
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const chartRef = useRef<IChartApi | null>(null)
+  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
+  const lineSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
+  const seriesColors = useMemo(() => {
+    if (typeof document === 'undefined') {
+      return { line: '#f6c465', negative: '#d4243a', positive: '#1fd79a' }
+    }
+    const root = getComputedStyle(document.documentElement)
+    return {
+      line: root.getPropertyValue('--color-accent-warm').trim() || '#f6c465',
+      positive: root.getPropertyValue('--color-positive').trim() || '#1fd79a',
+      negative: root.getPropertyValue('--color-negative').trim() || '#d4243a',
+    }
+  }, [])
+  const previousDataLengthRef = useRef(0)
+  const previousFirstTimeRef = useRef<number | null>(null)
+  const previousLastTimeRef = useRef<number | null>(null)
+  const activePanGestureRef = useRef(false)
+  const hasUserInteractedRef = useRef(false)
+  const isAdjustingVisibleRangeRef = useRef(false)
+  const lastHistoryRequestAtRef = useRef(0)
+  const lastLogicalRangeRef = useRef<LogicalRange | null>(null)
+  const wheelGestureTimeoutRef = useRef<number | null>(null)
+  const lastCrosshairDataRef = useRef<ChartCrosshairData | null>(null)
+  const previousViewportPresetKeyRef = useRef(viewportPresetKey)
+  const chartData = useMemo(() => sanitizeChartCandles(data), [data])
+  const [projectedPositionOverlays, setProjectedPositionOverlays] = useState<
+    Array<ProjectedPositionOverlay>
+  >([])
+
+  const candleData = useMemo(
+    () =>
+      chartData.map<CandlestickData<UTCTimestamp>>((candle) => ({
+        close: candle.close,
+        high: candle.high,
+        low: candle.low,
+        open: candle.open,
+        time: candle.time as UTCTimestamp,
+      })),
+    [chartData],
+  )
+  const lineData = useMemo(
+    () =>
+      chartData.map<LineData<UTCTimestamp>>((candle) => ({
+        time: candle.time as UTCTimestamp,
+        value: candle.close,
+      })),
+    [chartData],
+  )
+
+  const handleCrosshairMove = useEffectEvent(
+    (payload: ChartCrosshairData | null) => {
+      if (isSameCrosshairData(lastCrosshairDataRef.current, payload)) {
+        return
+      }
+
+      lastCrosshairDataRef.current = payload
+      onCrosshairMove?.(payload)
+    },
+  )
+  const getVisiblePriceSeries = useEffectEvent(() =>
+    displayMode === 'line' ? lineSeriesRef.current : candleSeriesRef.current,
+  )
+  const buildCrosshairPayload = useEffectEvent((time: Time | undefined) => {
+    if (time === undefined) return null
+    if (typeof time !== 'number') return null
+
+    const candle = chartData.find((item) => item.time === time)
+    if (!candle) return null
+
+    return {
+      close: candle.close,
+      high: candle.high,
+      low: candle.low,
+      open: candle.open,
+      time: candle.time,
+    }
+  })
+  const updatePositionOverlayCoordinates = useEffectEvent(() => {
+    const priceSeries = getVisiblePriceSeries()
+    if (
+      !chartRef.current ||
+      !priceSeries ||
+      !containerRef.current ||
+      chartData.length === 0 ||
+      positionOverlays.length === 0
+    ) {
+      setProjectedPositionOverlays([])
+      return
+    }
+
+    const timeScale = chartRef.current.timeScale()
+    const bounds = {
+      height: containerRef.current.clientHeight,
+      width: containerRef.current.clientWidth,
+    }
+    const projected = positionOverlays.flatMap<
+      Omit<ProjectedPositionOverlay, 'badgeLeft' | 'badgeTop'>
+    >((overlay) => {
+      const rawStartX = getInterpolatedTimeCoordinate({
+        chartData,
+        time: overlay.startTime,
+        timeScale,
+      })
+      const rawEndX = getInterpolatedTimeCoordinate({
+        chartData,
+        time: overlay.endTime,
+        timeScale,
+      })
+      const y = priceSeries.priceToCoordinate(overlay.averagePrice)
+
+      if (rawStartX === null || rawEndX === null || y === null) {
+        return []
+      }
+
+      const rawLineEndX = rawEndX <= rawStartX ? rawStartX + 8 : rawEndX
+      const minLineX = Math.min(rawStartX, rawLineEndX)
+      const maxLineX = Math.max(rawStartX, rawLineEndX)
+
+      if (
+        maxLineX < 0 ||
+        minLineX > bounds.width ||
+        y < 0 ||
+        y > bounds.height
+      ) {
+        return []
+      }
+
+      return [
+        {
+          ...overlay,
+          badgeAnchorX: rawStartX,
+          endX: Math.min(Math.max(rawLineEndX, 0), bounds.width),
+          lineColor:
+            overlay.side === 'buy'
+              ? seriesColors.positive
+              : seriesColors.negative,
+          showBadge: rawStartX >= 0 && rawStartX <= bounds.width,
+          startX: Math.min(Math.max(rawStartX, 0), bounds.width),
+          width: 0,
+          y,
+        },
+      ]
+    })
+
+    setProjectedPositionOverlays(
+      stackPositionBadges({ bounds, overlays: projected }),
+    )
+  })
+  const handleNeedOlderHistory = useEffectEvent(
+    (range: LogicalRange | null) => {
+      if (
+        !range ||
+        !activePanGestureRef.current ||
+        isAdjustingVisibleRangeRef.current
+      ) {
+        return
+      }
+      if (!hasMoreHistory || isLoadingMoreHistory || !onNeedOlderHistory) {
+        return
+      }
+
+      const previousRange = lastLogicalRangeRef.current
+      lastLogicalRangeRef.current = range
+
+      if (!previousRange) {
+        return
+      }
+
+      const previousSpan = previousRange.to - previousRange.from
+      const nextSpan = range.to - range.from
+      const isScaleChange = Math.abs(nextSpan - previousSpan) > 0.01
+      const movedLeft = range.from < previousRange.from - 0.25
+
+      if (isScaleChange || !movedLeft || !candleSeriesRef.current) {
+        return
+      }
+
+      const priceSeries = getVisiblePriceSeries()
+      if (!priceSeries) {
+        return
+      }
+
+      const now = Date.now()
+      if (
+        now - lastHistoryRequestAtRef.current <
+        CHART_HISTORY_REQUEST_DEBOUNCE_MS
+      ) {
+        return
+      }
+
+      const barsInfo = priceSeries.barsInLogicalRange(range)
+      const request = buildOlderChartHistoryRequest({
+        barsBefore: barsInfo?.barsBefore ?? null,
+        data: chartData,
+        logicalRange: range,
+      })
+      if (request === null) {
+        return
+      }
+
+      lastHistoryRequestAtRef.current = now
+      onNeedOlderHistory(request)
+    },
+  )
+  const applyVisibleLogicalRange = useEffectEvent(
+    (range: LogicalRangeLike | null) => {
+      if (!chartRef.current || !range) {
+        return
+      }
+
+      isAdjustingVisibleRangeRef.current = true
+      chartRef.current.timeScale().setVisibleLogicalRange(range as LogicalRange)
+      isAdjustingVisibleRangeRef.current = false
+      lastLogicalRangeRef.current = chartRef.current
+        .timeScale()
+        .getVisibleLogicalRange()
+    },
+  )
+  const applyDefaultViewport = useEffectEvent(() => {
+    if (!chartRef.current || chartData.length === 0) {
+      return
+    }
+
+    const nextRange = buildDefaultLogicalRange(
+      chartData.length,
+      defaultVisibleBars,
+    )
+
+    isAdjustingVisibleRangeRef.current = true
+
+    if (nextRange) {
+      chartRef.current.timeScale().setVisibleLogicalRange(nextRange)
+    } else {
+      chartRef.current.timeScale().fitContent()
+    }
+
+    isAdjustingVisibleRangeRef.current = false
+    lastLogicalRangeRef.current = chartRef.current
+      .timeScale()
+      .getVisibleLogicalRange()
+  })
+
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const chart = createChart(containerRef.current, {
+      autoSize: true,
+      crosshair: {
+        mode: CrosshairMode.Normal,
+      },
+      grid: {
+        horzLines: { color: 'rgba(255,255,255,0.06)' },
+        vertLines: { color: 'rgba(255,255,255,0.04)' },
+      },
+      handleScroll: {
+        horzTouchDrag: true,
+        mouseWheel: true,
+        pressedMouseMove: true,
+        // lightweight-charts only forwards touch moves on the price axis when
+        // vertical touch drag is allowed.
+        vertTouchDrag: true,
+      },
+      handleScale: {
+        axisPressedMouseMove: true,
+        mouseWheel: true,
+        pinch: true,
+      },
+      height,
+      layout: {
+        background: {
+          color: 'rgba(7, 17, 31, 0)',
+          type: ColorType.Solid,
+        },
+        textColor: 'rgba(233,239,245,0.75)',
+      },
+      rightPriceScale: {
+        borderColor: 'rgba(255,255,255,0.12)',
+      },
+      timeScale: {
+        borderColor: 'rgba(255,255,255,0.12)',
+        fixLeftEdge: true,
+        timeVisible: true,
+      },
+    })
+
+    const candleSeries = chart.addSeries(CandlestickSeries, {
+      borderDownColor: seriesColors.negative,
+      borderUpColor: seriesColors.positive,
+      downColor: seriesColors.negative,
+      wickDownColor: seriesColors.negative,
+      wickUpColor: seriesColors.positive,
+      upColor: seriesColors.positive,
+    })
+
+    const lineSeries = chart.addSeries(LineSeries, {
+      color: seriesColors.line,
+      lineWidth: 2,
+      priceLineColor: seriesColors.line,
+      visible: false,
+    })
+
+    chart.timeScale().applyOptions({ rightOffset: 8 })
+
+    chart.subscribeCrosshairMove((param) => {
+      handleCrosshairMove(buildCrosshairPayload(param.time))
+    })
+    const handleVisibleLogicalRangeChange = (range: LogicalRange | null) => {
+      handleNeedOlderHistory(range)
+      updatePositionOverlayCoordinates()
+    }
+    chart
+      .timeScale()
+      .subscribeVisibleLogicalRangeChange(handleVisibleLogicalRangeChange)
+    chart.timeScale().subscribeSizeChange(updatePositionOverlayCoordinates)
+
+    chartRef.current = chart
+    candleSeriesRef.current = candleSeries
+    lineSeriesRef.current = lineSeries
+
+    const clearPanGesture = () => {
+      activePanGestureRef.current = false
+      if (wheelGestureTimeoutRef.current !== null) {
+        window.clearTimeout(wheelGestureTimeoutRef.current)
+        wheelGestureTimeoutRef.current = null
+      }
+    }
+
+    const handlePointerDown = () => {
+      activePanGestureRef.current = true
+      hasUserInteractedRef.current = true
+    }
+    const handleTouchStart = (event: TouchEvent) => {
+      activePanGestureRef.current = event.touches.length === 1
+      if (event.touches.length > 0) {
+        hasUserInteractedRef.current = true
+      }
+    }
+    const handleTouchEnd = () => {
+      activePanGestureRef.current = false
+    }
+    const handleWheel = (event: WheelEvent) => {
+      hasUserInteractedRef.current = true
+      activePanGestureRef.current =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+      if (!activePanGestureRef.current) {
+        return
+      }
+      if (wheelGestureTimeoutRef.current !== null) {
+        window.clearTimeout(wheelGestureTimeoutRef.current)
+      }
+      wheelGestureTimeoutRef.current = window.setTimeout(() => {
+        activePanGestureRef.current = false
+        wheelGestureTimeoutRef.current = null
+      }, 120)
+    }
+
+    containerRef.current.addEventListener('pointerdown', handlePointerDown, {
+      passive: true,
+    })
+    window.addEventListener('pointerup', clearPanGesture)
+    window.addEventListener('pointercancel', clearPanGesture)
+    containerRef.current.addEventListener('wheel', handleWheel, {
+      passive: true,
+    })
+    containerRef.current.addEventListener('touchstart', handleTouchStart, {
+      passive: true,
+    })
+    containerRef.current.addEventListener('touchend', handleTouchEnd, {
+      passive: true,
+    })
+    containerRef.current.addEventListener('touchcancel', handleTouchEnd, {
+      passive: true,
+    })
+
+    const resizeObserver = new ResizeObserver(() => {
+      chart.timeScale().applyOptions({ rightOffset: 8 })
+      updatePositionOverlayCoordinates()
+    })
+    resizeObserver.observe(containerRef.current)
+
+    return () => {
+      resizeObserver.disconnect()
+      containerRef.current?.removeEventListener(
+        'pointerdown',
+        handlePointerDown,
+      )
+      window.removeEventListener('pointerup', clearPanGesture)
+      window.removeEventListener('pointercancel', clearPanGesture)
+      chart
+        .timeScale()
+        .unsubscribeVisibleLogicalRangeChange(handleVisibleLogicalRangeChange)
+      chart.timeScale().unsubscribeSizeChange(updatePositionOverlayCoordinates)
+      containerRef.current?.removeEventListener('wheel', handleWheel)
+      containerRef.current?.removeEventListener('touchstart', handleTouchStart)
+      containerRef.current?.removeEventListener('touchend', handleTouchEnd)
+      containerRef.current?.removeEventListener('touchcancel', handleTouchEnd)
+      chart.remove()
+      chartRef.current = null
+      candleSeriesRef.current = null
+      lineSeriesRef.current = null
+      previousDataLengthRef.current = 0
+      previousFirstTimeRef.current = null
+      previousLastTimeRef.current = null
+      activePanGestureRef.current = false
+      hasUserInteractedRef.current = false
+      isAdjustingVisibleRangeRef.current = false
+      lastHistoryRequestAtRef.current = 0
+      lastLogicalRangeRef.current = null
+      lastCrosshairDataRef.current = null
+      if (wheelGestureTimeoutRef.current !== null) {
+        window.clearTimeout(wheelGestureTimeoutRef.current)
+        wheelGestureTimeoutRef.current = null
+      }
+      setProjectedPositionOverlays([])
+    }
+  }, [height, seriesColors])
+
+  useEffect(() => {
+    if (!candleSeriesRef.current || !lineSeriesRef.current || !chartRef.current)
+      return
+    const previousRange = chartRef.current.timeScale().getVisibleLogicalRange()
+    const previousLength = previousDataLengthRef.current
+    const previousFirstTime = previousFirstTimeRef.current
+    const previousLastTime = previousLastTimeRef.current
+    const viewportPresetChanged =
+      previousViewportPresetKeyRef.current !== viewportPresetKey
+
+    const hadNoData = previousLength === 0
+    const nextFirstTime = chartData[0]?.time ?? null
+    const nextLastTime = chartData[chartData.length - 1]?.time ?? null
+
+    previousViewportPresetKeyRef.current = viewportPresetKey
+    previousDataLengthRef.current = chartData.length
+    previousFirstTimeRef.current = nextFirstTime
+    previousLastTimeRef.current = nextLastTime
+
+    if (chartData.length > 0) {
+      if (hadNoData) {
+        candleSeriesRef.current.setData(candleData)
+        lineSeriesRef.current.setData(lineData)
+        applyDefaultViewport()
+        return
+      }
+
+      const nextRange = computePrependedLogicalRange({
+        nextFirstTime,
+        nextLastTime,
+        nextLength: chartData.length,
+        previousFirstTime,
+        previousLastTime,
+        previousLength,
+        previousRange,
+      })
+
+      if (nextRange) {
+        candleSeriesRef.current.setData(candleData)
+        lineSeriesRef.current.setData(lineData)
+        if (hasUserInteractedRef.current) {
+          applyVisibleLogicalRange(nextRange)
+        } else {
+          applyDefaultViewport()
+        }
+        return
+      }
+
+      if (viewportPresetChanged) {
+        candleSeriesRef.current.setData(candleData)
+        lineSeriesRef.current.setData(lineData)
+        applyDefaultViewport()
+        return
+      }
+
+      const canApplyIncrementalUpdate =
+        previousFirstTime === nextFirstTime &&
+        previousLastTime !== null &&
+        nextLastTime >= previousLastTime
+
+      if (canApplyIncrementalUpdate) {
+        const startIndex = chartData.findIndex(
+          (candle) => candle.time >= previousLastTime,
+        )
+
+        if (startIndex >= 0) {
+          for (let index = startIndex; index < candleData.length; index += 1) {
+            candleSeriesRef.current.update(candleData[index])
+            lineSeriesRef.current.update(lineData[index])
+          }
+
+          lastLogicalRangeRef.current = chartRef.current
+            .timeScale()
+            .getVisibleLogicalRange()
+          updatePositionOverlayCoordinates()
+          return
+        }
+      }
+
+      candleSeriesRef.current.setData(candleData)
+      lineSeriesRef.current.setData(lineData)
+
+      if (!hasUserInteractedRef.current) {
+        applyDefaultViewport()
+        return
+      }
+
+      if (previousRange) {
+        applyVisibleLogicalRange(previousRange)
+        return
+      }
+
+      lastLogicalRangeRef.current = chartRef.current
+        .timeScale()
+        .getVisibleLogicalRange()
+      updatePositionOverlayCoordinates()
+      return
+    }
+
+    candleSeriesRef.current.setData(candleData)
+    lineSeriesRef.current.setData(lineData)
+    previousFirstTimeRef.current = null
+    previousLastTimeRef.current = null
+    lastLogicalRangeRef.current = null
+    handleCrosshairMove(null)
+    updatePositionOverlayCoordinates()
+  }, [candleData, chartData, chartData.length, lineData, viewportPresetKey])
+
+  useEffect(() => {
+    if (!candleSeriesRef.current || !lineSeriesRef.current) return
+
+    candleSeriesRef.current.applyOptions({
+      visible: displayMode === 'candles',
+    })
+    lineSeriesRef.current.applyOptions({ visible: displayMode === 'line' })
+    updatePositionOverlayCoordinates()
+  }, [displayMode])
+
+  useEffect(() => {
+    if (resetSignal <= 0) return
+    if (!chartRef.current) return
+    hasUserInteractedRef.current = false
+    applyDefaultViewport()
+    updatePositionOverlayCoordinates()
+  }, [resetSignal])
+
+  useEffect(() => {
+    hasUserInteractedRef.current = false
+  }, [viewportPresetKey])
+
+  useEffect(() => {
+    updatePositionOverlayCoordinates()
+  }, [chartData, positionOverlays])
+
+  return (
+    <div
+      className="relative h-full min-h-[420px] w-full touch-none"
+      data-base-ui-swipe-ignore=""
+    >
+      <div ref={containerRef} className="h-full min-h-[420px] w-full" />
+      {projectedPositionOverlays.length > 0 ? (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <svg aria-hidden className="absolute inset-0 size-full">
+            {projectedPositionOverlays.map((overlay) => (
+              <line
+                key={`${overlay.id}-line`}
+                stroke={overlay.lineColor}
+                strokeDasharray={
+                  overlay.status === 'active' ? '5 4' : undefined
+                }
+                strokeLinecap="round"
+                strokeWidth="2"
+                x1={overlay.startX}
+                x2={overlay.endX}
+                y1={overlay.y}
+                y2={overlay.y}
+              />
+            ))}
+          </svg>
+          {projectedPositionOverlays
+            .filter((overlay) => overlay.showBadge)
+            .map((overlay) => (
+              <div
+                className={`absolute z-10 flex h-6 items-center justify-center rounded-full border px-2 text-[11px] font-semibold shadow-[0_8px_24px_-16px_rgba(0,0,0,0.9)] backdrop-blur-sm ${
+                  overlay.side === 'buy'
+                    ? 'border-positive/60 bg-positive/90 text-background'
+                    : 'border-negative/60 bg-negative/90 text-white'
+                }`}
+                key={`${overlay.id}-badge`}
+                style={{
+                  left: overlay.badgeLeft,
+                  top: overlay.badgeTop,
+                  width: overlay.width,
+                }}
+              >
+                <span className="truncate">{overlay.label}</span>
+              </div>
+            ))}
+        </div>
+      ) : null}
+      {isLoadingMoreHistory ? (
+        <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+          Loading older history...
+        </div>
+      ) : null}
+    </div>
+  )
+}
