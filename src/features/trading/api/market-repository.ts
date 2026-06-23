@@ -2,13 +2,12 @@ import { readApiUrl } from './read-api'
 import type {
   MarketConfigRow,
   MarketUpdateEvent,
-} from '@/integrations/supabase'
+} from '@/integrations/read-api'
 import type { MarketPriceSnapshot } from '../domain/models'
 import {
   parseClosePositionEvent,
   parseMarketUpdateEvent,
-  supabase,
-} from '@/integrations/supabase'
+} from '@/integrations/read-api'
 
 export type CandleInterval = '1m' | '5m' | '1h'
 const MAX_LIGHTWEIGHT_CHART_ABS_VALUE = 90_071_992_547_409.91
@@ -27,13 +26,10 @@ interface ReadApiPriceResponse {
 
 interface ReadApiCandleItem {
   time: number
-  start_slot: number
-  end_slot: number
   open: number
   high: number
   low: number
   close: number
-  volume: number
 }
 
 interface ReadApiCandleResponse {
@@ -73,6 +69,31 @@ interface ReadApiMarketUpdatesResponse {
   items: Array<ReadApiMarketHistoryItem>
 }
 
+interface ReadApiClosedPositionItem {
+  signature: string
+  event_index: number
+  slot: number
+  market_id: number
+  start_slot: number | null
+  end_slot: number | null
+  deposit_amount: string
+  swapped_amount: string
+  remaining_amount: string
+  fee_amount: string
+  is_buy: boolean
+  event_time: string
+}
+
+interface ReadApiClosedPositionsResponse {
+  authority: string
+  market_id: number | null
+  before_slot: number | null
+  has_more: boolean
+  limit: number
+  points: number
+  items: Array<ReadApiClosedPositionItem>
+}
+
 interface ReadApiClosedPositionMiniChartItem {
   slot: number
   price: number
@@ -88,8 +109,6 @@ interface ReadApiClosedPositionMiniChartResponse {
 
 export interface MarketCandle {
   time: number
-  startSlot: number
-  endSlot: number
   open: number
   high: number
   low: number
@@ -175,17 +194,20 @@ export function dedupeMarketUpdatesById(events: Array<MarketUpdateEvent>) {
 }
 
 export async function fetchMarketConfig(marketId: number) {
-  const { data, error } = await supabase
-    .from('market_configs')
-    .select('*')
-    .eq('market_id', marketId)
-    .single<MarketConfigRow>()
+  const response = await fetch(readApiUrl(`/v1/markets/${marketId}/config`), {
+    headers: {
+      Accept: 'application/json',
+    },
+  })
 
-  if (error) {
-    throw new Error(error.message)
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(
+      `Failed to fetch market config (${response.status}): ${body || response.statusText}`,
+    )
   }
 
-  return data
+  return (await response.json()) as MarketConfigRow
 }
 
 export async function fetchMarketUpdatesPage({
@@ -318,35 +340,24 @@ export async function fetchMarketCandles({
         item.close,
       )
       const normalizedLow = Math.min(item.open, item.high, item.low, item.close)
-      const normalizedVolume =
-        isSafeChartNumber(item.volume) && item.volume >= 0 ? item.volume : 0
 
       return {
         close: item.close,
-        endSlot: item.end_slot,
         high: normalizedHigh,
         low: normalizedLow,
         open: item.open,
-        startSlot: item.start_slot,
         time,
-        volume: normalizedVolume,
+        volume: 0,
       }
     })
     .filter((item): item is MarketCandle => item !== null)
-    .sort((left, right) => {
-      if (left.time === right.time) {
-        return left.endSlot - right.endSlot
-      }
-      return left.time - right.time
-    })
+    .sort((left, right) => left.time - right.time)
 
   const dedupedCandles: Array<MarketCandle> = []
   for (const candle of candles) {
     const previous = dedupedCandles.at(-1)
     if (previous && previous.time === candle.time) {
-      if (candle.endSlot >= previous.endSlot) {
-        dedupedCandles[dedupedCandles.length - 1] = candle
-      }
+      dedupedCandles[dedupedCandles.length - 1] = candle
       continue
     }
 
@@ -486,27 +497,50 @@ export async function fetchClosedPositionEvents({
   marketId?: number
   positionAuthority: string
 }) {
-  let request = supabase
-    .from('close_position_events')
-    .select('*')
-    .eq('position_authority', positionAuthority)
-    .order('slot', { ascending: false })
-    .limit(limit)
-
+  const query = new URLSearchParams({ limit: String(limit) })
   if (marketId !== undefined) {
-    request = request.eq('market_id', marketId)
+    query.set('market_id', String(marketId))
   }
-
   if (createdAfter !== undefined) {
-    request = request.gte('created_at', createdAfter)
+    query.set('created_after', createdAfter)
   }
 
-  const { data, error } = await request
-  if (error) {
-    throw new Error(error.message)
+  const response = await fetch(
+    readApiUrl(
+      `/v1/authorities/${positionAuthority}/closed-positions?${query.toString()}`,
+    ),
+    {
+      headers: {
+        Accept: 'application/json',
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(
+      `Failed to fetch closed positions (${response.status}): ${body || response.statusText}`,
+    )
   }
 
-  return data.map(parseClosePositionEvent)
+  const payload = (await response.json()) as ReadApiClosedPositionsResponse
+  return payload.items.map((item) =>
+    parseClosePositionEvent({
+      created_at: item.event_time,
+      deposit_amount: item.deposit_amount,
+      end_slot: item.end_slot,
+      fee_amount: item.fee_amount,
+      id: stableEventIdFromUid(`${item.signature}:${item.event_index}`),
+      is_buy: item.is_buy ? 1 : 0,
+      market_id: item.market_id,
+      position_authority: payload.authority,
+      remaining_amount: item.remaining_amount,
+      signature: item.signature,
+      slot: item.slot,
+      start_slot: item.start_slot,
+      swapped_amount: item.swapped_amount,
+    }),
+  )
 }
 
 export function subscribeToMarketPriceStream({

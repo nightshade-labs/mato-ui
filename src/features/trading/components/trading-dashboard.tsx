@@ -128,6 +128,7 @@ export function TradingDashboard() {
   const session = useWalletSession()
   const walletConnection = useWalletConnection()
   const address = session?.account.address.toString() ?? null
+  const [marketPanelTab, setMarketPanelTab] = useState<MarketPanelTab>('chart')
 
   const marketAddressQuery = useMarketAddress(MARKET_ID)
   const marketAddress = marketAddressQuery.data
@@ -141,7 +142,11 @@ export function TradingDashboard() {
   })
   const streamingStateQuery = useStreamingMarketState(marketAddress)
   const tradePositionsQuery = useTradePositions(address)
-  const orderBookPositionsQuery = useMarketTradePositions(marketAddress)
+  const shouldLoadOrderBookPositions = marketPanelTab === 'order-book'
+  const orderBookPositionsQuery = useMarketTradePositions(
+    marketAddress,
+    shouldLoadOrderBookPositions,
+  )
   const closedPositionChartLookbackStart = useMemo(
     () =>
       new Date(
@@ -161,7 +166,6 @@ export function TradingDashboard() {
   const [durationSeconds, setDurationSeconds] = useState(30 * 60)
   const [positionPanelTab, setPositionPanelTab] =
     useState<PositionPanelTab>('active')
-  const [marketPanelTab, setMarketPanelTab] = useState<MarketPanelTab>('chart')
   const [activePositionPage, setActivePositionPage] = useState(0)
   const [chartTimeframe, setChartTimeframe] = useState<ChartTimeframe>('5m')
   const [chartDisplayMode, setChartDisplayMode] =
@@ -292,7 +296,12 @@ export function TradingDashboard() {
     [activePositions, normalizedActivePositionPage],
   )
   const currentSlot = streamingStateQuery.data?.currentSlot ?? null
-  const isOrderBookLoading = orderBookPositionsQuery.isLoading
+  const isOrderBookLoading =
+    shouldLoadOrderBookPositions && orderBookPositionsQuery.isLoading
+  const activePositionError =
+    tradePositionsQuery.error instanceof Error
+      ? tradePositionsQuery.error.message
+      : null
   const chartPositionSlotRanges = useMemo(
     () =>
       buildChartPositionSlotRanges({
@@ -305,8 +314,6 @@ export function TradingDashboard() {
   const chartPositionTimeAnchors = useMemo(
     () =>
       buildMarketTimeAnchors({
-        candles: marketChartHistory.candles,
-        chartIntervalMs: marketChartHistory.chartIntervalMs,
         events: marketUpdates.sharedEvents,
         extraAnchors: [
           ...(marketPriceQuery.data?.slot !== null &&
@@ -329,13 +336,7 @@ export function TradingDashboard() {
             : []),
         ],
       }),
-    [
-      currentSlot,
-      marketChartHistory.candles,
-      marketChartHistory.chartIntervalMs,
-      marketPriceQuery.data,
-      marketUpdates.sharedEvents,
-    ],
+    [currentSlot, marketPriceQuery.data, marketUpdates.sharedEvents],
   )
   const chartPositionOverlays = useMemo(
     () =>
@@ -1006,7 +1007,18 @@ export function TradingDashboard() {
               </div>
 
               {positionPanelTab === 'active' ? (
-                activePositions.length > 0 && marketAddress ? (
+                !address ? (
+                  <EmptyState copy="Connect a wallet to load your active positions." />
+                ) : tradePositionsQuery.isLoading &&
+                  activePositions.length === 0 ? (
+                  <EmptyState copy="Loading active positions..." />
+                ) : activePositionError && activePositions.length === 0 ? (
+                  <EmptyState
+                    copy={`Active positions unavailable: ${activePositionError}`}
+                  />
+                ) : activePositions.length > 0 && !marketAddress ? (
+                  <EmptyState copy="Loading market address..." />
+                ) : activePositions.length > 0 && marketAddress ? (
                   <div className="grid gap-4">
                     {paginatedActivePositions.map((position) => (
                       <ActivePositionCard

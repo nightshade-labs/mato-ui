@@ -7,12 +7,11 @@ import type { Address } from '@solana/kit'
 import type {
   ClosePositionEvent,
   MarketUpdateEvent,
-} from '@/integrations/supabase'
+} from '@/integrations/read-api'
 import type {
   StreamingMarketState,
   TradePositionRecord,
 } from '../domain/models'
-import type { TradingViewAggregatedCandle } from './market'
 import type { SlotRange } from './slot-ranges'
 
 export type ChartPositionSide = 'buy' | 'sell'
@@ -53,13 +52,9 @@ function toSlotRange(startSlot: number, endSlot: number): SlotRange | null {
 }
 
 export function buildMarketTimeAnchors({
-  candles,
-  chartIntervalMs,
   events,
   extraAnchors = [],
 }: {
-  candles: Array<TradingViewAggregatedCandle>
-  chartIntervalMs: number
   events: Array<MarketUpdateEvent>
   extraAnchors?: Array<SlotTimeAnchor>
 }) {
@@ -70,15 +65,6 @@ export function buildMarketTimeAnchors({
     anchorsBySlot.set(Math.floor(slot), {
       slot: Math.floor(slot),
       timeMs,
-    })
-  }
-
-  for (const candle of candles) {
-    const startTimeMs = candle.time * 1000
-    addAnchor({ slot: candle.startSlot, timeMs: startTimeMs })
-    addAnchor({
-      slot: candle.endSlot,
-      timeMs: startTimeMs + Math.max(0, chartIntervalMs - 1),
     })
   }
 

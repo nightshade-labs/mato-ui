@@ -5,15 +5,14 @@ import {
   getWalletStandardConnectors,
   watchWalletStandardConnectors,
 } from '@solana/client'
+import {
+  getBrowserSolanaRpcEndpoint,
+  getBrowserSolanaWebsocketEndpoint,
+} from './env'
 import type { SolanaClient, WalletConnector } from '@solana/client'
 
-const endpoint =
-  (typeof window !== 'undefined' && import.meta.env.VITE_SOLANA_RPC_URL) ||
-  'https://api.mainnet.solana.com'
-
-const websocketEndpoint =
-  (typeof window !== 'undefined' && import.meta.env.VITE_SOLANA_WS_URL) ||
-  endpoint.replace('https://', 'wss://').replace('http://', 'ws://')
+const endpoint = getBrowserSolanaRpcEndpoint()
+const websocketEndpoint = getBrowserSolanaWebsocketEndpoint(endpoint)
 
 function getInitialWalletConnectors() {
   if (typeof window === 'undefined') return []

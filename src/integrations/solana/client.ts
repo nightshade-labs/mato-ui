@@ -1,12 +1,8 @@
 import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit'
+import { getSolanaRpcEndpoint, getSolanaWebsocketEndpoint } from './env'
 
-const endpoint =
-  (typeof process !== 'undefined' && import.meta.env.VITE_SOLANA_RPC_URL) ||
-  'https://api.mainnet.solana.com'
-
-const websocketEndpoint =
-  (typeof process !== 'undefined' && process.env?.VITE_SOLANA_WS_URL) ||
-  endpoint.replace('https://', 'wss://').replace('http://', 'ws://')
+const endpoint = getSolanaRpcEndpoint()
+const websocketEndpoint = getSolanaWebsocketEndpoint(endpoint)
 
 export const rpc = createSolanaRpc(endpoint)
 export const rpcSubscriptions = createSolanaRpcSubscriptions(websocketEndpoint)

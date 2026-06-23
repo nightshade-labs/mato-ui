@@ -121,7 +121,7 @@ export const tradingQueries = {
       queryKey: tradingQueryKeys.marketTradePositions(marketAddress),
       queryFn: async () => {
         if (!marketAddress) return []
-        return fetchMarketTradePositions(client.runtime.rpc, marketAddress)
+        return fetchMarketTradePositions(client.runtime.rpc)
       },
     }),
   ownedPricesAccounts: ({

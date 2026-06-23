@@ -106,7 +106,10 @@ interface EnsureHistoryOptions {
 interface MarketHistoryStore {
   getSnapshot(): MarketHistoryStoreState
   ensureRange(range: SlotRange, options?: EnsureHistoryOptions): Promise<void>
-  ensureRanges(ranges: SlotRange[], options?: EnsureHistoryOptions): Promise<void>
+  ensureRanges(
+    ranges: SlotRange[],
+    options?: EnsureHistoryOptions,
+  ): Promise<void>
   getPointsForRange(range: SlotRange): MarketPricePoint[]
   hasCoverage(range: SlotRange): boolean
 }
@@ -115,7 +118,7 @@ interface MarketHistoryStore {
 ### Fetch Strategy
 
 - `ensureRange()` computes missing gaps against `loadedRanges`.
-- Missing gaps are merged before Supabase requests fire.
+- Missing gaps are merged before read API requests fire.
 - Each fetch still uses `fetchMarketUpdateRange()` so the backend contract stays stable.
 - Returned history is normalized once and merged into the shared store.
 
@@ -134,7 +137,10 @@ interface MarketChartHistoryController {
   candles: TradingViewAggregatedCandle[]
   hasOlderHistory: boolean
   isLoadingOlderHistory: boolean
-  onNeedOlderHistory: (visibleLogicalRange: { from: number; to: number }) => void
+  onNeedOlderHistory: (visibleLogicalRange: {
+    from: number
+    to: number
+  }) => void
 }
 ```
 

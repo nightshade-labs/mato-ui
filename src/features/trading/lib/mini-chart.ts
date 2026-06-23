@@ -1,4 +1,4 @@
-import type { MarketUpdateEvent } from '@/integrations/supabase'
+import type { MarketUpdateEvent } from '@/integrations/read-api'
 
 export interface MarketPricePoint {
   slot: number
@@ -47,7 +47,7 @@ function toFinitePositivePrice(
 }
 
 export function normalizeMarketPricePoints(
-  events: MarketUpdateEvent[],
+  events: Array<MarketUpdateEvent>,
   baseDecimals: number,
   quoteDecimals: number,
 ) {
@@ -74,7 +74,10 @@ export function normalizeMarketPricePoints(
     .map(({ slot, price }) => ({ slot, price }))
 }
 
-function findLastPointAtOrBefore(points: MarketPricePoint[], slot: number) {
+function findLastPointAtOrBefore(
+  points: Array<MarketPricePoint>,
+  slot: number,
+) {
   let low = 0
   let high = points.length - 1
   let result = -1
@@ -92,7 +95,7 @@ function findLastPointAtOrBefore(points: MarketPricePoint[], slot: number) {
   return result
 }
 
-function findFirstPointAfter(points: MarketPricePoint[], slot: number) {
+function findFirstPointAfter(points: Array<MarketPricePoint>, slot: number) {
   let low = 0
   let high = points.length
 
@@ -108,7 +111,10 @@ function findFirstPointAfter(points: MarketPricePoint[], slot: number) {
   return low
 }
 
-function findFirstPointAtOrAfter(points: MarketPricePoint[], slot: number) {
+function findFirstPointAtOrAfter(
+  points: Array<MarketPricePoint>,
+  slot: number,
+) {
   let low = 0
   let high = points.length
 
@@ -124,7 +130,7 @@ function findFirstPointAtOrAfter(points: MarketPricePoint[], slot: number) {
   return low
 }
 
-function getPriceAtSlot(points: MarketPricePoint[], slot: number) {
+function getPriceAtSlot(points: Array<MarketPricePoint>, slot: number) {
   if (points.length === 0) return null
 
   const index = findLastPointAtOrBefore(points, slot)
@@ -132,7 +138,7 @@ function getPriceAtSlot(points: MarketPricePoint[], slot: number) {
 }
 
 function getAveragePriceBetween(
-  points: MarketPricePoint[],
+  points: Array<MarketPricePoint>,
   startSlot: number,
   endSlot: number,
 ) {
@@ -166,7 +172,7 @@ function getAveragePriceBetween(
 }
 
 function countPointsInRange(
-  points: MarketPricePoint[],
+  points: Array<MarketPricePoint>,
   startSlot: number,
   endSlot: number,
 ) {
@@ -182,7 +188,7 @@ function countPointsInRange(
 }
 
 export function getMarketPriceRangeStats(
-  points: MarketPricePoint[],
+  points: Array<MarketPricePoint>,
   startSlot: number | null,
   endSlot: number | null,
 ): MarketPriceRangeStats {
@@ -255,7 +261,7 @@ function createSampleSlots(
 }
 
 export function buildClosedPositionMiniChart(
-  points: MarketPricePoint[],
+  points: Array<MarketPricePoint>,
   startSlot: number | null,
   endSlot: number | null,
 ) {
@@ -284,7 +290,7 @@ export function buildClosedPositionMiniChart(
     Math.max(2, maxSamplesForSpan),
   )
 
-  const chartPoints: MiniPriceChartPoint[] = []
+  const chartPoints: Array<MiniPriceChartPoint> = []
   for (let index = 0; index < sampleSlots.length; index += 1) {
     const slot = sampleSlots[index]
     const price =

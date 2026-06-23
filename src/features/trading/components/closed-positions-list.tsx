@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
-import {ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { fetchClosedPositionMiniChart } from '../api/market-repository'
 import { useClosedPositionEvents } from '../hooks/use-closed-position-events'
 import {
@@ -8,17 +8,12 @@ import {
   POSITION_PAGE_SIZE,
 } from '../constants'
 import { clampPage, getPageCount, getPageItems } from '../lib/pagination'
-import {
-  formatAtoms,
-
-  formatPrice,
-
-} from '../lib/format'
+import { formatAtoms, formatPrice } from '../lib/format'
 import { buildClosedPositionSummary } from '../view-models/closed-position'
 import { MiniPriceChart } from './mini-price-chart'
 import { PositionPagination } from './position-pagination'
 import type { MiniPriceChartPoint } from '../lib/mini-chart'
-import type { ClosePositionEvent } from '@/integrations/supabase'
+import type { ClosePositionEvent } from '@/integrations/read-api'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
