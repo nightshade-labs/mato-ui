@@ -1,7 +1,22 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "tanstack-start-app",
+  "name": "mato-ui",
   "compatibility_date": "2025-09-02",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry"
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "main": "@tanstack/react-start/server-entry",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "mato.markets",
+      "custom_domain": true,
+    },
+  ],
+  "env": {
+    "preview": {
+      "workers_dev": true,
+      "preview_urls": true,
+      "routes": [],
+    },
+  },
 }

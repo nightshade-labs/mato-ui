@@ -49,11 +49,11 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
       {
         property: 'og:image',
-        content: 'https://www.mato.finance/icon-512.png',
+        content: 'https://mato.markets/icon-512.png',
       },
       {
         property: 'og:url',
-        content: 'https://www.mato.finance',
+        content: 'https://mato.markets',
       },
       {
         property: 'og:type',
@@ -73,7 +73,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
       {
         name: 'twitter:image',
-        content: 'https://www.mato.finance/icon-512.png',
+        content: 'https://mato.markets/icon-512.png',
       },
     ],
     links: [

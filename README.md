@@ -17,6 +17,32 @@ To build this application for production:
 pnpm build
 ```
 
+## Deploying to Cloudflare
+
+Production is deployed to Cloudflare Workers at `mato.markets`. The Worker and
+custom domain are configured in `wrangler.jsonc`.
+
+```bash
+pnpm deploy
+```
+
+Run a deployment dry run without publishing:
+
+```bash
+pnpm build
+pnpm exec wrangler deploy --dry-run
+```
+
+Upload a test version without changing production traffic:
+
+```bash
+pnpm deploy:preview
+```
+
+Cloudflare deploys the build to the isolated `mato-ui-preview` Worker on
+`workers.dev`. The production `mato-ui` Worker and `mato.markets` remain
+unchanged.
+
 ## Testing
 
 This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:

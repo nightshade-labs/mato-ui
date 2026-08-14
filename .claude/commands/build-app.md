@@ -253,7 +253,7 @@ esac
 echo ""
 echo "💡 Next steps:"
 echo "   - Test locally: $PKG_MANAGER run start (or preview)"
-echo "   - Deploy: Connect to Vercel, Netlify, or your hosting"
+echo "   - Deploy to Cloudflare: $PKG_MANAGER run deploy"
 echo "   - Verify program ID matches target network"
 ```
 
