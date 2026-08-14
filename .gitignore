@@ -8,6 +8,8 @@ count.txt
 .nitro
 .tanstack
 .wrangler
+.vercel
+.pnpm-store
 .output
 .vinxi
 todos.json

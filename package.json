@@ -4,13 +4,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 3000",
-    "build": "vite build && node scripts/build-vercel.mjs",
+    "build": "vite build",
+    "build:vercel": "vite build && node scripts/build-vercel.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint",
     "format": "prettier",
     "check": "prettier --write . && eslint --fix",
     "deploy": "pnpm run build && wrangler deploy",
+    "cf-typegen": "wrangler types",
     "generate:client": "tsx scripts/generate-client.ts"
   },
   "dependencies": {

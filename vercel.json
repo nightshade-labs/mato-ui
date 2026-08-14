@@ -1,5 +1,5 @@
 {
   "framework": null,
-  "buildCommand": "pnpm run build",
+  "buildCommand": "pnpm run build:vercel",
   "installCommand": "pnpm install --no-frozen-lockfile"
 }
