@@ -1,7 +1,19 @@
 import { useId, useMemo, useState } from 'react'
-import { ArrowUpRight, ChevronDown, Waves } from 'lucide-react'
+import {
+  ArrowUpRight,
+  ChevronDown,
+  CirclePause,
+  CirclePlay,
+  WalletCards,
+  Waves,
+} from 'lucide-react'
 import { formatAtoms, formatPrice } from '../lib/format'
 import { getActivePositionMetrics } from '../lib/position-progress'
+import {
+  getTradePositionEndSlot,
+  isBuyTradePosition,
+  isPausedTradePosition,
+} from '../lib/trade-position'
 import { useEndSlotBookkeepingSnapshot } from '../hooks/use-end-slot-bookkeeping-snapshot'
 import type { Address } from '@solana/kit'
 import type {
@@ -18,8 +30,14 @@ export function ActivePositionCard({
   baseTicker,
   isCloseDisabled,
   isClosing,
+  isControlDisabled,
+  isPausing,
+  isResuming,
+  isWithdrawing,
   marketAddress,
   onClose,
+  onPauseToggle,
+  onWithdraw,
   position,
   quoteDecimals,
   quoteTicker,
@@ -29,8 +47,14 @@ export function ActivePositionCard({
   baseTicker: string
   isCloseDisabled: boolean
   isClosing: boolean
+  isControlDisabled: boolean
+  isPausing: boolean
+  isResuming: boolean
+  isWithdrawing: boolean
   marketAddress: Address
   onClose: (tradePositionAddress: Address) => void
+  onPauseToggle: (tradePositionAddress: Address) => void
+  onWithdraw: (tradePositionAddress: Address) => void
   position: TradePositionRecord
   quoteDecimals: number
   quoteTicker: string
@@ -38,15 +62,20 @@ export function ActivePositionCard({
 }) {
   const [expanded, setExpanded] = useState(false)
   const detailsId = useId()
+  const positionEndSlot = Number(getTradePositionEndSlot(position.data))
+  const isBuy = isBuyTradePosition(position.data)
+  const isPaused = isPausedTradePosition(position.data)
   const snapshotQuery = useEndSlotBookkeepingSnapshot({
-    currentSlot: streamingState?.currentSlot ?? null,
+    bookkeepingLastUpdateSlot:
+      streamingState?.bookkeepingLastUpdateSlot ?? null,
     enabled: Boolean(
+      !isPaused &&
       streamingState &&
-      streamingState.currentSlot > Number(position.data.endSlot),
+      streamingState.currentSlot > positionEndSlot,
     ),
-    endSlot: Number(position.data.endSlot),
+    endSlot: positionEndSlot,
     endSlotInterval: streamingState?.endSlotInterval ?? null,
-    isBuy: position.data.isBuy === 1,
+    isBuy,
     marketAddress,
   })
 
@@ -73,6 +102,17 @@ export function ActivePositionCard({
       streamingState,
     ],
   )
+  const hasReachedEnd = Boolean(
+    !metrics.isPaused &&
+    streamingState &&
+    streamingState.currentSlot >= positionEndSlot,
+  )
+  const canWithdraw =
+    !hasReachedEnd &&
+    (!metrics.isPaused ||
+      metrics.claimableSwappedAtoms === null ||
+      metrics.claimableSwappedAtoms > 0n)
+  const canTogglePause = metrics.isPaused || !hasReachedEnd
 
   return (
     <Card className="border-white/10 bg-black/15">
@@ -86,11 +126,14 @@ export function ActivePositionCard({
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Badge
-                variant={position.data.isBuy === 1 ? 'positive' : 'negative'}
-              >
-                {metrics.sideLabel}
-              </Badge>
+              <div className="flex flex-col items-start gap-1.5">
+                <Badge variant={isBuy ? 'positive' : 'negative'}>
+                  {metrics.sideLabel}
+                </Badge>
+                {metrics.isPaused ? (
+                  <Badge variant="muted">Paused</Badge>
+                ) : null}
+              </div>
               <div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Waves className="size-4" />
@@ -120,7 +163,8 @@ export function ActivePositionCard({
         </button>
 
         <Progress
-          animated
+          animated={!metrics.isPaused}
+          ariaLabel={`${metrics.sideLabel} position progress`}
           className="h-2.5 bg-white/8"
           indicatorClassName="bg-[linear-gradient(90deg,var(--color-accent-strong),var(--color-accent-strong-soft))]"
           value={metrics.progressPercent}
@@ -128,7 +172,7 @@ export function ActivePositionCard({
 
         {expanded ? (
           <div className="grid gap-3" id={detailsId}>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               <MetricCard
                 label="Deposited"
                 value={`${formatAtoms(metrics.amountAtoms, metrics.depositedDecimals)} ${metrics.depositedToken}`}
@@ -149,6 +193,14 @@ export function ActivePositionCard({
                     : `${formatAtoms(metrics.swappedAtoms, metrics.swappedDecimals)} ${metrics.swappedToken}`
                 }
               />
+              <MetricCard
+                label="Withdrawable before fee"
+                value={
+                  metrics.claimableSwappedAtoms === null
+                    ? '—'
+                    : `${formatAtoms(metrics.claimableSwappedAtoms, metrics.swappedDecimals)} ${metrics.swappedToken}`
+                }
+              />
             </div>
 
             <MetricCard
@@ -163,13 +215,45 @@ export function ActivePositionCard({
           </div>
         ) : null}
 
-        <Button
-          className="w-full rounded-xl bg-destructive/85 text-white hover:bg-destructive"
-          disabled={isCloseDisabled}
-          onClick={() => onClose(position.address)}
-        >
-          {isClosing ? 'Closing position...' : 'Close position'}
-        </Button>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button
+            aria-busy={isPausing || isResuming}
+            className="rounded-xl"
+            disabled={isControlDisabled || !canTogglePause}
+            onClick={() => onPauseToggle(position.address)}
+            variant="outline"
+          >
+            {metrics.isPaused ? (
+              <CirclePlay className="size-4" />
+            ) : (
+              <CirclePause className="size-4" />
+            )}
+            {isPausing
+              ? 'Pausing...'
+              : isResuming
+                ? 'Resuming...'
+                : metrics.isPaused
+                  ? 'Resume position'
+                  : 'Pause position'}
+          </Button>
+          <Button
+            aria-busy={isWithdrawing}
+            className="rounded-xl"
+            disabled={isControlDisabled || !canWithdraw}
+            onClick={() => onWithdraw(position.address)}
+            variant="outline"
+          >
+            <WalletCards className="size-4" />
+            {isWithdrawing ? 'Withdrawing...' : 'Withdraw swapped'}
+          </Button>
+          <Button
+            className="rounded-xl bg-destructive/85 text-white hover:bg-destructive sm:col-span-2"
+            disabled={isCloseDisabled}
+            onClick={() => onClose(position.address)}
+          >
+            {isClosing ? 'Closing position...' : 'Close position'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )

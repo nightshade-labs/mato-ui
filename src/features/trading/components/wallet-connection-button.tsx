@@ -22,12 +22,19 @@ import {
   formatExplorerTransactionUrl,
   shortenAddress,
 } from '../lib/format'
+import type { MarketId } from '../constants'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { endpoint } from '@/integrations/solana'
 
-export function WalletConnectionButton() {
+interface WalletConnectionButtonProps {
+  marketId: MarketId
+}
+
+export function WalletConnectionButton({
+  marketId,
+}: WalletConnectionButtonProps) {
   const {
     connect,
     connected,
@@ -41,7 +48,7 @@ export function WalletConnectionButton() {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
-  const reclaimRent = useReclaimRent(open && connected)
+  const reclaimRent = useReclaimRent(open && connected, marketId)
   const nativeSolBalance = useWalletSolBalance()
 
   useEffect(() => {

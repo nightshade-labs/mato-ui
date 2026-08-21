@@ -23,6 +23,8 @@ import {
   getStructEncoder,
   getU128Decoder,
   getU128Encoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -64,7 +66,7 @@ export type LiquidityPosition = {
   /** Bookkeeping snapshot at last update slot */
   quotePerBaseSnapshot: bigint
   /** Snapshot of slots without trades in this market when this order was created */
-  slotsWithoutTradeSnapshot: bigint
+  slotsWithoutTradeSnapshot: number
   /** Base flow, no extra flow precision needed, since flow are set manually */
   baseFlowU64: bigint
   /** Quote flow, no extra flow precision needed, since flow are set manually */
@@ -90,7 +92,7 @@ export type LiquidityPositionArgs = {
   /** Bookkeeping snapshot at last update slot */
   quotePerBaseSnapshot: number | bigint
   /** Snapshot of slots without trades in this market when this order was created */
-  slotsWithoutTradeSnapshot: number | bigint
+  slotsWithoutTradeSnapshot: number
   /** Base flow, no extra flow precision needed, since flow are set manually */
   baseFlowU64: number | bigint
   /** Quote flow, no extra flow precision needed, since flow are set manually */
@@ -114,7 +116,7 @@ export function getLiquidityPositionEncoder(): FixedSizeEncoder<LiquidityPositio
       ['quoteBalance', getU128Encoder()],
       ['basePerQuoteSnapshot', getU128Encoder()],
       ['quotePerBaseSnapshot', getU128Encoder()],
-      ['slotsWithoutTradeSnapshot', getU64Encoder()],
+      ['slotsWithoutTradeSnapshot', getU32Encoder()],
       ['baseFlowU64', getU64Encoder()],
       ['quoteFlowU64', getU64Encoder()],
       ['baseDebt', getU64Encoder()],
@@ -135,7 +137,7 @@ export function getLiquidityPositionDecoder(): FixedSizeDecoder<LiquidityPositio
     ['quoteBalance', getU128Decoder()],
     ['basePerQuoteSnapshot', getU128Decoder()],
     ['quotePerBaseSnapshot', getU128Decoder()],
-    ['slotsWithoutTradeSnapshot', getU64Decoder()],
+    ['slotsWithoutTradeSnapshot', getU32Decoder()],
     ['baseFlowU64', getU64Decoder()],
     ['quoteFlowU64', getU64Decoder()],
     ['baseDebt', getU64Decoder()],
@@ -220,5 +222,5 @@ export async function fetchAllMaybeLiquidityPosition(
 }
 
 export function getLiquidityPositionSize(): number {
-  return 153
+  return 149
 }

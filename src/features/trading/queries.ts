@@ -32,7 +32,7 @@ export const tradingQueries = {
   marketAddress: (marketId: number) =>
     queryOptions({
       queryKey: tradingQueryKeys.marketAddress(marketId),
-      queryFn: () => deriveMarketAddress(BigInt(marketId)),
+      queryFn: () => deriveMarketAddress(marketId),
       staleTime: Infinity,
     }),
   marketConfig: (marketId: number) =>
@@ -99,29 +99,33 @@ export const tradingQueries = {
   tradePositions: ({
     authority,
     client,
+    marketId,
   }: {
     authority: string | null | undefined
     client: SolanaClient
+    marketId: number
   }) =>
     queryOptions({
-      queryKey: tradingQueryKeys.tradePositions(authority),
+      queryKey: tradingQueryKeys.tradePositions(authority, marketId),
       queryFn: async () => {
         if (!authority) return []
-        return fetchTradePositions(client.runtime.rpc, authority)
+        return fetchTradePositions(client.runtime.rpc, authority, marketId)
       },
     }),
   marketTradePositions: ({
     client,
     marketAddress,
+    marketId,
   }: {
     client: SolanaClient
     marketAddress: Address | undefined
+    marketId: number
   }) =>
     queryOptions({
       queryKey: tradingQueryKeys.marketTradePositions(marketAddress),
       queryFn: async () => {
         if (!marketAddress) return []
-        return fetchMarketTradePositions(client.runtime.rpc)
+        return fetchMarketTradePositions(client.runtime.rpc, marketId)
       },
     }),
   ownedPricesAccounts: ({
@@ -201,15 +205,15 @@ export const tradingQueries = {
       refetchInterval: 1_000,
     }),
   endSlotSnapshot: ({
+    bookkeepingLastUpdateSlot,
     client,
-    currentSlot,
     endSlot,
     endSlotInterval,
     isBuy,
     marketAddress,
   }: {
+    bookkeepingLastUpdateSlot: number | null
     client: SolanaClient
-    currentSlot: number | null
     endSlot: number
     endSlotInterval: number | null
     isBuy: boolean
@@ -229,7 +233,7 @@ export const tradingQueries = {
       ),
       queryFn: () =>
         fetchEndSlotBookkeepingSnapshot({
-          currentSlot,
+          bookkeepingLastUpdateSlot,
           endSlot,
           endSlotInterval,
           isBuy,

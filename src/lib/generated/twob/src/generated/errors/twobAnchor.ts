@@ -36,52 +36,91 @@ export const TWOB_ANCHOR_ERROR__WRONG_TOKEN_ACCOUNT = 0x1778 // 6008
 export const TWOB_ANCHOR_ERROR__INVALID_ORDER = 0x1779 // 6009
 /** BookNotUpToDate: Book not up to date */
 export const TWOB_ANCHOR_ERROR__BOOK_NOT_UP_TO_DATE = 0x177a // 6010
-/** PositionNotEnded: Cannot close open position. */
+/** PositionNotEnded: Cannot close open position */
 export const TWOB_ANCHOR_ERROR__POSITION_NOT_ENDED = 0x177b // 6011
-/** NotEnoughDeposits: Deposits are too low for specified flow. */
+/** NotEnoughDeposits: Deposits are too low for specified flow */
 export const TWOB_ANCHOR_ERROR__NOT_ENOUGH_DEPOSITS = 0x177c // 6012
-/** MinAmountOutNotReached: Minimum amount out is not reached. */
+/** MinAmountOutNotReached: Minimum amount out is not reached */
 export const TWOB_ANCHOR_ERROR__MIN_AMOUNT_OUT_NOT_REACHED = 0x177d // 6013
-/** LiquidityPositionUnhealthy: Liquidity position is unhealthy. */
+/** LiquidityPositionUnhealthy: Liquidity position is unhealthy */
 export const TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_UNHEALTHY = 0x177e // 6014
-/** LiquidityPositionStillActive: Liquidity position still active. */
+/** LiquidityPositionStillActive: Liquidity position still active */
 export const TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_STILL_ACTIVE = 0x177f // 6015
-/** LiquidityPositionNotActive: Liquidity position not active anymore. */
+/** LiquidityPositionNotActive: Liquidity position not active anymore */
 export const TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_NOT_ACTIVE = 0x1780 // 6016
-/** NoDebt: Liquidity position has no debt. */
+/** NoDebt: Liquidity position has no debt */
 export const TWOB_ANCHOR_ERROR__NO_DEBT = 0x1781 // 6017
-/** MustCoverDebt: Deposits must cover debt. */
+/** MustCoverDebt: Deposits must cover debt */
 export const TWOB_ANCHOR_ERROR__MUST_COVER_DEBT = 0x1782 // 6018
-/** MarketIsPaused: Market is paused. */
+/** MarketIsPaused: Market is paused */
 export const TWOB_ANCHOR_ERROR__MARKET_IS_PAUSED = 0x1783 // 6019
-/** RemainingOrders: Market still has orders. */
-export const TWOB_ANCHOR_ERROR__REMAINING_ORDERS = 0x1784 // 6020
-/** AccountStillUsed: Too early to close account. */
-export const TWOB_ANCHOR_ERROR__ACCOUNT_STILL_USED = 0x1785 // 6021
-/** TradePositionExpired: Too late to close position. */
-export const TWOB_ANCHOR_ERROR__TRADE_POSITION_EXPIRED = 0x1786 // 6022
+/** MarketNotStarted: Market has not started yet */
+export const TWOB_ANCHOR_ERROR__MARKET_NOT_STARTED = 0x1784 // 6020
+/** RemainingOrders: Market still has orders */
+export const TWOB_ANCHOR_ERROR__REMAINING_ORDERS = 0x1785 // 6021
+/** AccountStillUsed: Too early to close account */
+export const TWOB_ANCHOR_ERROR__ACCOUNT_STILL_USED = 0x1786 // 6022
+/** FeeTooHigh: Fee too high */
+export const TWOB_ANCHOR_ERROR__FEE_TOO_HIGH = 0x1787 // 6023
+/** Unauthorized: Unauthorized */
+export const TWOB_ANCHOR_ERROR__UNAUTHORIZED = 0x1788 // 6024
+/** TimelockNotElapsed: Time lock not elapsed */
+export const TWOB_ANCHOR_ERROR__TIMELOCK_NOT_ELAPSED = 0x1789 // 6025
+/** NoPendingAuthority: No pending authority */
+export const TWOB_ANCHOR_ERROR__NO_PENDING_AUTHORITY = 0x178a // 6026
+/** InvalidPayer: Account does not match the payer of the position */
+export const TWOB_ANCHOR_ERROR__INVALID_PAYER = 0x178b // 6027
+/** InvalidReceiver: Account does not match the receiver of the position */
+export const TWOB_ANCHOR_ERROR__INVALID_RECEIVER = 0x178c // 6028
+/** PositionIsPaused: Position is paused */
+export const TWOB_ANCHOR_ERROR__POSITION_IS_PAUSED = 0x178d // 6029
+/** PositionIsNotPaused: Position is not paused */
+export const TWOB_ANCHOR_ERROR__POSITION_IS_NOT_PAUSED = 0x178e // 6030
+/** AmountZero: The amount is zero */
+export const TWOB_ANCHOR_ERROR__AMOUNT_ZERO = 0x178f // 6031
+/** UnsupportedMintExtension: Mint carries a token extension this program does not support */
+export const TWOB_ANCHOR_ERROR__UNSUPPORTED_MINT_EXTENSION = 0x1790 // 6032
+/** MintHasTransferHook: Mint has a transfer hook */
+export const TWOB_ANCHOR_ERROR__MINT_HAS_TRANSFER_HOOK = 0x1791 // 6033
+/** MintIsPaused: Mint is paused */
+export const TWOB_ANCHOR_ERROR__MINT_IS_PAUSED = 0x1792 // 6034
+/** MintFreezesNewAccounts: Mint freezes new token accounts by default */
+export const TWOB_ANCHOR_ERROR__MINT_FREEZES_NEW_ACCOUNTS = 0x1793 // 6035
 
 export type TwobAnchorError =
   | typeof TWOB_ANCHOR_ERROR__ACCOUNT_STILL_USED
+  | typeof TWOB_ANCHOR_ERROR__AMOUNT_ZERO
   | typeof TWOB_ANCHOR_ERROR__BOOK_NOT_UP_TO_DATE
   | typeof TWOB_ANCHOR_ERROR__DEPOSIT_TOO_SMALL
   | typeof TWOB_ANCHOR_ERROR__DURATION_TOO_LONG
   | typeof TWOB_ANCHOR_ERROR__DURATION_TOO_SHORT
   | typeof TWOB_ANCHOR_ERROR__END_SLOT_ALREADY_PASSED
+  | typeof TWOB_ANCHOR_ERROR__FEE_TOO_HIGH
   | typeof TWOB_ANCHOR_ERROR__FLOW_TOO_SMALL
   | typeof TWOB_ANCHOR_ERROR__INVALID_MINT
   | typeof TWOB_ANCHOR_ERROR__INVALID_ORDER
+  | typeof TWOB_ANCHOR_ERROR__INVALID_PAYER
+  | typeof TWOB_ANCHOR_ERROR__INVALID_RECEIVER
   | typeof TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_NOT_ACTIVE
   | typeof TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_STILL_ACTIVE
   | typeof TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_UNHEALTHY
   | typeof TWOB_ANCHOR_ERROR__MARKET_IS_PAUSED
+  | typeof TWOB_ANCHOR_ERROR__MARKET_NOT_STARTED
   | typeof TWOB_ANCHOR_ERROR__MIN_AMOUNT_OUT_NOT_REACHED
+  | typeof TWOB_ANCHOR_ERROR__MINT_FREEZES_NEW_ACCOUNTS
+  | typeof TWOB_ANCHOR_ERROR__MINT_HAS_TRANSFER_HOOK
+  | typeof TWOB_ANCHOR_ERROR__MINT_IS_PAUSED
   | typeof TWOB_ANCHOR_ERROR__MUST_COVER_DEBT
   | typeof TWOB_ANCHOR_ERROR__NO_DEBT
+  | typeof TWOB_ANCHOR_ERROR__NO_PENDING_AUTHORITY
   | typeof TWOB_ANCHOR_ERROR__NOT_ENOUGH_DEPOSITS
+  | typeof TWOB_ANCHOR_ERROR__POSITION_IS_NOT_PAUSED
+  | typeof TWOB_ANCHOR_ERROR__POSITION_IS_PAUSED
   | typeof TWOB_ANCHOR_ERROR__POSITION_NOT_ENDED
   | typeof TWOB_ANCHOR_ERROR__REMAINING_ORDERS
-  | typeof TWOB_ANCHOR_ERROR__TRADE_POSITION_EXPIRED
+  | typeof TWOB_ANCHOR_ERROR__TIMELOCK_NOT_ELAPSED
+  | typeof TWOB_ANCHOR_ERROR__UNAUTHORIZED
+  | typeof TWOB_ANCHOR_ERROR__UNSUPPORTED_MINT_EXTENSION
   | typeof TWOB_ANCHOR_ERROR__WRONG_EXITS_ACCOUNT
   | typeof TWOB_ANCHOR_ERROR__WRONG_PRICES_ACCOUNT
   | typeof TWOB_ANCHOR_ERROR__WRONG_TOKEN_ACCOUNT
@@ -89,26 +128,39 @@ export type TwobAnchorError =
 let twobAnchorErrorMessages: Record<TwobAnchorError, string> | undefined
 if (process.env.NODE_ENV !== 'production') {
   twobAnchorErrorMessages = {
-    [TWOB_ANCHOR_ERROR__ACCOUNT_STILL_USED]: `Too early to close account.`,
+    [TWOB_ANCHOR_ERROR__ACCOUNT_STILL_USED]: `Too early to close account`,
+    [TWOB_ANCHOR_ERROR__AMOUNT_ZERO]: `The amount is zero`,
     [TWOB_ANCHOR_ERROR__BOOK_NOT_UP_TO_DATE]: `Book not up to date`,
     [TWOB_ANCHOR_ERROR__DEPOSIT_TOO_SMALL]: `Increase order size`,
     [TWOB_ANCHOR_ERROR__DURATION_TOO_LONG]: `Duration is too long`,
     [TWOB_ANCHOR_ERROR__DURATION_TOO_SHORT]: `Duration is too short`,
     [TWOB_ANCHOR_ERROR__END_SLOT_ALREADY_PASSED]: `End slot has already passed`,
+    [TWOB_ANCHOR_ERROR__FEE_TOO_HIGH]: `Fee too high`,
     [TWOB_ANCHOR_ERROR__FLOW_TOO_SMALL]: `Increase order size or reduce order duration`,
     [TWOB_ANCHOR_ERROR__INVALID_MINT]: `Invalid mint account`,
     [TWOB_ANCHOR_ERROR__INVALID_ORDER]: `Invalid order submission`,
-    [TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_NOT_ACTIVE]: `Liquidity position not active anymore.`,
-    [TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_STILL_ACTIVE]: `Liquidity position still active.`,
-    [TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_UNHEALTHY]: `Liquidity position is unhealthy.`,
-    [TWOB_ANCHOR_ERROR__MARKET_IS_PAUSED]: `Market is paused.`,
-    [TWOB_ANCHOR_ERROR__MIN_AMOUNT_OUT_NOT_REACHED]: `Minimum amount out is not reached.`,
-    [TWOB_ANCHOR_ERROR__MUST_COVER_DEBT]: `Deposits must cover debt.`,
-    [TWOB_ANCHOR_ERROR__NO_DEBT]: `Liquidity position has no debt.`,
-    [TWOB_ANCHOR_ERROR__NOT_ENOUGH_DEPOSITS]: `Deposits are too low for specified flow.`,
-    [TWOB_ANCHOR_ERROR__POSITION_NOT_ENDED]: `Cannot close open position.`,
-    [TWOB_ANCHOR_ERROR__REMAINING_ORDERS]: `Market still has orders.`,
-    [TWOB_ANCHOR_ERROR__TRADE_POSITION_EXPIRED]: `Too late to close position.`,
+    [TWOB_ANCHOR_ERROR__INVALID_PAYER]: `Account does not match the payer of the position`,
+    [TWOB_ANCHOR_ERROR__INVALID_RECEIVER]: `Account does not match the receiver of the position`,
+    [TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_NOT_ACTIVE]: `Liquidity position not active anymore`,
+    [TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_STILL_ACTIVE]: `Liquidity position still active`,
+    [TWOB_ANCHOR_ERROR__LIQUIDITY_POSITION_UNHEALTHY]: `Liquidity position is unhealthy`,
+    [TWOB_ANCHOR_ERROR__MARKET_IS_PAUSED]: `Market is paused`,
+    [TWOB_ANCHOR_ERROR__MARKET_NOT_STARTED]: `Market has not started yet`,
+    [TWOB_ANCHOR_ERROR__MIN_AMOUNT_OUT_NOT_REACHED]: `Minimum amount out is not reached`,
+    [TWOB_ANCHOR_ERROR__MINT_FREEZES_NEW_ACCOUNTS]: `Mint freezes new token accounts by default`,
+    [TWOB_ANCHOR_ERROR__MINT_HAS_TRANSFER_HOOK]: `Mint has a transfer hook`,
+    [TWOB_ANCHOR_ERROR__MINT_IS_PAUSED]: `Mint is paused`,
+    [TWOB_ANCHOR_ERROR__MUST_COVER_DEBT]: `Deposits must cover debt`,
+    [TWOB_ANCHOR_ERROR__NO_DEBT]: `Liquidity position has no debt`,
+    [TWOB_ANCHOR_ERROR__NO_PENDING_AUTHORITY]: `No pending authority`,
+    [TWOB_ANCHOR_ERROR__NOT_ENOUGH_DEPOSITS]: `Deposits are too low for specified flow`,
+    [TWOB_ANCHOR_ERROR__POSITION_IS_NOT_PAUSED]: `Position is not paused`,
+    [TWOB_ANCHOR_ERROR__POSITION_IS_PAUSED]: `Position is paused`,
+    [TWOB_ANCHOR_ERROR__POSITION_NOT_ENDED]: `Cannot close open position`,
+    [TWOB_ANCHOR_ERROR__REMAINING_ORDERS]: `Market still has orders`,
+    [TWOB_ANCHOR_ERROR__TIMELOCK_NOT_ELAPSED]: `Time lock not elapsed`,
+    [TWOB_ANCHOR_ERROR__UNAUTHORIZED]: `Unauthorized`,
+    [TWOB_ANCHOR_ERROR__UNSUPPORTED_MINT_EXTENSION]: `Mint carries a token extension this program does not support`,
     [TWOB_ANCHOR_ERROR__WRONG_EXITS_ACCOUNT]: `Wrong exits account`,
     [TWOB_ANCHOR_ERROR__WRONG_PRICES_ACCOUNT]: `Wrong prices account`,
     [TWOB_ANCHOR_ERROR__WRONG_TOKEN_ACCOUNT]: `Wrong token account`,

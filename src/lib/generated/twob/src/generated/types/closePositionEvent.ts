@@ -12,65 +12,78 @@ import {
   getAddressEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
-  getU8Decoder,
-  getU8Encoder,
   type Address,
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
 } from '@solana/kit'
+import { getSideDecoder, getSideEncoder, type Side, type SideArgs } from '.'
 
 export type ClosePositionEvent = {
+  positionAddress: Address
   positionAuthority: Address
-  marketId: bigint
-  startSlot: bigint
-  endSlot: bigint
+  baseReceiver: Address
+  quoteReceiver: Address
   depositAmount: bigint
   swappedAmount: bigint
   remainingAmount: bigint
   feeAmount: bigint
-  isBuy: number
+  startSlot: bigint
+  endSlot: bigint
+  marketId: number
+  side: Side
 }
 
 export type ClosePositionEventArgs = {
+  positionAddress: Address
   positionAuthority: Address
-  marketId: number | bigint
-  startSlot: number | bigint
-  endSlot: number | bigint
+  baseReceiver: Address
+  quoteReceiver: Address
   depositAmount: number | bigint
   swappedAmount: number | bigint
   remainingAmount: number | bigint
   feeAmount: number | bigint
-  isBuy: number
+  startSlot: number | bigint
+  endSlot: number | bigint
+  marketId: number
+  side: SideArgs
 }
 
 export function getClosePositionEventEncoder(): FixedSizeEncoder<ClosePositionEventArgs> {
   return getStructEncoder([
+    ['positionAddress', getAddressEncoder()],
     ['positionAuthority', getAddressEncoder()],
-    ['marketId', getU64Encoder()],
-    ['startSlot', getU64Encoder()],
-    ['endSlot', getU64Encoder()],
+    ['baseReceiver', getAddressEncoder()],
+    ['quoteReceiver', getAddressEncoder()],
     ['depositAmount', getU64Encoder()],
     ['swappedAmount', getU64Encoder()],
     ['remainingAmount', getU64Encoder()],
     ['feeAmount', getU64Encoder()],
-    ['isBuy', getU8Encoder()],
+    ['startSlot', getU64Encoder()],
+    ['endSlot', getU64Encoder()],
+    ['marketId', getU32Encoder()],
+    ['side', getSideEncoder()],
   ])
 }
 
 export function getClosePositionEventDecoder(): FixedSizeDecoder<ClosePositionEvent> {
   return getStructDecoder([
+    ['positionAddress', getAddressDecoder()],
     ['positionAuthority', getAddressDecoder()],
-    ['marketId', getU64Decoder()],
-    ['startSlot', getU64Decoder()],
-    ['endSlot', getU64Decoder()],
+    ['baseReceiver', getAddressDecoder()],
+    ['quoteReceiver', getAddressDecoder()],
     ['depositAmount', getU64Decoder()],
     ['swappedAmount', getU64Decoder()],
     ['remainingAmount', getU64Decoder()],
     ['feeAmount', getU64Decoder()],
-    ['isBuy', getU8Decoder()],
+    ['startSlot', getU64Decoder()],
+    ['endSlot', getU64Decoder()],
+    ['marketId', getU32Decoder()],
+    ['side', getSideDecoder()],
   ])
 }
 

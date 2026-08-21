@@ -2,11 +2,13 @@ import { cn } from '@/lib/utils'
 
 export function Progress({
   animated = false,
+  ariaLabel,
   className,
   indicatorClassName,
   value,
 }: {
   animated?: boolean
+  ariaLabel?: string
   className?: string
   indicatorClassName?: string
   value: number
@@ -20,6 +22,7 @@ export function Progress({
         'h-2 overflow-hidden rounded-full bg-secondary/75',
         className,
       )}
+      aria-label={ariaLabel}
       aria-valuemax={100}
       aria-valuemin={0}
       aria-valuenow={clampedValue}

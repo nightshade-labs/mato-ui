@@ -15,6 +15,7 @@ import {
   getBase58Decoder,
   getBytesEncoder,
   getProgramDerivedAddress,
+  getU32Encoder,
   getU64Encoder,
   isTransactionMessageWithSingleSendingSigner,
   pipe,
@@ -29,19 +30,27 @@ import {
 } from '../constants'
 import { encodeBase58 } from '../lib/base58'
 import { decodeBase64 } from '../lib/bytes'
-import { collectCloseableRentAccounts } from '../lib/rent'
+import { collectCloseableRentAccountPairs } from '../lib/rent'
+import {
+  getTradePositionEndSlot,
+  isBuyTradePosition,
+} from '../lib/trade-position'
 import {
   fetchOwnedExitsAccounts,
   fetchOwnedPricesAccounts,
 } from './rent-accounts'
 import type { SolanaClient, WalletSession } from '@solana/client'
 import type { UseSendTransactionReturnType } from '@solana/react-hooks'
-import type { Address, Instruction } from '@solana/kit'
+import type { Address, TransactionSigner } from '@solana/kit'
 import type {
   StreamingMarketState,
   TradePositionRecord,
 } from '../domain/models'
 import type { ExitsRentAccount, PricesRentAccount } from '../lib/rent'
+import type {
+  Market,
+  TradePosition,
+} from '@/lib/generated/twob/src/generated/accounts'
 import {
   fetchBookkeeping,
   fetchMarket,
@@ -51,18 +60,22 @@ import {
   getTradePositionDiscriminatorBytes,
 } from '@/lib/generated/twob/src/generated/accounts'
 import {
-  getAuthorityClosePositionInstructionAsync,
+  getAuthorityCloseTradePositionInstructionAsync,
+  getCloseExitsAndPricesAccountInstructionAsync,
+  getPauseTradePositionInstructionAsync,
   getSubmitOrderInstructionAsync,
+  getUnpauseTradePositionInstructionAsync,
+  getWithdrawSwappedInstructionAsync,
 } from '@/lib/generated/twob/src/generated/instructions'
-import { getCloseExitsAccountInstructionDataEncoder } from '@/lib/generated/twob/src/generated/instructions/closeExitsAccount'
-import { getClosePricesAccountInstructionDataEncoder } from '@/lib/generated/twob/src/generated/instructions/closePricesAccount'
 import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '@/lib/generated/twob/src/generated/programs'
 
 const textEncoder = new TextEncoder()
 const BOOKKEEPING_DELAY_SLOTS = 20
+const TRADE_POSITION_MARKET_ID_OFFSET = 268n
 const SIGNATURE_POLL_INTERVAL_MS = 1_000
-const SYSTEM_PROGRAM_ADDRESS =
-  '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
+const ASSOCIATED_TOKEN_PROGRAM_ADDRESS =
+  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address
+const SYSTEM_PROGRAM_ADDRESS = '11111111111111111111111111111111' as Address
 
 export type TwobRpcClient = SolanaClient['runtime']['rpc']
 
@@ -115,96 +128,10 @@ async function waitForConfirmedSignature(
   throw new Error('Transaction confirmation timed out.')
 }
 
-function buildCloseExitsAccountInstruction({
-  bookkeepingAddress,
-  currentExits,
-  currentPrices,
-  exitsAddress,
-  marketAddress,
-  ownerAddress,
-  previousExits,
-  previousPrices,
-  referenceIndex,
-  signerAddress,
-}: {
-  bookkeepingAddress: Address
-  currentExits: Address
-  currentPrices: Address
-  exitsAddress: Address
-  marketAddress: Address
-  ownerAddress: Address
-  previousExits: Address
-  previousPrices: Address
-  referenceIndex: bigint
-  signerAddress: Address
-}): Instruction {
-  return Object.freeze({
-    accounts: [
-      { address: signerAddress, role: AccountRole.WRITABLE_SIGNER },
-      { address: ownerAddress, role: AccountRole.WRITABLE },
-      { address: exitsAddress, role: AccountRole.WRITABLE },
-      { address: marketAddress, role: AccountRole.WRITABLE },
-      { address: bookkeepingAddress, role: AccountRole.WRITABLE },
-      { address: currentExits, role: AccountRole.READONLY },
-      { address: previousExits, role: AccountRole.READONLY },
-      { address: currentPrices, role: AccountRole.WRITABLE },
-      { address: previousPrices, role: AccountRole.WRITABLE },
-      { address: SYSTEM_PROGRAM_ADDRESS, role: AccountRole.READONLY },
-    ],
-    data: getCloseExitsAccountInstructionDataEncoder().encode({
-      referenceIndex,
-    }),
-    programAddress: TWOB_ANCHOR_PROGRAM_ADDRESS,
-  })
-}
-
-function buildClosePricesAccountInstruction({
-  bookkeepingAddress,
-  currentExits,
-  currentPrices,
-  marketAddress,
-  ownerAddress,
-  previousExits,
-  previousPrices,
-  pricesAddress,
-  referenceIndex,
-  signerAddress,
-}: {
-  bookkeepingAddress: Address
-  currentExits: Address
-  currentPrices: Address
-  marketAddress: Address
-  ownerAddress: Address
-  previousExits: Address
-  previousPrices: Address
-  pricesAddress: Address
-  referenceIndex: bigint
-  signerAddress: Address
-}): Instruction {
-  return Object.freeze({
-    accounts: [
-      { address: signerAddress, role: AccountRole.WRITABLE_SIGNER },
-      { address: ownerAddress, role: AccountRole.WRITABLE },
-      { address: pricesAddress, role: AccountRole.WRITABLE },
-      { address: marketAddress, role: AccountRole.WRITABLE },
-      { address: bookkeepingAddress, role: AccountRole.WRITABLE },
-      { address: currentExits, role: AccountRole.READONLY },
-      { address: previousExits, role: AccountRole.READONLY },
-      { address: currentPrices, role: AccountRole.WRITABLE },
-      { address: previousPrices, role: AccountRole.WRITABLE },
-      { address: SYSTEM_PROGRAM_ADDRESS, role: AccountRole.READONLY },
-    ],
-    data: getClosePricesAccountInstructionDataEncoder().encode({
-      referenceIndex,
-    }),
-    programAddress: TWOB_ANCHOR_PROGRAM_ADDRESS,
-  })
-}
-
-export async function deriveMarketAddress(marketId: bigint | number) {
+export async function deriveMarketAddress(marketId: number) {
   const [address] = await getProgramDerivedAddress({
     programAddress: TWOB_ANCHOR_PROGRAM_ADDRESS,
-    seeds: [seed('market'), getU64Encoder().encode(BigInt(marketId))],
+    seeds: [seed('market'), getU32Encoder().encode(marketId)],
   })
   return address
 }
@@ -247,14 +174,47 @@ export async function derivePricesAddress(
   return address
 }
 
+export async function deriveAssociatedTokenAddress({
+  mint,
+  owner,
+  tokenProgram,
+}: {
+  mint: Address
+  owner: Address
+  tokenProgram: Address
+}) {
+  const [address] = await getProgramDerivedAddress({
+    programAddress: ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
+    seeds: [
+      getAddressEncoder().encode(owner),
+      getAddressEncoder().encode(tokenProgram),
+      getAddressEncoder().encode(mint),
+    ],
+  })
+  return address
+}
+
+export async function deriveTemporaryWithdrawTokenAddress(
+  tradePositionAddress: Address,
+) {
+  const [address] = await getProgramDerivedAddress({
+    programAddress: TWOB_ANCHOR_PROGRAM_ADDRESS,
+    seeds: [getAddressEncoder().encode(tradePositionAddress)],
+  })
+  return address
+}
+
 export function getReferenceIndex(
   currentSlot: number,
-  endSlotInterval: bigint,
+  endSlotInterval: bigint | number,
 ) {
   return BigInt(
-    Math.floor(
-      (currentSlot + BOOKKEEPING_DELAY_SLOTS) /
-        (ARRAY_LENGTH * Number(endSlotInterval)),
+    Math.max(
+      1,
+      Math.floor(
+        (currentSlot + BOOKKEEPING_DELAY_SLOTS) /
+          (ARRAY_LENGTH * Number(endSlotInterval)),
+      ),
     ),
   )
 }
@@ -263,20 +223,42 @@ export function getPreviousIndex(referenceIndex: bigint) {
   return referenceIndex - 1n
 }
 
-export function getFutureIndex(endSlot: bigint, endSlotInterval: bigint) {
-  return endSlot / BigInt(ARRAY_LENGTH) / endSlotInterval
+export function getFutureIndex(
+  endSlot: bigint,
+  endSlotInterval: bigint | number,
+) {
+  return endSlot / BigInt(ARRAY_LENGTH) / BigInt(endSlotInterval)
 }
 
 export function alignEndSlot(
   currentSlot: number,
   durationSlots: number,
-  endSlotInterval: bigint,
+  endSlotInterval: bigint | number,
 ) {
   const interval = Number(endSlotInterval)
   return BigInt(
     Math.floor((currentSlot + durationSlots + interval / 2) / interval) *
       interval,
   )
+}
+
+export function getUnpausedEndSlot(
+  currentSlot: bigint | number,
+  remainingSlots: number,
+  endSlotInterval: bigint | number,
+) {
+  const slot = BigInt(currentSlot)
+  const interval = BigInt(endSlotInterval)
+  return ((slot + BigInt(remainingSlots) + interval) / interval) * interval
+}
+
+export function getSwappedPositionAsset(
+  market: Pick<Market, 'baseMint' | 'quoteMint'>,
+  tradePosition: Pick<TradePosition, 'baseReceiver' | 'quoteReceiver' | 'side'>,
+) {
+  return isBuyTradePosition(tradePosition)
+    ? { mint: market.baseMint, receiver: tradePosition.baseReceiver }
+    : { mint: market.quoteMint, receiver: tradePosition.quoteReceiver }
 }
 
 export function resolveSnapshotLocation(slot: number, endSlotInterval: number) {
@@ -304,21 +286,42 @@ export async function fetchStreamingMarketState(
   ])
 
   return {
+    baseMint: marketAccount.data.baseMint,
     bookkeepingBasePerQuote: bookkeepingAccount.data.basePerQuote,
     bookkeepingLastUpdateSlot: Number(bookkeepingAccount.data.lastUpdateSlot),
     bookkeepingQuotePerBase: bookkeepingAccount.data.quotePerBase,
     currentSlot: Number(currentSlot),
     endSlotInterval: Number(marketAccount.data.endSlotInterval),
+    isPaused: marketAccount.data.isPaused !== 0,
     marketBaseFlow: marketAccount.data.baseFlow,
+    marketId: marketAccount.data.id,
     marketQuoteFlow: marketAccount.data.quoteFlow,
+    minimumBaseDepositAtoms: marketAccount.data.minimumBaseDepositAtoms,
+    minimumQuoteDepositAtoms: marketAccount.data.minimumQuoteDepositAtoms,
+    quoteMint: marketAccount.data.quoteMint,
+  }
+}
+
+function getTradePositionMarketIdFilter(
+  marketId: number,
+): GetProgramAccountsFilter {
+  return {
+    memcmp: {
+      bytes: encodeBase58(
+        Uint8Array.from(getU32Encoder().encode(marketId)),
+      ) as never,
+      encoding: 'base58',
+      offset: TRADE_POSITION_MARKET_ID_OFFSET,
+    },
   }
 }
 
 export async function fetchTradePositions(
   rpcClient: TwobRpcClient,
   authority: string,
+  marketId: number,
 ): Promise<Array<TradePositionRecord>> {
-  return fetchTradePositionAccounts(rpcClient, [
+  const positions = await fetchTradePositionAccounts(rpcClient, [
     {
       memcmp: {
         bytes: authority as never,
@@ -326,7 +329,9 @@ export async function fetchTradePositions(
         offset: 8n,
       },
     },
+    getTradePositionMarketIdFilter(marketId),
   ])
+  return positions.filter((position) => position.data.marketId === marketId)
 }
 
 async function fetchTradePositionAccounts(
@@ -372,19 +377,23 @@ async function fetchTradePositionAccounts(
 
 export async function fetchMarketTradePositions(
   rpcClient: TwobRpcClient,
+  marketId: number,
 ): Promise<Array<TradePositionRecord>> {
-  return fetchTradePositionAccounts(rpcClient)
+  const positions = await fetchTradePositionAccounts(rpcClient, [
+    getTradePositionMarketIdFilter(marketId),
+  ])
+  return positions.filter((position) => position.data.marketId === marketId)
 }
 
 export async function fetchEndSlotBookkeepingSnapshot({
-  currentSlot,
+  bookkeepingLastUpdateSlot,
   endSlot,
   endSlotInterval,
   isBuy,
   marketAddress,
   rpcClient,
 }: {
-  currentSlot: number | null
+  bookkeepingLastUpdateSlot: number | null
   endSlot: number
   endSlotInterval: number | null
   isBuy: boolean
@@ -398,15 +407,9 @@ export async function fetchEndSlotBookkeepingSnapshot({
 
   if (!snapshotLocation) return null
 
-  const snapshotReadySlot =
-    endSlotInterval === null || endSlotInterval <= 0
-      ? null
-      : endSlot + ARRAY_LENGTH * endSlotInterval
-
   if (
-    currentSlot === null ||
-    snapshotReadySlot === null ||
-    currentSlot < snapshotReadySlot
+    bookkeepingLastUpdateSlot === null ||
+    bookkeepingLastUpdateSlot < endSlot
   ) {
     return null
   }
@@ -477,7 +480,7 @@ export async function sendSubmitOrder({
     amount: bigint
     durationSlots: number
     existingWrappedAtoms?: bigint
-    id: bigint
+    id: number
     inputMintAddress: string
     isBuy: boolean
     marketAddress: Address
@@ -493,6 +496,17 @@ export async function sendSubmitOrder({
     isBuy,
     marketAddress,
   } = request
+
+  if (!Number.isInteger(id) || id < 0 || id > 0xffffffff) {
+    throw new Error('Order id must be an unsigned 32-bit integer.')
+  }
+  if (
+    !Number.isInteger(durationSlots) ||
+    durationSlots <= 0 ||
+    durationSlots > 0xffffffff
+  ) {
+    throw new Error('Order duration must be a positive 32-bit slot count.')
+  }
 
   const walletSigner = createWalletTransactionSigner(session).signer
   const wrapShortfall =
@@ -518,8 +532,12 @@ export async function sendSubmitOrder({
     marketAccount.data.endSlotInterval,
   )
   const previousIndex = getPreviousIndex(referenceIndex)
-  const endSlot = alignEndSlot(
+  const positionStartSlot = Math.max(
     currentSlot,
+    Number(marketAccount.data.startSlot),
+  )
+  const endSlot = alignEndSlot(
+    positionStartSlot,
     durationSlots,
     marketAccount.data.endSlotInterval,
   )
@@ -539,15 +557,19 @@ export async function sendSubmitOrder({
   const instruction = await getSubmitOrderInstructionAsync({
     amount,
     authority: walletSigner,
+    baseReceiver: session.account.address,
     currentExits,
     currentPrices,
-    endSlot,
+    duration: durationSlots,
     futureIndex,
     id,
     market: marketAddress,
     mint,
+    operator: session.account.address,
+    payer: walletSigner,
     previousExits,
     previousPrices,
+    quoteReceiver: session.account.address,
     referenceIndex,
     tokenProgram: tokenProgram.programAddress,
   })
@@ -598,6 +620,356 @@ export async function sendSubmitOrder({
     blockhashBackedTransaction,
     'confirmed',
   )
+  const serializedSignature = signature.toString()
+  await waitForConfirmedSignature(client.runtime.rpc, serializedSignature)
+  return serializedSignature
+}
+
+function getCreateAssociatedTokenIdempotentInstruction({
+  ata,
+  mint,
+  owner,
+  payer,
+  tokenProgram,
+}: {
+  ata: Address
+  mint: Address
+  owner: Address
+  payer: TransactionSigner
+  tokenProgram: Address
+}) {
+  return Object.freeze({
+    accounts: [
+      {
+        address: payer.address,
+        role: AccountRole.WRITABLE_SIGNER,
+        signer: payer,
+      },
+      { address: ata, role: AccountRole.WRITABLE },
+      { address: owner, role: AccountRole.READONLY },
+      { address: mint, role: AccountRole.READONLY },
+      { address: SYSTEM_PROGRAM_ADDRESS, role: AccountRole.READONLY },
+      { address: tokenProgram, role: AccountRole.READONLY },
+    ] as const,
+    data: new Uint8Array([1]),
+    programAddress: ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
+  })
+}
+
+async function getPositionControlContext({
+  client,
+  marketAddress,
+  session,
+  tradePositionAddress,
+}: {
+  client: SolanaClient
+  marketAddress: Address
+  session: WalletSession
+  tradePositionAddress: Address
+}) {
+  const [marketAccount, tradePositionAccount] = await Promise.all([
+    fetchMarket(client.runtime.rpc, marketAddress, {
+      commitment: 'confirmed',
+    }),
+    fetchTradePosition(client.runtime.rpc, tradePositionAddress, {
+      commitment: 'confirmed',
+    }),
+  ])
+  const tradePosition = tradePositionAccount.data
+  const walletAddress = session.account.address.toString()
+
+  if (tradePosition.marketId !== marketAccount.data.id) {
+    throw new Error('Trade position belongs to a different market.')
+  }
+  if (
+    tradePosition.authority.toString() !== walletAddress &&
+    tradePosition.operator.toString() !== walletAddress
+  ) {
+    throw new Error('This wallet is not allowed to control the position.')
+  }
+
+  return {
+    market: marketAccount.data,
+    tradePosition,
+  }
+}
+
+async function derivePositionReferenceAccounts({
+  currentSlot,
+  endSlotInterval,
+  marketAddress,
+}: {
+  currentSlot: number
+  endSlotInterval: number
+  marketAddress: Address
+}) {
+  const referenceIndex = getReferenceIndex(currentSlot, endSlotInterval)
+  const previousIndex = getPreviousIndex(referenceIndex)
+  const [currentExits, previousExits, currentPrices, previousPrices] =
+    await Promise.all([
+      deriveExitsAddress(marketAddress, referenceIndex),
+      deriveExitsAddress(marketAddress, previousIndex),
+      derivePricesAddress(marketAddress, referenceIndex),
+      derivePricesAddress(marketAddress, previousIndex),
+    ])
+
+  return {
+    currentExits,
+    currentPrices,
+    previousExits,
+    previousPrices,
+    referenceIndex,
+  }
+}
+
+export async function sendPauseTradePosition({
+  client,
+  request,
+  sendTransaction,
+  session,
+}: {
+  client: SolanaClient
+  request: {
+    marketAddress: Address
+    tradePositionAddress: Address
+  }
+  sendTransaction: SendTransactionHelper
+  session: WalletSession
+}) {
+  const { marketAddress, tradePositionAddress } = request
+  const walletSigner = createWalletTransactionSigner(session).signer
+  const { market, tradePosition } = await getPositionControlContext({
+    client,
+    marketAddress,
+    session,
+    tradePositionAddress,
+  })
+
+  if (tradePosition.pausedAtSlot > 0n) {
+    throw new Error('This position is already paused.')
+  }
+
+  const [baseTokenProgram, quoteTokenProgram] = await Promise.all([
+    detectTokenProgram(client.runtime, market.baseMint, 'confirmed'),
+    detectTokenProgram(client.runtime, market.quoteMint, 'confirmed'),
+  ])
+  const currentSlot = Number(
+    await client.runtime.rpc.getSlot({ commitment: 'confirmed' }).send(),
+  )
+  if (BigInt(currentSlot) >= getTradePositionEndSlot(tradePosition)) {
+    throw new Error('This position has already ended and cannot be paused.')
+  }
+  if (BigInt(currentSlot) <= market.startSlot) {
+    throw new Error('This market has not started yet.')
+  }
+
+  const referenceAccounts = await derivePositionReferenceAccounts({
+    currentSlot,
+    endSlotInterval: market.endSlotInterval,
+    marketAddress,
+  })
+  const futureIndex = getFutureIndex(
+    getTradePositionEndSlot(tradePosition),
+    market.endSlotInterval,
+  )
+  const futureExits = await deriveExitsAddress(marketAddress, futureIndex)
+  const instruction = await getPauseTradePositionInstructionAsync({
+    baseMint: market.baseMint,
+    baseTokenProgram: baseTokenProgram.programAddress,
+    currentExits: referenceAccounts.currentExits,
+    currentPrices: referenceAccounts.currentPrices,
+    futureExits,
+    market: marketAddress,
+    previousExits: referenceAccounts.previousExits,
+    previousPrices: referenceAccounts.previousPrices,
+    quoteMint: market.quoteMint,
+    quoteTokenProgram: quoteTokenProgram.programAddress,
+    referenceIndex: referenceAccounts.referenceIndex,
+    signer: walletSigner,
+    tradePosition: tradePositionAddress,
+  })
+
+  const signature = await sendTransaction.send({
+    authority: walletSigner,
+    instructions: [instruction],
+  })
+  const serializedSignature = signature.toString()
+  await waitForConfirmedSignature(client.runtime.rpc, serializedSignature)
+  return serializedSignature
+}
+
+export async function sendUnpauseTradePosition({
+  client,
+  request,
+  sendTransaction,
+  session,
+}: {
+  client: SolanaClient
+  request: {
+    marketAddress: Address
+    tradePositionAddress: Address
+  }
+  sendTransaction: SendTransactionHelper
+  session: WalletSession
+}) {
+  const { marketAddress, tradePositionAddress } = request
+  const walletSigner = createWalletTransactionSigner(session).signer
+  const { market, tradePosition } = await getPositionControlContext({
+    client,
+    marketAddress,
+    session,
+    tradePositionAddress,
+  })
+
+  if (tradePosition.pausedAtSlot === 0n) {
+    throw new Error('This position is not paused.')
+  }
+  if (market.isPaused !== 0) {
+    throw new Error('The market is paused. Try resuming the position later.')
+  }
+
+  const [baseTokenProgram, quoteTokenProgram] = await Promise.all([
+    detectTokenProgram(client.runtime, market.baseMint, 'confirmed'),
+    detectTokenProgram(client.runtime, market.quoteMint, 'confirmed'),
+  ])
+  const currentSlot = Number(
+    await client.runtime.rpc.getSlot({ commitment: 'confirmed' }).send(),
+  )
+  const referenceAccounts = await derivePositionReferenceAccounts({
+    currentSlot,
+    endSlotInterval: market.endSlotInterval,
+    marketAddress,
+  })
+  const oldIndex = getFutureIndex(
+    getTradePositionEndSlot(tradePosition),
+    market.endSlotInterval,
+  )
+  const unpausedEndSlot = getUnpausedEndSlot(
+    currentSlot,
+    tradePosition.remainingSlots,
+    market.endSlotInterval,
+  )
+  const futureIndex = getFutureIndex(unpausedEndSlot, market.endSlotInterval)
+  const [oldExits, futureExits, futurePrices] = await Promise.all([
+    deriveExitsAddress(marketAddress, oldIndex),
+    deriveExitsAddress(marketAddress, futureIndex),
+    derivePricesAddress(marketAddress, futureIndex),
+  ])
+  const instruction = await getUnpauseTradePositionInstructionAsync({
+    baseMint: market.baseMint,
+    baseTokenProgram: baseTokenProgram.programAddress,
+    currentExits: referenceAccounts.currentExits,
+    currentPrices: referenceAccounts.currentPrices,
+    futureExits,
+    futureIndex,
+    futurePrices,
+    market: marketAddress,
+    oldExits,
+    previousExits: referenceAccounts.previousExits,
+    previousPrices: referenceAccounts.previousPrices,
+    quoteMint: market.quoteMint,
+    quoteTokenProgram: quoteTokenProgram.programAddress,
+    referenceIndex: referenceAccounts.referenceIndex,
+    signer: walletSigner,
+    tradePosition: tradePositionAddress,
+  })
+
+  const signature = await sendTransaction.send({
+    authority: walletSigner,
+    instructions: [instruction],
+  })
+  const serializedSignature = signature.toString()
+  await waitForConfirmedSignature(client.runtime.rpc, serializedSignature)
+  return serializedSignature
+}
+
+export async function sendWithdrawSwapped({
+  client,
+  request,
+  sendTransaction,
+  session,
+}: {
+  client: SolanaClient
+  request: {
+    marketAddress: Address
+    tradePositionAddress: Address
+  }
+  sendTransaction: SendTransactionHelper
+  session: WalletSession
+}) {
+  const { marketAddress, tradePositionAddress } = request
+  const walletSigner = createWalletTransactionSigner(session).signer
+  const { market, tradePosition } = await getPositionControlContext({
+    client,
+    marketAddress,
+    session,
+    tradePositionAddress,
+  })
+
+  const { mint, receiver } = getSwappedPositionAsset(market, tradePosition)
+  const tokenProgram = await detectTokenProgram(
+    client.runtime,
+    mint,
+    'confirmed',
+  )
+  const currentSlot = Number(
+    await client.runtime.rpc.getSlot({ commitment: 'confirmed' }).send(),
+  )
+  if (
+    tradePosition.pausedAtSlot === 0n &&
+    BigInt(currentSlot) >= getTradePositionEndSlot(tradePosition)
+  ) {
+    throw new Error(
+      'This position has already ended. Close it to receive the remaining funds.',
+    )
+  }
+  if (BigInt(currentSlot) <= market.startSlot) {
+    throw new Error('This market has not started yet.')
+  }
+  const referenceAccounts = await derivePositionReferenceAccounts({
+    currentSlot,
+    endSlotInterval: market.endSlotInterval,
+    marketAddress,
+  })
+  const isNative = mint.toString() === WRAPPED_SOL_MINT
+  const receiverTokenAccount = isNative
+    ? await deriveTemporaryWithdrawTokenAddress(tradePositionAddress)
+    : await deriveAssociatedTokenAddress({
+        mint,
+        owner: receiver,
+        tokenProgram: tokenProgram.programAddress,
+      })
+  const withdrawInstruction = await getWithdrawSwappedInstructionAsync({
+    currentExits: referenceAccounts.currentExits,
+    currentPrices: referenceAccounts.currentPrices,
+    market: marketAddress,
+    mint,
+    previousExits: referenceAccounts.previousExits,
+    previousPrices: referenceAccounts.previousPrices,
+    receiver,
+    receiverTokenAccount,
+    referenceIndex: referenceAccounts.referenceIndex,
+    signer: walletSigner,
+    tokenProgram: tokenProgram.programAddress,
+    tradePosition: tradePositionAddress,
+  })
+  const createReceiverInstruction = isNative
+    ? null
+    : getCreateAssociatedTokenIdempotentInstruction({
+        ata: receiverTokenAccount,
+        mint,
+        owner: receiver,
+        payer: walletSigner,
+        tokenProgram: tokenProgram.programAddress,
+      })
+  const instructions = createReceiverInstruction
+    ? [createReceiverInstruction, withdrawInstruction]
+    : [withdrawInstruction]
+
+  const signature = await sendTransaction.send({
+    authority: walletSigner,
+    instructions,
+  })
   const serializedSignature = signature.toString()
   await waitForConfirmedSignature(client.runtime.rpc, serializedSignature)
   return serializedSignature
@@ -705,8 +1077,12 @@ export async function sendClosePositions({
         throw new Error('Failed to resolve position address.')
       }
 
+      const tradePosition = tradePositionAccount.data
+      if (tradePosition.marketId !== marketAccount.data.id) {
+        throw new Error('Trade position belongs to a different market.')
+      }
       const futureIndex = getFutureIndex(
-        tradePositionAccount.data.endSlot,
+        getTradePositionEndSlot(tradePosition),
         marketAccount.data.endSlotInterval,
       )
       const [futureExits, futurePrices] = await Promise.all([
@@ -740,18 +1116,21 @@ export async function sendClosePositions({
         )
       }
 
-      return getAuthorityClosePositionInstructionAsync({
+      return getAuthorityCloseTradePositionInstructionAsync({
         authority: walletSigner,
         baseMint: marketAccount.data.baseMint,
+        baseReceiver: tradePosition.baseReceiver,
         baseTokenProgram: baseTokenProgram.programAddress,
         currentExits,
         currentPrices,
         futureExits,
         futurePrices,
         market: marketAddress,
+        payer: tradePosition.payer,
         previousExits,
         previousPrices,
         quoteMint: marketAccount.data.quoteMint,
+        quoteReceiver: tradePosition.quoteReceiver,
         quoteTokenProgram: quoteTokenProgram.programAddress,
         referenceIndex,
         tradePosition: tradePositionAddress,
@@ -794,7 +1173,6 @@ export async function sendReclaimRent({
 }) {
   const { marketAddress, maxAccounts } = request
   const walletSigner = createWalletTransactionSigner(session).signer
-  const signerAddress = walletSigner.address
   const ownerAddress = session.account.address
   const owner = ownerAddress.toString()
 
@@ -813,6 +1191,9 @@ export async function sendReclaimRent({
       address: account.address,
       index: account.data.index,
       lamports: account.lamports,
+      market: account.data.market,
+      openPositions: account.data.openPositions,
+      payer: account.data.payer,
     }),
   )
   const pricesAccounts: Array<PricesRentAccount> = ownedPricesAccounts.map(
@@ -820,13 +1201,9 @@ export async function sendReclaimRent({
       address: account.address,
       index: account.data.index,
       lamports: account.lamports,
-      openPositions: account.data.openPositions,
+      market: account.data.market,
+      payer: account.data.payer,
     }),
-  )
-  const indicesWithOpenPositions = new Set<bigint>(
-    pricesAccounts
-      .filter((account) => account.openPositions > 0n)
-      .map((account) => account.index),
   )
 
   const referenceIndex = getReferenceIndex(
@@ -837,30 +1214,25 @@ export async function sendReclaimRent({
     throw new Error('Reclaim rent is not available yet for this market.')
   }
   const previousIndex = getPreviousIndex(referenceIndex)
-
-  const candidateAccounts = collectCloseableRentAccounts({
+  const candidatePairs = collectCloseableRentAccountPairs({
     currentSlot: Number(currentSlot),
     endSlotInterval: marketAccount.data.endSlotInterval,
     exitsAccounts,
     maxAccounts: exitsAccounts.length + pricesAccounts.length,
+    market: marketAddress,
+    payer: ownerAddress,
     pricesAccounts,
   })
-  const closeableAccounts = candidateAccounts
-    .filter((account) => account.index < previousIndex)
-    .filter(
-      (account) =>
-        !(
-          account.kind === 'exits' &&
-          indicesWithOpenPositions.has(account.index)
-        ),
-    )
-    .slice(0, Math.max(0, Math.floor(maxAccounts)))
+  const closeablePairs = candidatePairs.slice(
+    0,
+    Math.max(0, Math.floor(maxAccounts / 2)),
+  )
 
-  if (closeableAccounts.length === 0) {
+  if (closeablePairs.length === 0) {
     throw new Error('No reclaimable rent accounts available.')
   }
-  const reclaimedLamports = closeableAccounts.reduce(
-    (sum, account) => sum + account.lamports,
+  const reclaimedLamports = closeablePairs.reduce(
+    (sum, pair) => sum + pair.exits.lamports + pair.prices.lamports,
     0n,
   )
   const [
@@ -878,35 +1250,21 @@ export async function sendReclaimRent({
   ])
 
   const instructions = await Promise.all(
-    closeableAccounts.map((account) => {
-      if (account.kind === 'exits') {
-        return buildCloseExitsAccountInstruction({
-          bookkeepingAddress,
-          currentExits,
-          currentPrices,
-          exitsAddress: account.address,
-          marketAddress,
-          ownerAddress,
-          previousExits,
-          previousPrices,
-          referenceIndex,
-          signerAddress,
-        })
-      }
-
-      return buildClosePricesAccountInstruction({
-        bookkeepingAddress,
+    closeablePairs.map((pair) =>
+      getCloseExitsAndPricesAccountInstructionAsync({
+        bookkeeping: bookkeepingAddress,
         currentExits,
         currentPrices,
-        marketAddress,
-        ownerAddress,
+        exits: pair.exits.address,
+        market: marketAddress,
+        payer: pair.exits.payer,
         previousExits,
         previousPrices,
-        pricesAddress: account.address,
+        prices: pair.prices.address,
         referenceIndex,
-        signerAddress,
-      })
-    }),
+        signer: walletSigner,
+      }),
+    ),
   )
 
   const { value: blockhashLifetime } = await client.runtime.rpc

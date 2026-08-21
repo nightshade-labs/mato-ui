@@ -25,6 +25,8 @@ import {
   getStructEncoder,
   getU128Decoder,
   getU128Encoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -53,32 +55,40 @@ export function getPricesDiscriminatorBytes() {
 
 export type Prices = {
   discriminator: ReadonlyUint8Array
-  /** Address which created this account, used to determine where the rent goes if account is closed */
-  owner: Address
+  /**
+   * Market this account belongs to, kept first so it can be read without deserializing
+   * the whole account
+   */
+  market: Address
+  /** Reference interval this account covers, kept next to `market` for the same reason */
+  index: bigint
+  /** Address which funded this account, used to determine where the rent goes if account is closed */
+  payer: Address
   /** Takes a snapshot of the bookkeeping account for given slot */
   basePerQuoteSnapshot: Array<bigint>
   /** Takes a snapshot of the bookkeeping account for given slot */
   quotePerBaseSnapshot: Array<bigint>
   /** Takes a snapshot of the bookkeeping account for given slot */
-  slotsWithoutTradesSnapshot: Array<bigint>
-  /** Number of open trade positions that end in this reference interval */
-  openPositions: bigint
-  index: bigint
+  slotsWithoutTradesSnapshot: Array<number>
   bump: number
 }
 
 export type PricesArgs = {
-  /** Address which created this account, used to determine where the rent goes if account is closed */
-  owner: Address
+  /**
+   * Market this account belongs to, kept first so it can be read without deserializing
+   * the whole account
+   */
+  market: Address
+  /** Reference interval this account covers, kept next to `market` for the same reason */
+  index: number | bigint
+  /** Address which funded this account, used to determine where the rent goes if account is closed */
+  payer: Address
   /** Takes a snapshot of the bookkeeping account for given slot */
   basePerQuoteSnapshot: Array<number | bigint>
   /** Takes a snapshot of the bookkeeping account for given slot */
   quotePerBaseSnapshot: Array<number | bigint>
   /** Takes a snapshot of the bookkeeping account for given slot */
-  slotsWithoutTradesSnapshot: Array<number | bigint>
-  /** Number of open trade positions that end in this reference interval */
-  openPositions: number | bigint
-  index: number | bigint
+  slotsWithoutTradesSnapshot: Array<number>
   bump: number
 }
 
@@ -87,15 +97,15 @@ export function getPricesEncoder(): FixedSizeEncoder<PricesArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['owner', getAddressEncoder()],
-      ['basePerQuoteSnapshot', getArrayEncoder(getU128Encoder(), { size: 10 })],
-      ['quotePerBaseSnapshot', getArrayEncoder(getU128Encoder(), { size: 10 })],
+      ['market', getAddressEncoder()],
+      ['index', getU64Encoder()],
+      ['payer', getAddressEncoder()],
+      ['basePerQuoteSnapshot', getArrayEncoder(getU128Encoder(), { size: 20 })],
+      ['quotePerBaseSnapshot', getArrayEncoder(getU128Encoder(), { size: 20 })],
       [
         'slotsWithoutTradesSnapshot',
-        getArrayEncoder(getU64Encoder(), { size: 10 }),
+        getArrayEncoder(getU32Encoder(), { size: 20 }),
       ],
-      ['openPositions', getU64Encoder()],
-      ['index', getU64Encoder()],
       ['bump', getU8Encoder()],
     ]),
     (value) => ({ ...value, discriminator: PRICES_DISCRIMINATOR }),
@@ -106,15 +116,15 @@ export function getPricesEncoder(): FixedSizeEncoder<PricesArgs> {
 export function getPricesDecoder(): FixedSizeDecoder<Prices> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['owner', getAddressDecoder()],
-    ['basePerQuoteSnapshot', getArrayDecoder(getU128Decoder(), { size: 10 })],
-    ['quotePerBaseSnapshot', getArrayDecoder(getU128Decoder(), { size: 10 })],
+    ['market', getAddressDecoder()],
+    ['index', getU64Decoder()],
+    ['payer', getAddressDecoder()],
+    ['basePerQuoteSnapshot', getArrayDecoder(getU128Decoder(), { size: 20 })],
+    ['quotePerBaseSnapshot', getArrayDecoder(getU128Decoder(), { size: 20 })],
     [
       'slotsWithoutTradesSnapshot',
-      getArrayDecoder(getU64Decoder(), { size: 10 }),
+      getArrayDecoder(getU32Decoder(), { size: 20 }),
     ],
-    ['openPositions', getU64Decoder()],
-    ['index', getU64Decoder()],
     ['bump', getU8Decoder()],
   ])
 }
@@ -178,5 +188,5 @@ export async function fetchAllMaybePrices(
 }
 
 export function getPricesSize(): number {
-  return 457
+  return 801
 }

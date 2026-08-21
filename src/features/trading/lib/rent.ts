@@ -1,36 +1,31 @@
-import type { Address } from '@solana/kit'
 import {
   ARRAY_LENGTH,
   MAX_RECLAIM_RENT_ACCOUNTS_PER_TRANSACTION,
 } from '../constants'
+import type { Address } from '@solana/kit'
 
 export type ExitsRentAccount = {
   address: Address
   index: bigint
   lamports: bigint
+  market: Address
+  openPositions: number
+  payer: Address
 }
 
 export type PricesRentAccount = {
   address: Address
   index: bigint
   lamports: bigint
-  openPositions: bigint
+  market: Address
+  payer: Address
 }
 
-export type RentAccountToClose =
-  | {
-      address: Address
-      index: bigint
-      kind: 'exits'
-      lamports: bigint
-    }
-  | {
-      address: Address
-      index: bigint
-      kind: 'prices'
-      lamports: bigint
-      openPositions: bigint
-    }
+export type CloseableRentAccountPair = {
+  exits: ExitsRentAccount
+  index: bigint
+  prices: PricesRentAccount
+}
 
 function toBigInt(value: bigint | number) {
   return typeof value === 'bigint' ? value : BigInt(Math.floor(value))
@@ -40,7 +35,7 @@ function getClosableAfterSlot(index: bigint, endSlotInterval: bigint) {
   return (index + 1n) * BigInt(ARRAY_LENGTH) * endSlotInterval
 }
 
-export function isExitsAccountCloseable({
+export function isRentAccountIndexStale({
   currentSlot,
   endSlotInterval,
   index,
@@ -55,76 +50,49 @@ export function isExitsAccountCloseable({
   )
 }
 
-export function isPricesAccountCloseable({
-  currentSlot,
-  endSlotInterval,
-  index,
-  openPositions,
-}: {
-  currentSlot: bigint | number
-  endSlotInterval: bigint | number
-  index: bigint
-  openPositions: bigint
-}) {
-  return (
-    openPositions === 0n &&
-    isExitsAccountCloseable({ currentSlot, endSlotInterval, index })
-  )
-}
-
-export function collectCloseableRentAccounts({
+export function collectCloseableRentAccountPairs({
   currentSlot,
   endSlotInterval,
   exitsAccounts,
+  market,
   maxAccounts = MAX_RECLAIM_RENT_ACCOUNTS_PER_TRANSACTION,
+  payer,
   pricesAccounts,
 }: {
   currentSlot: bigint | number
   endSlotInterval: bigint | number
-  exitsAccounts: ExitsRentAccount[]
+  exitsAccounts: Array<ExitsRentAccount>
+  market: Address
   maxAccounts?: number
-  pricesAccounts: PricesRentAccount[]
-}): RentAccountToClose[] {
-  const closeableExits: RentAccountToClose[] = exitsAccounts
-    .filter((account) =>
-      isExitsAccountCloseable({
-        currentSlot,
-        endSlotInterval,
-        index: account.index,
-      }),
-    )
-    .map((account) => ({
-      address: account.address,
-      index: account.index,
-      kind: 'exits' as const,
-      lamports: account.lamports,
-    }))
+  payer: Address
+  pricesAccounts: Array<PricesRentAccount>
+}): Array<CloseableRentAccountPair> {
+  const matchingPricesByIndex = new Map(
+    pricesAccounts
+      .filter((account) => account.market === market && account.payer === payer)
+      .map((account) => [account.index, account] as const),
+  )
+  const maxPairs = Math.max(0, Math.floor(maxAccounts / 2))
 
-  const closeablePrices: RentAccountToClose[] = pricesAccounts
-    .filter((account) =>
-      isPricesAccountCloseable({
-        currentSlot,
-        endSlotInterval,
-        index: account.index,
-        openPositions: account.openPositions,
-      }),
+  return exitsAccounts
+    .filter(
+      (account) =>
+        account.market === market &&
+        account.payer === payer &&
+        account.openPositions === 0 &&
+        isRentAccountIndexStale({
+          currentSlot,
+          endSlotInterval,
+          index: account.index,
+        }),
     )
-    .map((account) => ({
-      address: account.address,
-      index: account.index,
-      kind: 'prices' as const,
-      lamports: account.lamports,
-      openPositions: account.openPositions,
-    }))
-
-  return [...closeableExits, ...closeablePrices]
+    .flatMap((exits) => {
+      const prices = matchingPricesByIndex.get(exits.index)
+      return prices ? [{ exits, index: exits.index, prices }] : []
+    })
     .sort((left, right) => {
-      if (left.index === right.index) {
-        if (left.kind === right.kind) return 0
-        return left.kind === 'exits' ? -1 : 1
-      }
-
+      if (left.index === right.index) return 0
       return left.index < right.index ? -1 : 1
     })
-    .slice(0, Math.max(0, Math.floor(maxAccounts)))
+    .slice(0, maxPairs)
 }

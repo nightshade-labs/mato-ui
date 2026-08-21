@@ -3,6 +3,11 @@ import { buildClosedPositionSummary } from '../view-models/closed-position'
 import { formatAtoms } from './format'
 import { getActivePositionMetrics } from './position-progress'
 import { mergeAdjacentRanges } from './slot-ranges'
+import {
+  getTradePositionEndSlot,
+  isBuyTradePosition,
+  isPausedTradePosition,
+} from './trade-position'
 import type { Address } from '@solana/kit'
 import type {
   ClosePositionEvent,
@@ -157,9 +162,11 @@ export function buildChartPositionSlotRanges({
 
   for (const position of activePositions) {
     const startSlot = Number(position.data.startSlot)
-    const positionEndSlot = Number(position.data.endSlot)
-    const endSlot =
-      currentSlot === null
+    const positionEndSlot = Number(getTradePositionEndSlot(position.data))
+    const isPaused = isPausedTradePosition(position.data)
+    const endSlot = isPaused
+      ? Number(position.data.pausedAtSlot)
+      : currentSlot === null
         ? positionEndSlot
         : Math.min(Math.max(currentSlot, startSlot), positionEndSlot)
     const range = toSlotRange(startSlot, endSlot)
@@ -217,11 +224,11 @@ export function buildChartPositionOverlays({
       if (metrics.averagePrice === null) continue
 
       const startSlot = Number(position.data.startSlot)
-      const positionEndSlot = Number(position.data.endSlot)
-      const lineEndSlot = Math.min(
-        Math.max(currentSlot, startSlot),
-        positionEndSlot,
-      )
+      const positionEndSlot = Number(getTradePositionEndSlot(position.data))
+      const isPaused = isPausedTradePosition(position.data)
+      const lineEndSlot = isPaused
+        ? Number(position.data.pausedAtSlot)
+        : Math.min(Math.max(currentSlot, startSlot), positionEndSlot)
       const startTimeMs = estimateTimeMsForSlot(anchors, startSlot)
       const endTimeMs = estimateTimeMsForSlot(anchors, lineEndSlot)
       if (startTimeMs === null || endTimeMs === null) continue
@@ -234,9 +241,9 @@ export function buildChartPositionOverlays({
           metrics.amountAtoms,
           metrics.depositedDecimals,
         )} ${metrics.depositedToken}`,
-        side: position.data.isBuy === 1 ? 'buy' : 'sell',
+        side: isBuyTradePosition(position.data) ? 'buy' : 'sell',
         startTime: Math.floor(startTimeMs / 1000),
-        status: currentSlot < positionEndSlot ? 'active' : 'closed',
+        status: isPaused || currentSlot < positionEndSlot ? 'active' : 'closed',
       })
     }
   }

@@ -6,12 +6,15 @@ import {
 import type { Address } from '@solana/kit'
 import type { ClosePositionEvent } from '@/integrations/read-api'
 import type { TradePositionRecord } from '../domain/models'
+import { Side } from '@/lib/generated/twob/src/generated/types'
 
 function activePosition({
   endSlot,
+  pausedAtSlot = 0n,
   startSlot,
 }: {
   endSlot: bigint
+  pausedAtSlot?: bigint
   startSlot: bigint
 }): TradePositionRecord {
   return {
@@ -20,13 +23,24 @@ function activePosition({
       discriminator: new Uint8Array(),
       amount: 1_000_000n,
       authority: '22222222222222222222222222222222' as Address,
+      baseReceiver: '33333333333333333333333333333333' as Address,
       bookkeepingSnapshot: 0n,
       bump: 255,
-      endSlot,
-      id: 1n,
-      isBuy: 1,
-      slotsWithoutTradesSnapshot: 0n,
+      flow: 0n,
+      id: 1,
+      inactiveRefund: 0n,
+      lastUpdateSlot: startSlot,
+      marketId: 1,
+      operator: '44444444444444444444444444444444' as Address,
+      pausedAtSlot,
+      payer: '55555555555555555555555555555555' as Address,
+      quoteReceiver: '66666666666666666666666666666666' as Address,
+      remainingSlots: Number(endSlot - startSlot),
+      side: Side.Buy,
+      slotsWithoutTradesSnapshot: 0,
       startSlot,
+      swappedAmountAtSnapshot: 0n,
+      withdrawnAmount: 0n,
     },
   }
 }
@@ -98,6 +112,22 @@ describe('buildChartPositionSlotRanges', () => {
         currentSlot: 180,
       }),
     ).toEqual([{ endSlot: 180, startSlot: 100 }])
+  })
+
+  it('stops a paused position range at its pause slot', () => {
+    expect(
+      buildChartPositionSlotRanges({
+        activePositions: [
+          activePosition({
+            endSlot: 300n,
+            pausedAtSlot: 160n,
+            startSlot: 100n,
+          }),
+        ],
+        closedPositions: [],
+        currentSlot: 240,
+      }),
+    ).toEqual([{ endSlot: 160, startSlot: 100 }])
   })
 
   it('uses the close slot for closed positions that were closed early', () => {

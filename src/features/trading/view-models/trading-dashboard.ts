@@ -27,6 +27,37 @@ export interface DashboardChartFocus {
   time: number
 }
 
+export interface DashboardMarketPrice {
+  eventTimeMs?: number | null
+  price: number | null
+  slot: number | null
+}
+
+export interface ReferenceMarketPricingInputs {
+  chartCandles: Array<TradingViewAggregatedCandle>
+  crosshairData: DashboardChartFocus | null
+  marketPrice?: DashboardMarketPrice
+  marketUpdates: Array<MarketUpdateEvent>
+  priceChangeHistory: Array<TradingViewAggregatedCandle>
+}
+
+export function selectReferenceMarketPricing({
+  isReferenceMarket,
+  ...pricing
+}: ReferenceMarketPricingInputs & {
+  isReferenceMarket: boolean
+}): ReferenceMarketPricingInputs {
+  if (isReferenceMarket) return pricing
+
+  return {
+    chartCandles: [],
+    crosshairData: null,
+    marketPrice: undefined,
+    marketUpdates: [],
+    priceChangeHistory: [],
+  }
+}
+
 export interface TradingMarketIdentity {
   baseDecimals: number
   baseMint: string | null
@@ -138,11 +169,7 @@ export function buildTradingDashboardViewModel({
   chartCandles: Array<TradingViewAggregatedCandle>
   crosshairData: DashboardChartFocus | null
   durationSeconds: number
-  marketPrice?: {
-    eventTimeMs?: number | null
-    price: number | null
-    slot: number | null
-  }
+  marketPrice?: DashboardMarketPrice
   marketUpdates: Array<MarketUpdateEvent>
   priceChangeHistory: Array<TradingViewAggregatedCandle>
   quoteDecimals: number

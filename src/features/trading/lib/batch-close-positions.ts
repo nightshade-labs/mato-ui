@@ -1,9 +1,13 @@
+import { getTradePositionEndSlot } from './trade-position'
+
 export type BatchCloseMode = 'ended' | 'all'
 
 type BatchClosePositionLike = {
   address: string
   data: {
-    endSlot: bigint
+    lastUpdateSlot: bigint
+    pausedAtSlot: bigint
+    remainingSlots: number
   }
 }
 
@@ -11,8 +15,11 @@ function compareByEndSlotThenAddress(
   left: BatchClosePositionLike,
   right: BatchClosePositionLike,
 ) {
-  if (left.data.endSlot < right.data.endSlot) return -1
-  if (left.data.endSlot > right.data.endSlot) return 1
+  const leftEndSlot = getTradePositionEndSlot(left.data)
+  const rightEndSlot = getTradePositionEndSlot(right.data)
+
+  if (leftEndSlot < rightEndSlot) return -1
+  if (leftEndSlot > rightEndSlot) return 1
   return left.address.localeCompare(right.address)
 }
 
@@ -20,8 +27,10 @@ export function isEndedPosition(
   position: BatchClosePositionLike,
   currentSlot: number | null,
 ) {
-  if (currentSlot === null) return false
-  return BigInt(Math.floor(currentSlot)) > position.data.endSlot
+  if (currentSlot === null || position.data.pausedAtSlot > 0n) return false
+  return (
+    BigInt(Math.floor(currentSlot)) > getTradePositionEndSlot(position.data)
+  )
 }
 
 export function selectBatchClosePositions<T extends BatchClosePositionLike>({

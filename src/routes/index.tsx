@@ -1,25 +1,29 @@
 import { createFileRoute } from '@tanstack/react-router'
+import type { MarketId } from '@/features/trading/constants'
 import { TradingDashboard } from '@/features/trading/components/trading-dashboard'
-import { MARKET_ID } from '@/features/trading/constants'
+import { parseMarketSearch } from '@/features/trading/constants'
 import { tradingQueries } from '@/features/trading/queries'
 
 export const Route = createFileRoute('/')({
-  loader: async ({ context }) => {
-    await Promise.all([
-      context.queryClient.ensureQueryData(
-        tradingQueries.marketConfig(MARKET_ID),
-      ),
-      context.queryClient.ensureQueryData(
-        tradingQueries.marketAddress(MARKET_ID),
-      ),
-      context.queryClient.ensureQueryData(
-        tradingQueries.marketPrice(MARKET_ID),
-      ),
-    ])
+  validateSearch: parseMarketSearch,
+  loaderDeps: ({ search }) => ({ marketId: search.market }),
+  loader: async ({ context, deps }) => {
+    await context.queryClient.ensureQueryData(
+      tradingQueries.marketAddress(deps.marketId),
+    )
   },
   component: App,
 })
 
 function App() {
-  return <TradingDashboard />
+  const { market: marketId } = Route.useSearch()
+  const navigate = Route.useNavigate()
+
+  function handleMarketChange(nextMarketId: MarketId) {
+    void navigate({ search: { market: nextMarketId } })
+  }
+
+  return (
+    <TradingDashboard marketId={marketId} onMarketChange={handleMarketChange} />
+  )
 }

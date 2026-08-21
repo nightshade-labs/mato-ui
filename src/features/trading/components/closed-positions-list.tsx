@@ -76,6 +76,7 @@ export function ClosedPositionsList({
   baseTicker,
   marketId,
   positionAuthority,
+  priceHistoryAvailable,
   quoteDecimals,
   quoteTicker,
 }: {
@@ -83,6 +84,7 @@ export function ClosedPositionsList({
   baseTicker: string
   marketId: number
   positionAuthority: string
+  priceHistoryAvailable: boolean
   quoteDecimals: number
   quoteTicker: string
 }) {
@@ -213,6 +215,8 @@ export function ClosedPositionsList({
   }, [chartStatesByEventId])
 
   const pendingChartEvents = useMemo(() => {
+    if (!priceHistoryAvailable) return []
+
     const remainingSlots =
       CLOSED_POSITION_MAX_CONCURRENT_CHART_LOADS - activeChartLoadCount
     if (remainingSlots <= 0) {
@@ -236,6 +240,7 @@ export function ClosedPositionsList({
     activeChartLoadCount,
     chartStatesByEventId,
     paginatedEvents,
+    priceHistoryAvailable,
     visibleEventIds,
   ])
 
@@ -314,6 +319,14 @@ export function ClosedPositionsList({
   const chartStateForEvent = (
     event: ClosePositionEvent,
   ): ClosedPositionChartState => {
+    if (!priceHistoryAvailable) {
+      return {
+        error: null,
+        points: null,
+        status: 'unavailable',
+      }
+    }
+
     const existing = chartStatesByEventId.get(event.id)
     if (existing) {
       return existing

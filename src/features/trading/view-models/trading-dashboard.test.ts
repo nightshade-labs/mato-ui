@@ -4,7 +4,9 @@ import {
   calculateRelativePriceChangePercent,
   deriveMarketIdentity,
   formatDashboardPriceChangePercent,
+  selectReferenceMarketPricing,
 } from './trading-dashboard'
+import type { Address } from '@solana/kit'
 import type { TradingViewAggregatedCandle } from '../lib/market'
 
 describe('deriveMarketIdentity', () => {
@@ -23,6 +25,48 @@ describe('deriveMarketIdentity', () => {
 
     expect(identity.baseTicker).toBe('SOL')
     expect(identity.quoteTicker).toBe('USDC')
+  })
+})
+
+describe('selectReferenceMarketPricing', () => {
+  it('removes the SOL reference feed from custom-market calculations', () => {
+    const referenceCandle: TradingViewAggregatedCandle = {
+      close: 150,
+      endSlot: 2,
+      high: 151,
+      low: 149,
+      open: 150,
+      startSlot: 1,
+      time: 1_742_428_800,
+      volume: 10,
+    }
+
+    expect(
+      selectReferenceMarketPricing({
+        chartCandles: [referenceCandle],
+        crosshairData: { ...referenceCandle },
+        isReferenceMarket: false,
+        marketPrice: { price: 150, slot: 2 },
+        marketUpdates: [
+          {
+            base_flow: 1n,
+            created_at: '2026-03-20T00:00:00Z',
+            id: 1,
+            market_id: 1,
+            quote_flow: 150n,
+            signature: 'reference',
+            slot: 2,
+          },
+        ],
+        priceChangeHistory: [referenceCandle],
+      }),
+    ).toEqual({
+      chartCandles: [],
+      crosshairData: null,
+      marketPrice: undefined,
+      marketUpdates: [],
+      priceChangeHistory: [],
+    })
   })
 })
 
@@ -86,13 +130,19 @@ describe('buildTradingDashboardViewModel', () => {
       quoteTicker: 'USDC',
       side: 'buy',
       streamingState: {
+        baseMint: 'So11111111111111111111111111111111111111112' as Address,
         bookkeepingBasePerQuote: 0n,
         bookkeepingLastUpdateSlot: 11,
         bookkeepingQuotePerBase: 0n,
         currentSlot: 11,
         endSlotInterval: 5,
+        isPaused: false,
         marketBaseFlow: 1_000_000_000n,
+        marketId: 1,
         marketQuoteFlow: 20_000_000_000n,
+        minimumBaseDepositAtoms: 1n,
+        minimumQuoteDepositAtoms: 1n,
+        quoteMint: '11111111111111111111111111111111' as Address,
       },
       tradePositions: [],
     })

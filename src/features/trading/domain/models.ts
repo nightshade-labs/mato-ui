@@ -7,6 +7,12 @@ export interface TradePositionRecord {
 }
 
 export interface StreamingMarketState {
+  baseMint: Address
+  quoteMint: Address
+  marketId: number
+  minimumBaseDepositAtoms: bigint
+  minimumQuoteDepositAtoms: bigint
+  isPaused: boolean
   currentSlot: number
   endSlotInterval: number
   marketBaseFlow: bigint

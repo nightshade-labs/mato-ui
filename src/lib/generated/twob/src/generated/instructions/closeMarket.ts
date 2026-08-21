@@ -62,8 +62,6 @@ export type CloseMarketInstruction<
   TAccountBookkeeping extends string | AccountMeta<string> = string,
   TAccountBaseTokenProgram extends string | AccountMeta<string> = string,
   TAccountQuoteTokenProgram extends string | AccountMeta<string> = string,
-  TAccountSystemProgram extends string | AccountMeta<string> =
-    '11111111111111111111111111111111',
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -104,9 +102,6 @@ export type CloseMarketInstruction<
       TAccountQuoteTokenProgram extends string
         ? ReadonlyAccount<TAccountQuoteTokenProgram>
         : TAccountQuoteTokenProgram,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >
@@ -150,7 +145,6 @@ export type CloseMarketAsyncInput<
   TAccountBookkeeping extends string = string,
   TAccountBaseTokenProgram extends string = string,
   TAccountQuoteTokenProgram extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
   payer: TransactionSigner<TAccountPayer>
@@ -163,7 +157,6 @@ export type CloseMarketAsyncInput<
   bookkeeping?: Address<TAccountBookkeeping>
   baseTokenProgram: Address<TAccountBaseTokenProgram>
   quoteTokenProgram: Address<TAccountQuoteTokenProgram>
-  systemProgram?: Address<TAccountSystemProgram>
 }
 
 export async function getCloseMarketInstructionAsync<
@@ -178,7 +171,6 @@ export async function getCloseMarketInstructionAsync<
   TAccountBookkeeping extends string,
   TAccountBaseTokenProgram extends string,
   TAccountQuoteTokenProgram extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
   input: CloseMarketAsyncInput<
@@ -192,8 +184,7 @@ export async function getCloseMarketInstructionAsync<
     TAccountQuoteVault,
     TAccountBookkeeping,
     TAccountBaseTokenProgram,
-    TAccountQuoteTokenProgram,
-    TAccountSystemProgram
+    TAccountQuoteTokenProgram
   >,
   config?: { programAddress?: TProgramAddress },
 ): Promise<
@@ -209,8 +200,7 @@ export async function getCloseMarketInstructionAsync<
     TAccountQuoteVault,
     TAccountBookkeeping,
     TAccountBaseTokenProgram,
-    TAccountQuoteTokenProgram,
-    TAccountSystemProgram
+    TAccountQuoteTokenProgram
   >
 > {
   // Program address.
@@ -235,7 +225,6 @@ export async function getCloseMarketInstructionAsync<
       value: input.quoteTokenProgram ?? null,
       isWritable: false,
     },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   }
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -325,10 +314,6 @@ export async function getCloseMarketInstructionAsync<
       ],
     })
   }
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
-  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
@@ -344,7 +329,6 @@ export async function getCloseMarketInstructionAsync<
       getAccountMeta('bookkeeping', accounts.bookkeeping),
       getAccountMeta('baseTokenProgram', accounts.baseTokenProgram),
       getAccountMeta('quoteTokenProgram', accounts.quoteTokenProgram),
-      getAccountMeta('systemProgram', accounts.systemProgram),
     ],
     data: getCloseMarketInstructionDataEncoder().encode({}),
     programAddress,
@@ -360,8 +344,7 @@ export async function getCloseMarketInstructionAsync<
     TAccountQuoteVault,
     TAccountBookkeeping,
     TAccountBaseTokenProgram,
-    TAccountQuoteTokenProgram,
-    TAccountSystemProgram
+    TAccountQuoteTokenProgram
   >)
 }
 
@@ -377,7 +360,6 @@ export type CloseMarketInput<
   TAccountBookkeeping extends string = string,
   TAccountBaseTokenProgram extends string = string,
   TAccountQuoteTokenProgram extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
   payer: TransactionSigner<TAccountPayer>
@@ -390,7 +372,6 @@ export type CloseMarketInput<
   bookkeeping: Address<TAccountBookkeeping>
   baseTokenProgram: Address<TAccountBaseTokenProgram>
   quoteTokenProgram: Address<TAccountQuoteTokenProgram>
-  systemProgram?: Address<TAccountSystemProgram>
 }
 
 export function getCloseMarketInstruction<
@@ -405,7 +386,6 @@ export function getCloseMarketInstruction<
   TAccountBookkeeping extends string,
   TAccountBaseTokenProgram extends string,
   TAccountQuoteTokenProgram extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
   input: CloseMarketInput<
@@ -419,8 +399,7 @@ export function getCloseMarketInstruction<
     TAccountQuoteVault,
     TAccountBookkeeping,
     TAccountBaseTokenProgram,
-    TAccountQuoteTokenProgram,
-    TAccountSystemProgram
+    TAccountQuoteTokenProgram
   >,
   config?: { programAddress?: TProgramAddress },
 ): CloseMarketInstruction<
@@ -435,8 +414,7 @@ export function getCloseMarketInstruction<
   TAccountQuoteVault,
   TAccountBookkeeping,
   TAccountBaseTokenProgram,
-  TAccountQuoteTokenProgram,
-  TAccountSystemProgram
+  TAccountQuoteTokenProgram
 > {
   // Program address.
   const programAddress = config?.programAddress ?? TWOB_ANCHOR_PROGRAM_ADDRESS
@@ -460,18 +438,11 @@ export function getCloseMarketInstruction<
       value: input.quoteTokenProgram ?? null,
       isWritable: false,
     },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   }
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
     ResolvedInstructionAccount
   >
-
-  // Resolve default values.
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
-  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
@@ -487,7 +458,6 @@ export function getCloseMarketInstruction<
       getAccountMeta('bookkeeping', accounts.bookkeeping),
       getAccountMeta('baseTokenProgram', accounts.baseTokenProgram),
       getAccountMeta('quoteTokenProgram', accounts.quoteTokenProgram),
-      getAccountMeta('systemProgram', accounts.systemProgram),
     ],
     data: getCloseMarketInstructionDataEncoder().encode({}),
     programAddress,
@@ -503,8 +473,7 @@ export function getCloseMarketInstruction<
     TAccountQuoteVault,
     TAccountBookkeeping,
     TAccountBaseTokenProgram,
-    TAccountQuoteTokenProgram,
-    TAccountSystemProgram
+    TAccountQuoteTokenProgram
   >)
 }
 
@@ -525,7 +494,6 @@ export type ParsedCloseMarketInstruction<
     bookkeeping: TAccountMetas[8]
     baseTokenProgram: TAccountMetas[9]
     quoteTokenProgram: TAccountMetas[10]
-    systemProgram: TAccountMetas[11]
   }
   data: CloseMarketInstructionData
 }
@@ -538,12 +506,12 @@ export function parseCloseMarketInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedCloseMarketInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 12) {
+  if (instruction.accounts.length < 11) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 12,
+        expectedAccountMetas: 11,
       },
     )
   }
@@ -567,7 +535,6 @@ export function parseCloseMarketInstruction<
       bookkeeping: getNextAccount(),
       baseTokenProgram: getNextAccount(),
       quoteTokenProgram: getNextAccount(),
-      systemProgram: getNextAccount(),
     },
     data: getCloseMarketInstructionDataDecoder().decode(instruction.data),
   }

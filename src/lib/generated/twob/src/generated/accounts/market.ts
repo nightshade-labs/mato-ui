@@ -23,6 +23,10 @@ import {
   getStructEncoder,
   getU128Decoder,
   getU128Encoder,
+  getU16Decoder,
+  getU16Encoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -51,24 +55,28 @@ export function getMarketDiscriminatorBytes() {
 
 export type Market = {
   discriminator: ReadonlyUint8Array
-  /** Market id, every trading pair has its own id */
-  id: bigint
   /** Since mints are not included in market seeds, we store them in the account */
   baseMint: Address
   quoteMint: Address
-  /** Slot at which market is active */
-  startSlot: bigint
   /** Current flow of base token */
   baseFlow: bigint
   /** Current flow of quote token */
   quoteFlow: bigint
-  /** Order can only and at a slot that is a multiple of end_slot_interval */
-  endSlotInterval: bigint
-  /** Stores the number of open positions (trade and liquidity) in this market, rethink if this is needed */
+  /** Minimum base trade amount */
+  minimumBaseDepositAtoms: bigint
+  /** Minimum quote trade amount */
+  minimumQuoteDepositAtoms: bigint
+  /** Slot at which market is active */
+  startSlot: bigint
+  /** Stores the number of open positions (trade and liquidity) in this market */
   openPositions: bigint
   /** Stores accumulated and not yet withdrawn fees */
   accumulatedBaseFees: bigint
   accumulatedQuoteFees: bigint
+  /** Market id, every trading pair has its own id */
+  id: number
+  /** Order can only and at a slot that is a multiple of end_slot_interval */
+  endSlotInterval: number
   /** Trading fee in basis points */
   feeBps: number
   /** Penalty fee for unhealthy liquidity position */
@@ -78,24 +86,28 @@ export type Market = {
 }
 
 export type MarketArgs = {
-  /** Market id, every trading pair has its own id */
-  id: number | bigint
   /** Since mints are not included in market seeds, we store them in the account */
   baseMint: Address
   quoteMint: Address
-  /** Slot at which market is active */
-  startSlot: number | bigint
   /** Current flow of base token */
   baseFlow: number | bigint
   /** Current flow of quote token */
   quoteFlow: number | bigint
-  /** Order can only and at a slot that is a multiple of end_slot_interval */
-  endSlotInterval: number | bigint
-  /** Stores the number of open positions (trade and liquidity) in this market, rethink if this is needed */
+  /** Minimum base trade amount */
+  minimumBaseDepositAtoms: number | bigint
+  /** Minimum quote trade amount */
+  minimumQuoteDepositAtoms: number | bigint
+  /** Slot at which market is active */
+  startSlot: number | bigint
+  /** Stores the number of open positions (trade and liquidity) in this market */
   openPositions: number | bigint
   /** Stores accumulated and not yet withdrawn fees */
   accumulatedBaseFees: number | bigint
   accumulatedQuoteFees: number | bigint
+  /** Market id, every trading pair has its own id */
+  id: number
+  /** Order can only and at a slot that is a multiple of end_slot_interval */
+  endSlotInterval: number
   /** Trading fee in basis points */
   feeBps: number
   /** Penalty fee for unhealthy liquidity position */
@@ -109,16 +121,18 @@ export function getMarketEncoder(): FixedSizeEncoder<MarketArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['id', getU64Encoder()],
       ['baseMint', getAddressEncoder()],
       ['quoteMint', getAddressEncoder()],
-      ['startSlot', getU64Encoder()],
       ['baseFlow', getU128Encoder()],
       ['quoteFlow', getU128Encoder()],
-      ['endSlotInterval', getU64Encoder()],
+      ['minimumBaseDepositAtoms', getU64Encoder()],
+      ['minimumQuoteDepositAtoms', getU64Encoder()],
+      ['startSlot', getU64Encoder()],
       ['openPositions', getU64Encoder()],
       ['accumulatedBaseFees', getU64Encoder()],
       ['accumulatedQuoteFees', getU64Encoder()],
+      ['id', getU32Encoder()],
+      ['endSlotInterval', getU16Encoder()],
       ['feeBps', getU8Encoder()],
       ['unhealthyLiquidityFeeBps', getU8Encoder()],
       ['isPaused', getU8Encoder()],
@@ -132,16 +146,18 @@ export function getMarketEncoder(): FixedSizeEncoder<MarketArgs> {
 export function getMarketDecoder(): FixedSizeDecoder<Market> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['id', getU64Decoder()],
     ['baseMint', getAddressDecoder()],
     ['quoteMint', getAddressDecoder()],
-    ['startSlot', getU64Decoder()],
     ['baseFlow', getU128Decoder()],
     ['quoteFlow', getU128Decoder()],
-    ['endSlotInterval', getU64Decoder()],
+    ['minimumBaseDepositAtoms', getU64Decoder()],
+    ['minimumQuoteDepositAtoms', getU64Decoder()],
+    ['startSlot', getU64Decoder()],
     ['openPositions', getU64Decoder()],
     ['accumulatedBaseFees', getU64Decoder()],
     ['accumulatedQuoteFees', getU64Decoder()],
+    ['id', getU32Decoder()],
+    ['endSlotInterval', getU16Decoder()],
     ['feeBps', getU8Decoder()],
     ['unhealthyLiquidityFeeBps', getU8Decoder()],
     ['isPaused', getU8Decoder()],
@@ -208,5 +224,5 @@ export async function fetchAllMaybeMarket(
 }
 
 export function getMarketSize(): number {
-  return 156
+  return 162
 }

@@ -54,7 +54,6 @@ export function getPauseMarketDiscriminatorBytes() {
 export type PauseMarketInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountAuthority extends string | AccountMeta<string> = string,
-  TAccountPayer extends string | AccountMeta<string> = string,
   TAccountProgramConfig extends string | AccountMeta<string> = string,
   TAccountMarket extends string | AccountMeta<string> = string,
   TAccountBookkeeping extends string | AccountMeta<string> = string,
@@ -62,8 +61,6 @@ export type PauseMarketInstruction<
   TAccountPreviousExits extends string | AccountMeta<string> = string,
   TAccountCurrentPrices extends string | AccountMeta<string> = string,
   TAccountPreviousPrices extends string | AccountMeta<string> = string,
-  TAccountSystemProgram extends string | AccountMeta<string> =
-    '11111111111111111111111111111111',
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -73,10 +70,6 @@ export type PauseMarketInstruction<
         ? WritableSignerAccount<TAccountAuthority> &
             AccountSignerMeta<TAccountAuthority>
         : TAccountAuthority,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            AccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
       TAccountProgramConfig extends string
         ? ReadonlyAccount<TAccountProgramConfig>
         : TAccountProgramConfig,
@@ -98,9 +91,6 @@ export type PauseMarketInstruction<
       TAccountPreviousPrices extends string
         ? WritableAccount<TAccountPreviousPrices>
         : TAccountPreviousPrices,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >
@@ -141,7 +131,6 @@ export function getPauseMarketInstructionDataCodec(): FixedSizeCodec<
 
 export type PauseMarketAsyncInput<
   TAccountAuthority extends string = string,
-  TAccountPayer extends string = string,
   TAccountProgramConfig extends string = string,
   TAccountMarket extends string = string,
   TAccountBookkeeping extends string = string,
@@ -149,10 +138,8 @@ export type PauseMarketAsyncInput<
   TAccountPreviousExits extends string = string,
   TAccountCurrentPrices extends string = string,
   TAccountPreviousPrices extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
-  payer: TransactionSigner<TAccountPayer>
   programConfig?: Address<TAccountProgramConfig>
   market: Address<TAccountMarket>
   bookkeeping?: Address<TAccountBookkeeping>
@@ -160,13 +147,11 @@ export type PauseMarketAsyncInput<
   previousExits: Address<TAccountPreviousExits>
   currentPrices: Address<TAccountCurrentPrices>
   previousPrices: Address<TAccountPreviousPrices>
-  systemProgram?: Address<TAccountSystemProgram>
   referenceIndex: PauseMarketInstructionDataArgs['referenceIndex']
 }
 
 export async function getPauseMarketInstructionAsync<
   TAccountAuthority extends string,
-  TAccountPayer extends string,
   TAccountProgramConfig extends string,
   TAccountMarket extends string,
   TAccountBookkeeping extends string,
@@ -174,35 +159,30 @@ export async function getPauseMarketInstructionAsync<
   TAccountPreviousExits extends string,
   TAccountCurrentPrices extends string,
   TAccountPreviousPrices extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
   input: PauseMarketAsyncInput<
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
     TAccountMarket,
     TAccountBookkeeping,
     TAccountCurrentExits,
     TAccountPreviousExits,
     TAccountCurrentPrices,
-    TAccountPreviousPrices,
-    TAccountSystemProgram
+    TAccountPreviousPrices
   >,
   config?: { programAddress?: TProgramAddress },
 ): Promise<
   PauseMarketInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
     TAccountMarket,
     TAccountBookkeeping,
     TAccountCurrentExits,
     TAccountPreviousExits,
     TAccountCurrentPrices,
-    TAccountPreviousPrices,
-    TAccountSystemProgram
+    TAccountPreviousPrices
   >
 > {
   // Program address.
@@ -211,7 +191,6 @@ export async function getPauseMarketInstructionAsync<
   // Original accounts.
   const originalAccounts = {
     authority: { value: input.authority ?? null, isWritable: true },
-    payer: { value: input.payer ?? null, isWritable: true },
     programConfig: { value: input.programConfig ?? null, isWritable: false },
     market: { value: input.market ?? null, isWritable: true },
     bookkeeping: { value: input.bookkeeping ?? null, isWritable: true },
@@ -219,7 +198,6 @@ export async function getPauseMarketInstructionAsync<
     previousExits: { value: input.previousExits ?? null, isWritable: false },
     currentPrices: { value: input.currentPrices ?? null, isWritable: true },
     previousPrices: { value: input.previousPrices ?? null, isWritable: true },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   }
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -260,16 +238,11 @@ export async function getPauseMarketInstructionAsync<
       ],
     })
   }
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
-  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
       getAccountMeta('authority', accounts.authority),
-      getAccountMeta('payer', accounts.payer),
       getAccountMeta('programConfig', accounts.programConfig),
       getAccountMeta('market', accounts.market),
       getAccountMeta('bookkeeping', accounts.bookkeeping),
@@ -277,7 +250,6 @@ export async function getPauseMarketInstructionAsync<
       getAccountMeta('previousExits', accounts.previousExits),
       getAccountMeta('currentPrices', accounts.currentPrices),
       getAccountMeta('previousPrices', accounts.previousPrices),
-      getAccountMeta('systemProgram', accounts.systemProgram),
     ],
     data: getPauseMarketInstructionDataEncoder().encode(
       args as PauseMarketInstructionDataArgs,
@@ -286,21 +258,18 @@ export async function getPauseMarketInstructionAsync<
   } as PauseMarketInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
     TAccountMarket,
     TAccountBookkeeping,
     TAccountCurrentExits,
     TAccountPreviousExits,
     TAccountCurrentPrices,
-    TAccountPreviousPrices,
-    TAccountSystemProgram
+    TAccountPreviousPrices
   >)
 }
 
 export type PauseMarketInput<
   TAccountAuthority extends string = string,
-  TAccountPayer extends string = string,
   TAccountProgramConfig extends string = string,
   TAccountMarket extends string = string,
   TAccountBookkeeping extends string = string,
@@ -308,10 +277,8 @@ export type PauseMarketInput<
   TAccountPreviousExits extends string = string,
   TAccountCurrentPrices extends string = string,
   TAccountPreviousPrices extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
-  payer: TransactionSigner<TAccountPayer>
   programConfig: Address<TAccountProgramConfig>
   market: Address<TAccountMarket>
   bookkeeping: Address<TAccountBookkeeping>
@@ -319,13 +286,11 @@ export type PauseMarketInput<
   previousExits: Address<TAccountPreviousExits>
   currentPrices: Address<TAccountCurrentPrices>
   previousPrices: Address<TAccountPreviousPrices>
-  systemProgram?: Address<TAccountSystemProgram>
   referenceIndex: PauseMarketInstructionDataArgs['referenceIndex']
 }
 
 export function getPauseMarketInstruction<
   TAccountAuthority extends string,
-  TAccountPayer extends string,
   TAccountProgramConfig extends string,
   TAccountMarket extends string,
   TAccountBookkeeping extends string,
@@ -333,34 +298,29 @@ export function getPauseMarketInstruction<
   TAccountPreviousExits extends string,
   TAccountCurrentPrices extends string,
   TAccountPreviousPrices extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
   input: PauseMarketInput<
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
     TAccountMarket,
     TAccountBookkeeping,
     TAccountCurrentExits,
     TAccountPreviousExits,
     TAccountCurrentPrices,
-    TAccountPreviousPrices,
-    TAccountSystemProgram
+    TAccountPreviousPrices
   >,
   config?: { programAddress?: TProgramAddress },
 ): PauseMarketInstruction<
   TProgramAddress,
   TAccountAuthority,
-  TAccountPayer,
   TAccountProgramConfig,
   TAccountMarket,
   TAccountBookkeeping,
   TAccountCurrentExits,
   TAccountPreviousExits,
   TAccountCurrentPrices,
-  TAccountPreviousPrices,
-  TAccountSystemProgram
+  TAccountPreviousPrices
 > {
   // Program address.
   const programAddress = config?.programAddress ?? TWOB_ANCHOR_PROGRAM_ADDRESS
@@ -368,7 +328,6 @@ export function getPauseMarketInstruction<
   // Original accounts.
   const originalAccounts = {
     authority: { value: input.authority ?? null, isWritable: true },
-    payer: { value: input.payer ?? null, isWritable: true },
     programConfig: { value: input.programConfig ?? null, isWritable: false },
     market: { value: input.market ?? null, isWritable: true },
     bookkeeping: { value: input.bookkeeping ?? null, isWritable: true },
@@ -376,7 +335,6 @@ export function getPauseMarketInstruction<
     previousExits: { value: input.previousExits ?? null, isWritable: false },
     currentPrices: { value: input.currentPrices ?? null, isWritable: true },
     previousPrices: { value: input.previousPrices ?? null, isWritable: true },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   }
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -386,17 +344,10 @@ export function getPauseMarketInstruction<
   // Original args.
   const args = { ...input }
 
-  // Resolve default values.
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
-  }
-
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
       getAccountMeta('authority', accounts.authority),
-      getAccountMeta('payer', accounts.payer),
       getAccountMeta('programConfig', accounts.programConfig),
       getAccountMeta('market', accounts.market),
       getAccountMeta('bookkeeping', accounts.bookkeeping),
@@ -404,7 +355,6 @@ export function getPauseMarketInstruction<
       getAccountMeta('previousExits', accounts.previousExits),
       getAccountMeta('currentPrices', accounts.currentPrices),
       getAccountMeta('previousPrices', accounts.previousPrices),
-      getAccountMeta('systemProgram', accounts.systemProgram),
     ],
     data: getPauseMarketInstructionDataEncoder().encode(
       args as PauseMarketInstructionDataArgs,
@@ -413,15 +363,13 @@ export function getPauseMarketInstruction<
   } as PauseMarketInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
     TAccountMarket,
     TAccountBookkeeping,
     TAccountCurrentExits,
     TAccountPreviousExits,
     TAccountCurrentPrices,
-    TAccountPreviousPrices,
-    TAccountSystemProgram
+    TAccountPreviousPrices
   >)
 }
 
@@ -432,15 +380,13 @@ export type ParsedPauseMarketInstruction<
   programAddress: Address<TProgram>
   accounts: {
     authority: TAccountMetas[0]
-    payer: TAccountMetas[1]
-    programConfig: TAccountMetas[2]
-    market: TAccountMetas[3]
-    bookkeeping: TAccountMetas[4]
-    currentExits: TAccountMetas[5]
-    previousExits: TAccountMetas[6]
-    currentPrices: TAccountMetas[7]
-    previousPrices: TAccountMetas[8]
-    systemProgram: TAccountMetas[9]
+    programConfig: TAccountMetas[1]
+    market: TAccountMetas[2]
+    bookkeeping: TAccountMetas[3]
+    currentExits: TAccountMetas[4]
+    previousExits: TAccountMetas[5]
+    currentPrices: TAccountMetas[6]
+    previousPrices: TAccountMetas[7]
   }
   data: PauseMarketInstructionData
 }
@@ -453,12 +399,12 @@ export function parsePauseMarketInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedPauseMarketInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 10) {
+  if (instruction.accounts.length < 8) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 10,
+        expectedAccountMetas: 8,
       },
     )
   }
@@ -472,7 +418,6 @@ export function parsePauseMarketInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       authority: getNextAccount(),
-      payer: getNextAccount(),
       programConfig: getNextAccount(),
       market: getNextAccount(),
       bookkeeping: getNextAccount(),
@@ -480,7 +425,6 @@ export function parsePauseMarketInstruction<
       previousExits: getNextAccount(),
       currentPrices: getNextAccount(),
       previousPrices: getNextAccount(),
-      systemProgram: getNextAccount(),
     },
     data: getPauseMarketInstructionDataDecoder().decode(instruction.data),
   }

@@ -52,11 +52,8 @@ export function getUpdateFeesDiscriminatorBytes() {
 export type UpdateFeesInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountAuthority extends string | AccountMeta<string> = string,
-  TAccountPayer extends string | AccountMeta<string> = string,
   TAccountProgramConfig extends string | AccountMeta<string> = string,
   TAccountMarket extends string | AccountMeta<string> = string,
-  TAccountSystemProgram extends string | AccountMeta<string> =
-    '11111111111111111111111111111111',
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -66,19 +63,12 @@ export type UpdateFeesInstruction<
         ? WritableSignerAccount<TAccountAuthority> &
             AccountSignerMeta<TAccountAuthority>
         : TAccountAuthority,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            AccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
       TAccountProgramConfig extends string
         ? ReadonlyAccount<TAccountProgramConfig>
         : TAccountProgramConfig,
       TAccountMarket extends string
         ? WritableAccount<TAccountMarket>
         : TAccountMarket,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >
@@ -125,44 +115,34 @@ export function getUpdateFeesInstructionDataCodec(): FixedSizeCodec<
 
 export type UpdateFeesAsyncInput<
   TAccountAuthority extends string = string,
-  TAccountPayer extends string = string,
   TAccountProgramConfig extends string = string,
   TAccountMarket extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
-  payer: TransactionSigner<TAccountPayer>
   programConfig?: Address<TAccountProgramConfig>
   market: Address<TAccountMarket>
-  systemProgram?: Address<TAccountSystemProgram>
   tradingFee: UpdateFeesInstructionDataArgs['tradingFee']
   unhealthyLiquidityFee: UpdateFeesInstructionDataArgs['unhealthyLiquidityFee']
 }
 
 export async function getUpdateFeesInstructionAsync<
   TAccountAuthority extends string,
-  TAccountPayer extends string,
   TAccountProgramConfig extends string,
   TAccountMarket extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
   input: UpdateFeesAsyncInput<
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
-    TAccountMarket,
-    TAccountSystemProgram
+    TAccountMarket
   >,
   config?: { programAddress?: TProgramAddress },
 ): Promise<
   UpdateFeesInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
-    TAccountMarket,
-    TAccountSystemProgram
+    TAccountMarket
   >
 > {
   // Program address.
@@ -171,10 +151,8 @@ export async function getUpdateFeesInstructionAsync<
   // Original accounts.
   const originalAccounts = {
     authority: { value: input.authority ?? null, isWritable: true },
-    payer: { value: input.payer ?? null, isWritable: true },
     programConfig: { value: input.programConfig ?? null, isWritable: false },
     market: { value: input.market ?? null, isWritable: true },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   }
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -197,19 +175,13 @@ export async function getUpdateFeesInstructionAsync<
       ],
     })
   }
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
-  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
       getAccountMeta('authority', accounts.authority),
-      getAccountMeta('payer', accounts.payer),
       getAccountMeta('programConfig', accounts.programConfig),
       getAccountMeta('market', accounts.market),
-      getAccountMeta('systemProgram', accounts.systemProgram),
     ],
     data: getUpdateFeesInstructionDataEncoder().encode(
       args as UpdateFeesInstructionDataArgs,
@@ -218,52 +190,40 @@ export async function getUpdateFeesInstructionAsync<
   } as UpdateFeesInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
-    TAccountMarket,
-    TAccountSystemProgram
+    TAccountMarket
   >)
 }
 
 export type UpdateFeesInput<
   TAccountAuthority extends string = string,
-  TAccountPayer extends string = string,
   TAccountProgramConfig extends string = string,
   TAccountMarket extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
-  payer: TransactionSigner<TAccountPayer>
   programConfig: Address<TAccountProgramConfig>
   market: Address<TAccountMarket>
-  systemProgram?: Address<TAccountSystemProgram>
   tradingFee: UpdateFeesInstructionDataArgs['tradingFee']
   unhealthyLiquidityFee: UpdateFeesInstructionDataArgs['unhealthyLiquidityFee']
 }
 
 export function getUpdateFeesInstruction<
   TAccountAuthority extends string,
-  TAccountPayer extends string,
   TAccountProgramConfig extends string,
   TAccountMarket extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
   input: UpdateFeesInput<
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
-    TAccountMarket,
-    TAccountSystemProgram
+    TAccountMarket
   >,
   config?: { programAddress?: TProgramAddress },
 ): UpdateFeesInstruction<
   TProgramAddress,
   TAccountAuthority,
-  TAccountPayer,
   TAccountProgramConfig,
-  TAccountMarket,
-  TAccountSystemProgram
+  TAccountMarket
 > {
   // Program address.
   const programAddress = config?.programAddress ?? TWOB_ANCHOR_PROGRAM_ADDRESS
@@ -271,10 +231,8 @@ export function getUpdateFeesInstruction<
   // Original accounts.
   const originalAccounts = {
     authority: { value: input.authority ?? null, isWritable: true },
-    payer: { value: input.payer ?? null, isWritable: true },
     programConfig: { value: input.programConfig ?? null, isWritable: false },
     market: { value: input.market ?? null, isWritable: true },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   }
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -284,20 +242,12 @@ export function getUpdateFeesInstruction<
   // Original args.
   const args = { ...input }
 
-  // Resolve default values.
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
-  }
-
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
       getAccountMeta('authority', accounts.authority),
-      getAccountMeta('payer', accounts.payer),
       getAccountMeta('programConfig', accounts.programConfig),
       getAccountMeta('market', accounts.market),
-      getAccountMeta('systemProgram', accounts.systemProgram),
     ],
     data: getUpdateFeesInstructionDataEncoder().encode(
       args as UpdateFeesInstructionDataArgs,
@@ -306,10 +256,8 @@ export function getUpdateFeesInstruction<
   } as UpdateFeesInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
-    TAccountMarket,
-    TAccountSystemProgram
+    TAccountMarket
   >)
 }
 
@@ -320,10 +268,8 @@ export type ParsedUpdateFeesInstruction<
   programAddress: Address<TProgram>
   accounts: {
     authority: TAccountMetas[0]
-    payer: TAccountMetas[1]
-    programConfig: TAccountMetas[2]
-    market: TAccountMetas[3]
-    systemProgram: TAccountMetas[4]
+    programConfig: TAccountMetas[1]
+    market: TAccountMetas[2]
   }
   data: UpdateFeesInstructionData
 }
@@ -336,12 +282,12 @@ export function parseUpdateFeesInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedUpdateFeesInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 5) {
+  if (instruction.accounts.length < 3) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 5,
+        expectedAccountMetas: 3,
       },
     )
   }
@@ -355,10 +301,8 @@ export function parseUpdateFeesInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       authority: getNextAccount(),
-      payer: getNextAccount(),
       programConfig: getNextAccount(),
       market: getNextAccount(),
-      systemProgram: getNextAccount(),
     },
     data: getUpdateFeesInstructionDataDecoder().decode(instruction.data),
   }

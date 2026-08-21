@@ -1,5 +1,7 @@
 const GENERIC_TRANSACTION_PLAN_MESSAGE =
   'The provided transaction plan failed to execute.'
+const STALE_MARKET_ACCOUNTS_MESSAGE =
+  'Market state changed while the transaction was awaiting approval. Please try again.'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -68,7 +70,7 @@ function extractMessage(error: unknown): string | null {
   return null
 }
 
-function extractLogs(error: unknown): string[] | null {
+function extractLogs(error: unknown): Array<string> | null {
   if (!isRecord(error)) return null
   const context = isRecord(error.context) ? error.context : null
   return readLogs(context?.logs) ?? readLogs(error.logs)
@@ -91,6 +93,59 @@ function extractPlanHint(value: unknown): string | null {
   return hint.length > 0 ? hint : null
 }
 
+function serializeError(value: unknown) {
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return ''
+  }
+}
+
+function serializeErrorDetails(values: Array<unknown>) {
+  return values
+    .map((value) => (typeof value === 'string' ? value : serializeError(value)))
+    .join(' ')
+}
+
+function hasCustomProgramError(
+  detail: string,
+  code: number,
+  hexCode: string,
+  name: string,
+) {
+  return (
+    new RegExp(`"Custom"\\s*:\\s*${code}`).test(detail) ||
+    new RegExp(`custom program error:\\s*0x${hexCode}`, 'i').test(detail) ||
+    new RegExp(name, 'i').test(detail)
+  )
+}
+
+function isStaleMarketAccountError(...values: Array<unknown>) {
+  const detail = serializeErrorDetails(values)
+
+  return (
+    hasCustomProgramError(detail, 6006, '1776', 'WrongExitsAccount') ||
+    hasCustomProgramError(detail, 6007, '1777', 'WrongPricesAccount') ||
+    hasCustomProgramError(detail, 6010, '177a', 'BookNotUpToDate')
+  )
+}
+
+function getPositionControlErrorMessage(...values: Array<unknown>) {
+  const detail = serializeErrorDetails(values)
+
+  if (hasCustomProgramError(detail, 6031, '178f', 'AmountZero')) {
+    return 'There are no new swapped funds to withdraw yet.'
+  }
+  if (hasCustomProgramError(detail, 6029, '178d', 'PositionIsPaused')) {
+    return 'This position is already paused.'
+  }
+  if (hasCustomProgramError(detail, 6030, '178e', 'PositionIsNotPaused')) {
+    return 'This position is not paused.'
+  }
+
+  return null
+}
+
 export function formatTransactionError(error: unknown, fallback: string) {
   const transactionPlanResult = isRecord(error)
     ? (error.transactionPlanResult ??
@@ -102,6 +157,17 @@ export function formatTransactionError(error: unknown, fallback: string) {
 
   const message =
     extractMessage(nestedError) ?? extractMessage(error) ?? fallback
+
+  if (isStaleMarketAccountError(message, nestedError, error)) {
+    return STALE_MARKET_ACCOUNTS_MESSAGE
+  }
+
+  const positionControlMessage = getPositionControlErrorMessage(
+    message,
+    nestedError,
+    error,
+  )
+  if (positionControlMessage) return positionControlMessage
 
   const logs = extractLogs(nestedError) ?? extractLogs(error)
   if (!logs || logs.length === 0) {

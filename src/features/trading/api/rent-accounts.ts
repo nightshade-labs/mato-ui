@@ -1,16 +1,15 @@
+import { decodeBase64 } from '../lib/bytes'
+import { encodeBase58 } from '../lib/base58'
 import type { Address } from '@solana/kit'
+import type { TwobRpcClient } from './twob-client'
+import type { Exits, Prices } from '@/lib/generated/twob/src/generated/accounts'
 import {
   getExitsDecoder,
   getExitsDiscriminatorBytes,
   getPricesDecoder,
   getPricesDiscriminatorBytes,
-  type Exits,
-  type Prices,
 } from '@/lib/generated/twob/src/generated/accounts'
 import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '@/lib/generated/twob/src/generated/programs'
-import { decodeBase64 } from '../lib/bytes'
-import { encodeBase58 } from '../lib/base58'
-import type { TwobRpcClient } from './twob-client'
 
 type ProgramAccountResponse = {
   account: { data: [string, string]; lamports: bigint | number | string }
@@ -18,9 +17,9 @@ type ProgramAccountResponse = {
 }
 
 type ProgramAccountsResponse =
-  | ProgramAccountResponse[]
+  | Array<ProgramAccountResponse>
   | {
-      value: ProgramAccountResponse[]
+      value: Array<ProgramAccountResponse>
     }
 
 function asProgramAccounts(response: ProgramAccountsResponse) {
@@ -45,8 +44,8 @@ export type OwnedExitsAccount = {
 
 export async function fetchOwnedPricesAccounts(
   rpcClient: TwobRpcClient,
-  owner: string,
-): Promise<OwnedPricesAccount[]> {
+  payer: string,
+): Promise<Array<OwnedPricesAccount>> {
   const response = (await rpcClient
     .getProgramAccounts(TWOB_ANCHOR_PROGRAM_ADDRESS, {
       commitment: 'confirmed',
@@ -63,9 +62,9 @@ export async function fetchOwnedPricesAccounts(
         },
         {
           memcmp: {
-            bytes: owner as never,
+            bytes: payer as never,
             encoding: 'base58',
-            offset: 8n,
+            offset: 48n,
           },
         },
       ],
@@ -87,8 +86,8 @@ export async function fetchOwnedPricesAccounts(
 
 export async function fetchOwnedExitsAccounts(
   rpcClient: TwobRpcClient,
-  owner: string,
-): Promise<OwnedExitsAccount[]> {
+  payer: string,
+): Promise<Array<OwnedExitsAccount>> {
   const response = (await rpcClient
     .getProgramAccounts(TWOB_ANCHOR_PROGRAM_ADDRESS, {
       commitment: 'confirmed',
@@ -105,9 +104,9 @@ export async function fetchOwnedExitsAccounts(
         },
         {
           memcmp: {
-            bytes: owner as never,
+            bytes: payer as never,
             encoding: 'base58',
-            offset: 8n,
+            offset: 48n,
           },
         },
       ],
