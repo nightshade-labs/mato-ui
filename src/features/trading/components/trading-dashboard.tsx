@@ -14,12 +14,11 @@ import {
   DEFAULT_MARKET_UPDATES_LIMIT,
   HIGH_PRICE_IMPACT_WARNING_THRESHOLD_PERCENT,
   MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS,
-  MARKET_ID,
   MAX_BATCH_CLOSE_POSITIONS_PER_TRANSACTION,
-  MIN_TRADE_AMOUNT_ATOMS,
   NATIVE_FEE_BUFFER_ATOMS,
   NATIVE_SOL_DECIMALS,
   POSITION_PAGE_SIZE,
+  getMarketDefinition,
 } from '../constants'
 import {
   atomsFromPercent,
@@ -43,14 +42,12 @@ import { clampPage, getPageCount, getPageItems } from '../lib/pagination'
 import { isHighPriceImpact } from '../lib/price-impact'
 import { useMarketAddress } from '../hooks/use-market-address'
 import { useMarketChartHistory } from '../hooks/use-market-chart-history'
-import { useMarketConfig } from '../hooks/use-market-config'
 import { useMarketPrice } from '../hooks/use-market-price'
 import { useMarketPriceChange24h } from '../hooks/use-market-price-change'
 import { useMarketUpdates } from '../hooks/use-market-updates'
 import { useMarketTradePositions } from '../hooks/use-market-trade-positions'
 import { useStreamingMarketState } from '../hooks/use-streaming-market-state'
 import { useTradePositions } from '../hooks/use-trade-positions'
-import { useClosedPositionEvents } from '../hooks/use-closed-position-events'
 import { useWalletSolBalance } from '../hooks/use-wallet-sol-balance'
 import { useWalletTokenBalance } from '../hooks/use-wallet-token-balance'
 import { useSubmitOrder } from '../hooks/use-submit-order'
@@ -58,14 +55,9 @@ import { useClosePosition } from '../hooks/use-close-position'
 import { usePositionControls } from '../hooks/use-position-controls'
 import { useReclaimRent } from '../hooks/use-reclaim-rent'
 import {
-  buildChartPositionOverlays,
-  buildChartPositionSlotRanges,
-  buildMarketTimeAnchors,
-} from '../lib/chart-positions'
-import {
   buildTradingDashboardViewModel,
-  deriveMarketIdentity,
   formatDashboardPrice,
+  selectReferenceMarketPricing,
 } from '../view-models/trading-dashboard'
 import { MarketPriceChart } from './market-price-chart'
 import { OrderEntryCard } from './order-entry-card'
@@ -75,6 +67,7 @@ import { ClosedPositionsList } from './closed-positions-list'
 import { HighPriceImpactDialog } from './high-price-impact-dialog'
 import { PositionPagination } from './position-pagination'
 import { ReclaimRentBanner } from './reclaim-rent-banner'
+import { MarketSelector } from './market-selector'
 import type { ReactNode } from 'react'
 import type {
   ChartCrosshairData,
@@ -84,6 +77,7 @@ import type {
 import type { ChartPositionOverlay } from '../lib/chart-positions'
 import type {
   ChartTimeframe,
+  MarketId,
   MarketPanelTab,
   OrderSide,
   PositionPanelTab,
@@ -114,6 +108,8 @@ const CHART_DISPLAY_MODES = [
   { icon: ChartCandlestick, label: 'Candles', mode: 'candles' },
   { icon: ChartLine, label: 'Line', mode: 'line' },
 ] as const
+const REFERENCE_PRICE_MARKET_ID: MarketId = 1
+const REFERENCE_CHART_LABEL = 'SOL/USDC · Mainnet reference'
 const MARKET_PANEL_TABS = [
   { icon: ChartCandlestick, label: 'Chart', tab: 'chart' },
   { icon: ListOrdered, label: 'Order book', tab: 'order-book' },
@@ -122,45 +118,37 @@ const MARKET_PANEL_TABS = [
   label: string
   tab: MarketPanelTab
 }>
-const CHART_POSITION_CLOSED_LOOKBACK_DAYS = 30
-const CHART_POSITION_CLOSED_LIMIT = 1000
-
-export function TradingDashboard() {
+export function TradingDashboard({
+  marketId,
+  onMarketChange,
+}: {
+  marketId: MarketId
+  onMarketChange: (marketId: MarketId) => void
+}) {
   const session = useWalletSession()
   const walletConnection = useWalletConnection()
   const address = session?.account.address.toString() ?? null
   const [marketPanelTab, setMarketPanelTab] = useState<MarketPanelTab>('chart')
+  const selectedMarket = getMarketDefinition(marketId)
 
-  const marketAddressQuery = useMarketAddress(MARKET_ID)
+  const marketAddressQuery = useMarketAddress(marketId)
   const marketAddress = marketAddressQuery.data
-  const marketConfigQuery = useMarketConfig(MARKET_ID)
-  const marketConfig = marketConfigQuery.data ?? null
-  const marketPriceQuery = useMarketPrice(MARKET_ID)
-  const marketPriceChange24hQuery = useMarketPriceChange24h(MARKET_ID)
+  const marketPriceQuery = useMarketPrice(REFERENCE_PRICE_MARKET_ID)
+  const marketPriceChange24hQuery = useMarketPriceChange24h(
+    REFERENCE_PRICE_MARKET_ID,
+  )
   const marketUpdates = useMarketUpdates({
     limit: DEFAULT_MARKET_UPDATES_LIMIT,
-    marketId: MARKET_ID,
+    marketId: REFERENCE_PRICE_MARKET_ID,
   })
   const streamingStateQuery = useStreamingMarketState(marketAddress)
-  const tradePositionsQuery = useTradePositions(address)
+  const tradePositionsQuery = useTradePositions(address, marketId)
   const shouldLoadOrderBookPositions = marketPanelTab === 'order-book'
   const orderBookPositionsQuery = useMarketTradePositions(
     marketAddress,
+    marketId,
     shouldLoadOrderBookPositions,
   )
-  const closedPositionChartLookbackStart = useMemo(
-    () =>
-      new Date(
-        Date.now() - CHART_POSITION_CLOSED_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
-      ).toISOString(),
-    [],
-  )
-  const closedPositionChartQuery = useClosedPositionEvents({
-    createdAfter: closedPositionChartLookbackStart,
-    limit: CHART_POSITION_CLOSED_LIMIT,
-    marketId: MARKET_ID,
-    positionAuthority: address ?? '',
-  })
 
   const [side, setSide] = useState<OrderSide>('buy')
   const [amountInput, setAmountInput] = useState('')
@@ -181,19 +169,19 @@ export function TradingDashboard() {
   const submitOrder = useSubmitOrder()
   const closePosition = useClosePosition()
   const positionControls = usePositionControls()
-  const reclaimRent = useReclaimRent(walletConnection.connected)
+  const reclaimRent = useReclaimRent(walletConnection.connected, marketId)
 
   const {
     baseDecimals,
     baseMint,
-    baseTicker,
+    baseSymbol: baseTicker,
     quoteDecimals,
     quoteMint,
-    quoteTicker,
-  } = useMemo(() => deriveMarketIdentity(marketConfig), [marketConfig])
+    quoteSymbol: quoteTicker,
+  } = selectedMarket
   const marketChartHistory = useMarketChartHistory({
     latestPrice: marketPriceQuery.data ?? null,
-    marketId: MARKET_ID,
+    marketId: REFERENCE_PRICE_MARKET_ID,
     timeframe: chartTimeframe,
   })
 
@@ -204,6 +192,21 @@ export function TradingDashboard() {
   const selectedBalance = side === 'sell' ? baseBalance : quoteBalance
   const amountTokenTicker = side === 'sell' ? baseTicker : quoteTicker
   const amountDecimals = side === 'sell' ? baseDecimals : quoteDecimals
+  const onChainMarket = streamingStateQuery.data ?? null
+  const marketConfigurationMismatch = Boolean(
+    onChainMarket &&
+    (onChainMarket.marketId !== marketId ||
+      onChainMarket.baseMint.toString() !== baseMint ||
+      onChainMarket.quoteMint.toString() !== quoteMint),
+  )
+  const isMarketReady = Boolean(onChainMarket && !marketConfigurationMismatch)
+  const isMarketPaused = onChainMarket?.isPaused ?? false
+  const minimumTradeAmountAtoms =
+    side === 'sell'
+      ? (onChainMarket?.minimumBaseDepositAtoms ??
+        selectedMarket.minimumBaseDepositAtoms)
+      : (onChainMarket?.minimumQuoteDepositAtoms ??
+        selectedMarket.minimumQuoteDepositAtoms)
   const availableAtoms = selectedBalance.spendableAtoms
   const amountAtoms = useMemo(
     () => parseTokenAmount(amountInput, amountDecimals),
@@ -218,10 +221,10 @@ export function TradingDashboard() {
   const amountBelowMinimum =
     amountAtoms !== null &&
     amountAtoms > 0n &&
-    amountAtoms < MIN_TRADE_AMOUNT_ATOMS
+    amountAtoms < minimumTradeAmountAtoms
   const availableAmountDisplay = Number(availableAtoms) / 10 ** amountDecimals
   const minimumAmountDisplay = formatAtoms(
-    MIN_TRADE_AMOUNT_ATOMS,
+    minimumTradeAmountAtoms,
     amountDecimals,
   )
   const amountValidationMessage = amountExceedsAvailable
@@ -278,10 +281,6 @@ export function TradingDashboard() {
     () => orderBookPositionsQuery.data ?? [],
     [orderBookPositionsQuery.data],
   )
-  const closedChartPositions = useMemo(
-    () => closedPositionChartQuery.data ?? [],
-    [closedPositionChartQuery.data],
-  )
   const activePositionPageCount = getPageCount(
     activePositions.length,
     POSITION_PAGE_SIZE,
@@ -307,69 +306,12 @@ export function TradingDashboard() {
     tradePositionsQuery.error instanceof Error
       ? tradePositionsQuery.error.message
       : null
-  const chartPositionSlotRanges = useMemo(
-    () =>
-      buildChartPositionSlotRanges({
-        activePositions,
-        closedPositions: closedChartPositions,
-        currentSlot,
-      }),
-    [activePositions, closedChartPositions, currentSlot],
-  )
-  const chartPositionTimeAnchors = useMemo(
-    () =>
-      buildMarketTimeAnchors({
-        events: marketUpdates.sharedEvents,
-        extraAnchors: [
-          ...(marketPriceQuery.data?.slot !== null &&
-          marketPriceQuery.data?.slot !== undefined &&
-          marketPriceQuery.data.eventTimeMs !== null
-            ? [
-                {
-                  slot: marketPriceQuery.data.slot,
-                  timeMs: marketPriceQuery.data.eventTimeMs,
-                },
-              ]
-            : []),
-          ...(currentSlot !== null
-            ? [
-                {
-                  slot: currentSlot,
-                  timeMs: Date.now(),
-                },
-              ]
-            : []),
-        ],
-      }),
-    [currentSlot, marketPriceQuery.data, marketUpdates.sharedEvents],
-  )
-  const chartPositionOverlays = useMemo(
-    () =>
-      buildChartPositionOverlays({
-        activePositions,
-        anchors: chartPositionTimeAnchors,
-        baseDecimals,
-        baseTicker,
-        closedPositions: closedChartPositions,
-        currentSlot,
-        marketAddress,
-        quoteDecimals,
-        quoteTicker,
-        streamingState: streamingStateQuery.data ?? null,
-      }),
-    [
-      activePositions,
-      baseDecimals,
-      baseTicker,
-      chartPositionTimeAnchors,
-      closedChartPositions,
-      currentSlot,
-      marketAddress,
-      quoteDecimals,
-      quoteTicker,
-      streamingStateQuery.data,
-    ],
-  )
+  const marketRuntimeError = marketConfigurationMismatch
+    ? `Market #${marketId} does not match the verified devnet configuration.`
+    : !onChainMarket && streamingStateQuery.error instanceof Error
+      ? streamingStateQuery.error.message
+      : null
+  const chartPositionOverlays: Array<ChartPositionOverlay> = []
   const endedPositions = useMemo(
     () =>
       activePositions.filter((position) =>
@@ -397,45 +339,52 @@ export function TradingDashboard() {
       }),
     [activePositions, currentSlot],
   )
-  const dashboardViewModel = useMemo(
-    () =>
-      buildTradingDashboardViewModel({
-        amountAtoms,
-        amountUiValue,
-        baseDecimals,
-        baseTicker,
-        chartCandles: marketChartHistory.candles,
-        crosshairData,
-        durationSeconds,
-        marketPrice: marketPriceQuery.data,
-        marketUpdates: marketUpdates.events,
-        priceChangeHistory: marketPriceChange24hQuery.data ?? [],
-        quoteDecimals,
-        quoteTicker,
-        side,
-        streamingState: streamingStateQuery.data ?? null,
-        tradePositions: activePositions,
-      }),
-    [
-      activePositions,
+  const dashboardViewModel = useMemo(() => {
+    const referencePricing = selectReferenceMarketPricing({
+      chartCandles: marketChartHistory.candles,
+      crosshairData,
+      isReferenceMarket: marketId === REFERENCE_PRICE_MARKET_ID,
+      marketPrice: marketPriceQuery.data ?? undefined,
+      marketUpdates: marketUpdates.events,
+      priceChangeHistory: marketPriceChange24hQuery.data ?? [],
+    })
+
+    return buildTradingDashboardViewModel({
       amountAtoms,
       amountUiValue,
       baseDecimals,
       baseTicker,
-      crosshairData,
+      chartCandles: referencePricing.chartCandles,
+      crosshairData: referencePricing.crosshairData,
       durationSeconds,
-      marketChartHistory.candles,
-      marketPriceQuery.data,
-      marketPriceChange24hQuery.data,
-      marketUpdates.events,
+      marketPrice: referencePricing.marketPrice,
+      marketUpdates: referencePricing.marketUpdates,
+      priceChangeHistory: referencePricing.priceChangeHistory,
       quoteDecimals,
       quoteTicker,
       side,
-      streamingStateQuery.data,
-    ],
-  )
+      streamingState: streamingStateQuery.data ?? null,
+      tradePositions: activePositions,
+    })
+  }, [
+    activePositions,
+    amountAtoms,
+    amountUiValue,
+    baseDecimals,
+    baseTicker,
+    crosshairData,
+    durationSeconds,
+    marketChartHistory.candles,
+    marketPriceQuery.data,
+    marketPriceChange24hQuery.data,
+    marketUpdates.events,
+    marketId,
+    quoteDecimals,
+    quoteTicker,
+    side,
+    streamingStateQuery.data,
+  ])
   const {
-    chartCandles,
     displayPrice,
     estimatedConversionText,
     executionPriceDisplay,
@@ -444,6 +393,7 @@ export function TradingDashboard() {
     priceChange24hDisplay,
     priceChange24hPercent,
   } = dashboardViewModel
+  const chartCandles = marketChartHistory.candles
   const hasHighPriceImpact = isHighPriceImpact(priceImpactPercent)
   const highPriceImpactThresholdDisplay = `${HIGH_PRICE_IMPACT_WARNING_THRESHOLD_PERCENT}%`
   const priceImpactWarningText = hasHighPriceImpact
@@ -453,6 +403,8 @@ export function TradingDashboard() {
   const submitDisabled =
     !walletConnection.connected ||
     !marketAddress ||
+    !isMarketReady ||
+    isMarketPaused ||
     !amountAtoms ||
     amountAtoms <= 0n ||
     amountBelowMinimum ||
@@ -471,13 +423,26 @@ export function TradingDashboard() {
             ? 'Amount exceeds balance'
             : amountBelowMinimum
               ? 'Amount too small'
-              : hasLowSubmitNativeSolBalance
-                ? 'Add SOL to submit'
-                : hasHighPriceImpact
-                  ? 'Review price impact'
-                  : side === 'buy'
-                    ? 'Submit buy order'
-                    : 'Submit sell order'
+              : !isMarketReady
+                ? marketRuntimeError
+                  ? 'Market unavailable'
+                  : 'Loading market...'
+                : isMarketPaused
+                  ? 'Market paused'
+                  : hasLowSubmitNativeSolBalance
+                    ? 'Add SOL to submit'
+                    : hasHighPriceImpact
+                      ? 'Review price impact'
+                      : side === 'buy'
+                        ? 'Submit buy order'
+                        : 'Submit sell order'
+
+  useEffect(() => {
+    setAmountInput('')
+    setActivePositionPage(0)
+    setPositionPanelTab('active')
+    setHighPriceImpactDialogOpen(false)
+  }, [marketId])
 
   useEffect(() => {
     setActivePositionPage((current) =>
@@ -490,14 +455,6 @@ export function TradingDashboard() {
       setHighPriceImpactDialogOpen(false)
     }
   }, [hasHighPriceImpact, submitDisabled])
-
-  useEffect(() => {
-    if (chartPositionSlotRanges.length === 0) return
-
-    void marketUpdates.ensureRanges(chartPositionSlotRanges, {
-      reason: 'main-chart',
-    })
-  }, [chartPositionSlotRanges, marketUpdates.ensureRanges])
 
   useEffect(() => {
     const signature = submitOrder.signature
@@ -684,6 +641,20 @@ export function TradingDashboard() {
       })
       return
     }
+    if (!isMarketReady) {
+      toast.error('Order not ready', {
+        description: marketRuntimeError ?? 'Market data is still loading.',
+        id: 'order-validation',
+      })
+      return
+    }
+    if (isMarketPaused) {
+      toast.error('Order not ready', {
+        description: 'This market is currently paused.',
+        id: 'order-validation',
+      })
+      return
+    }
     if (!amountAtoms || amountAtoms <= 0n) {
       toast.error('Order not ready', {
         description: `Enter a valid ${amountTokenTicker} amount.`,
@@ -698,7 +669,7 @@ export function TradingDashboard() {
       })
       return
     }
-    if (amountAtoms < MIN_TRADE_AMOUNT_ATOMS) {
+    if (amountAtoms < minimumTradeAmountAtoms) {
       toast.error('Order not ready', {
         description: `Minimum order size is ${minimumAmountDisplay} ${amountTokenTicker}.`,
         id: 'order-validation',
@@ -719,7 +690,7 @@ export function TradingDashboard() {
       durationSlots,
       existingWrappedAtoms: selectedBalance.existingWrappedAtoms,
       id: crypto.getRandomValues(new Uint32Array(1))[0],
-      inputMintAddress: side === 'buy' ? (quoteMint ?? '') : (baseMint ?? ''),
+      inputMintAddress: side === 'buy' ? quoteMint : baseMint,
       isBuy: side === 'buy',
       marketAddress,
     })
@@ -797,14 +768,25 @@ export function TradingDashboard() {
     }
   }
 
+  const isMarketChangeDisabled =
+    submitOrder.isSubmitting ||
+    closePosition.isClosing ||
+    positionControls.isPending ||
+    reclaimRent.isReclaiming
+
   return (
     <div className="relative min-h-[calc(100dvh-3.5rem)] bg-[color:var(--color-page-bg)] text-foreground">
       <div className="relative mx-auto max-w-[1440px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <h1 className="text-xl font-semibold tracking-[-0.04em] sm:text-2xl">
-              {baseTicker}/{quoteTicker}
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+            <h1 className="sr-only">
+              Trade {baseTicker}/{quoteTicker}
             </h1>
+            <MarketSelector
+              disabled={isMarketChangeDisabled}
+              marketId={marketId}
+              onMarketChange={onMarketChange}
+            />
             <span className="text-xl font-semibold tracking-[-0.04em] text-[color:var(--color-accent-warm)] sm:text-2xl">
               {formatDashboardPrice(displayPrice)}
             </span>
@@ -833,16 +815,22 @@ export function TradingDashboard() {
             <DrawerContent className="overflow-hidden xl:hidden">
               <DrawerHeader>
                 <DrawerTitle>
-                  {baseTicker}/{quoteTicker}
+                  {marketPanelTab === 'chart'
+                    ? 'SOL/USDC reference chart'
+                    : `${baseTicker}/${quoteTicker}`}
                 </DrawerTitle>
                 <DrawerDescription>
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span>{formatDashboardPrice(displayPrice)}</span>
-                    <PriceChangeBadge
-                      display={priceChange24hDisplay}
-                      value={priceChange24hPercent}
-                    />
-                  </span>
+                  {marketPanelTab === 'chart' ? (
+                    'Mainnet price history'
+                  ) : (
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span>{formatDashboardPrice(displayPrice)}</span>
+                      <PriceChangeBadge
+                        display={priceChange24hDisplay}
+                        value={priceChange24hPercent}
+                      />
+                    </span>
+                  )}
                 </DrawerDescription>
               </DrawerHeader>
               <div className="min-w-0 space-y-4">
@@ -861,11 +849,6 @@ export function TradingDashboard() {
                       marketChartHistory.isLoadingMoreHistory
                     }
                     isMarketUpdatesLoading={marketUpdates.isLoading}
-                    marketAddressError={
-                      marketAddressQuery.error instanceof Error
-                        ? marketAddressQuery.error.message
-                        : null
-                    }
                     marketChartHistoryError={marketChartHistory.error}
                     marketUpdatesError={marketUpdates.error}
                     onCrosshairMove={setCrosshairData}
@@ -875,12 +858,9 @@ export function TradingDashboard() {
                       setChartResetSignal((previous) => previous + 1)
                     }
                     onTimeframeChange={setChartTimeframe}
-                    positionOverlayError={
-                      closedPositionChartQuery.error instanceof Error
-                        ? closedPositionChartQuery.error.message
-                        : null
-                    }
+                    positionOverlayError={null}
                     positionOverlays={chartPositionOverlays}
+                    referenceLabel={REFERENCE_CHART_LABEL}
                     resetSignal={chartResetSignal}
                     statusMinHeightClassName="min-h-[360px]"
                   />
@@ -899,6 +879,15 @@ export function TradingDashboard() {
             </DrawerContent>
           </Drawer>
         </div>
+
+        {marketRuntimeError ? (
+          <Alert className="mb-5 flex items-start gap-3 border-destructive/35 bg-destructive/10 text-destructive">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span>
+              Market #{marketId} is unavailable: {marketRuntimeError}
+            </span>
+          </Alert>
+        ) : null}
 
         {lowSubmitNativeSolWarning ? (
           <Alert className="mb-5 flex items-start gap-3 border-warning/35 bg-warning/10 text-warning-foreground">
@@ -964,11 +953,6 @@ export function TradingDashboard() {
                       marketChartHistory.isLoadingMoreHistory
                     }
                     isMarketUpdatesLoading={marketUpdates.isLoading}
-                    marketAddressError={
-                      marketAddressQuery.error instanceof Error
-                        ? marketAddressQuery.error.message
-                        : null
-                    }
                     marketChartHistoryError={marketChartHistory.error}
                     marketUpdatesError={marketUpdates.error}
                     onCrosshairMove={setCrosshairData}
@@ -978,12 +962,9 @@ export function TradingDashboard() {
                       setChartResetSignal((previous) => previous + 1)
                     }
                     onTimeframeChange={setChartTimeframe}
-                    positionOverlayError={
-                      closedPositionChartQuery.error instanceof Error
-                        ? closedPositionChartQuery.error.message
-                        : null
-                    }
+                    positionOverlayError={null}
                     positionOverlays={chartPositionOverlays}
+                    referenceLabel={REFERENCE_CHART_LABEL}
                     resetSignal={chartResetSignal}
                   />
                 ) : (
@@ -1192,10 +1173,12 @@ export function TradingDashboard() {
                 )
               ) : address ? (
                 <ClosedPositionsList
+                  key={marketId}
                   baseDecimals={baseDecimals}
                   baseTicker={baseTicker}
-                  marketId={MARKET_ID}
+                  marketId={marketId}
                   positionAuthority={address}
+                  priceHistoryAvailable={marketId === REFERENCE_PRICE_MARKET_ID}
                   quoteDecimals={quoteDecimals}
                   quoteTicker={quoteTicker}
                 />
@@ -1286,7 +1269,6 @@ function PriceChartPanel({
   hasMoreHistory,
   isLoadingMoreHistory,
   isMarketUpdatesLoading,
-  marketAddressError,
   marketChartHistoryError,
   marketUpdatesError,
   onCrosshairMove,
@@ -1296,6 +1278,7 @@ function PriceChartPanel({
   onTimeframeChange,
   positionOverlayError,
   positionOverlays,
+  referenceLabel,
   resetSignal,
   statusMinHeightClassName = 'min-h-[420px]',
 }: {
@@ -1307,7 +1290,6 @@ function PriceChartPanel({
   hasMoreHistory: boolean
   isLoadingMoreHistory: boolean
   isMarketUpdatesLoading: boolean
-  marketAddressError: string | null
   marketChartHistoryError: string | null
   marketUpdatesError: string | null
   onCrosshairMove: (value: ChartCrosshairData | null) => void
@@ -1317,6 +1299,7 @@ function PriceChartPanel({
   onTimeframeChange: (timeframe: ChartTimeframe) => void
   positionOverlayError: string | null
   positionOverlays: Array<ChartPositionOverlay>
+  referenceLabel: string
   resetSignal: number
   statusMinHeightClassName?: string
 }) {
@@ -1324,6 +1307,7 @@ function PriceChartPanel({
     <div className={cn('space-y-4', className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="muted">{referenceLabel}</Badge>
           <div className="flex flex-wrap gap-2">
             {CHART_TIMEFRAMES.map((timeframe) => (
               <Button
@@ -1399,9 +1383,6 @@ function PriceChartPanel({
       ) : null}
       {marketChartHistoryError ? (
         <p className="text-sm text-destructive">{marketChartHistoryError}</p>
-      ) : null}
-      {marketAddressError ? (
-        <p className="text-sm text-destructive">{marketAddressError}</p>
       ) : null}
       {positionOverlayError ? (
         <p className="text-sm text-destructive">

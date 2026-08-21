@@ -71,6 +71,7 @@ import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '@/lib/generated/twob/src/generated/
 
 const textEncoder = new TextEncoder()
 const BOOKKEEPING_DELAY_SLOTS = 20
+const TRADE_POSITION_MARKET_ID_OFFSET = 268n
 const SIGNATURE_POLL_INTERVAL_MS = 1_000
 const ASSOCIATED_TOKEN_PROGRAM_ADDRESS =
   'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address
@@ -285,13 +286,33 @@ export async function fetchStreamingMarketState(
   ])
 
   return {
+    baseMint: marketAccount.data.baseMint,
     bookkeepingBasePerQuote: bookkeepingAccount.data.basePerQuote,
     bookkeepingLastUpdateSlot: Number(bookkeepingAccount.data.lastUpdateSlot),
     bookkeepingQuotePerBase: bookkeepingAccount.data.quotePerBase,
     currentSlot: Number(currentSlot),
     endSlotInterval: Number(marketAccount.data.endSlotInterval),
+    isPaused: marketAccount.data.isPaused !== 0,
     marketBaseFlow: marketAccount.data.baseFlow,
+    marketId: marketAccount.data.id,
     marketQuoteFlow: marketAccount.data.quoteFlow,
+    minimumBaseDepositAtoms: marketAccount.data.minimumBaseDepositAtoms,
+    minimumQuoteDepositAtoms: marketAccount.data.minimumQuoteDepositAtoms,
+    quoteMint: marketAccount.data.quoteMint,
+  }
+}
+
+function getTradePositionMarketIdFilter(
+  marketId: number,
+): GetProgramAccountsFilter {
+  return {
+    memcmp: {
+      bytes: encodeBase58(
+        Uint8Array.from(getU32Encoder().encode(marketId)),
+      ) as never,
+      encoding: 'base58',
+      offset: TRADE_POSITION_MARKET_ID_OFFSET,
+    },
   }
 }
 
@@ -308,6 +329,7 @@ export async function fetchTradePositions(
         offset: 8n,
       },
     },
+    getTradePositionMarketIdFilter(marketId),
   ])
   return positions.filter((position) => position.data.marketId === marketId)
 }
@@ -357,7 +379,9 @@ export async function fetchMarketTradePositions(
   rpcClient: TwobRpcClient,
   marketId: number,
 ): Promise<Array<TradePositionRecord>> {
-  const positions = await fetchTradePositionAccounts(rpcClient)
+  const positions = await fetchTradePositionAccounts(rpcClient, [
+    getTradePositionMarketIdFilter(marketId),
+  ])
   return positions.filter((position) => position.data.marketId === marketId)
 }
 

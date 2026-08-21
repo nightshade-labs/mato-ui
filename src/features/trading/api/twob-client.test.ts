@@ -3,11 +3,15 @@ import {
   deriveAssociatedTokenAddress,
   deriveMarketAddress,
   deriveTemporaryWithdrawTokenAddress,
+  fetchMarketTradePositions,
+  fetchTradePositions,
   getReferenceIndex,
   getSwappedPositionAsset,
   getUnpausedEndSlot,
 } from './twob-client'
+import type { TwobRpcClient } from './twob-client'
 import type { Address } from '@solana/kit'
+import { getTradePositionEncoder } from '@/lib/generated/twob/src/generated/accounts'
 import { Side } from '@/lib/generated/twob/src/generated/types'
 
 const BASE_MINT = 'So11111111111111111111111111111111111111112' as Address
@@ -18,6 +22,57 @@ const LEGACY_TOKEN_PROGRAM =
   'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address
 const TOKEN_2022_PROGRAM =
   'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' as Address
+
+type ProgramAccountsConfig = NonNullable<
+  Parameters<TwobRpcClient['getProgramAccounts']>[1]
+>
+
+function encodeTradePosition(marketId: number, id: number) {
+  const bytes = getTradePositionEncoder().encode({
+    amount: 100n,
+    authority: BASE_RECEIVER,
+    baseReceiver: BASE_RECEIVER,
+    bookkeepingSnapshot: 0n,
+    bump: 0,
+    flow: 10n,
+    id,
+    inactiveRefund: 0n,
+    lastUpdateSlot: 1n,
+    marketId,
+    operator: BASE_RECEIVER,
+    pausedAtSlot: 0n,
+    payer: BASE_RECEIVER,
+    quoteReceiver: QUOTE_RECEIVER,
+    remainingSlots: 10,
+    side: Side.Buy,
+    slotsWithoutTradesSnapshot: 0,
+    startSlot: 1n,
+    swappedAmountAtSnapshot: 0n,
+    withdrawnAmount: 0n,
+  })
+
+  return Buffer.from(bytes).toString('base64')
+}
+
+function createProgramAccountsRpc(
+  accounts: Array<{
+    account: { data: [string, 'base64'] }
+    pubkey: Address
+  }> = [],
+) {
+  let config: ProgramAccountsConfig | null = null
+  const rpc = {
+    getProgramAccounts: (
+      _programAddress: Address,
+      nextConfig: ProgramAccountsConfig,
+    ) => {
+      config = nextConfig
+      return { send: () => Promise.resolve(accounts) }
+    },
+  } as unknown as TwobRpcClient
+
+  return { getConfig: () => config, rpc }
+}
 
 describe('twob v1 client helpers', () => {
   it('derives the deployed market 1 PDA with a u32 seed', async () => {
@@ -79,5 +134,50 @@ describe('twob v1 client helpers', () => {
     expect(
       getSwappedPositionAsset(market, { ...receivers, side: Side.Sell }),
     ).toEqual({ mint: QUOTE_MINT, receiver: QUOTE_RECEIVER })
+  })
+
+  it('adds the little-endian market id filter to authority scans', async () => {
+    const { getConfig, rpc } = createProgramAccountsRpc()
+
+    await fetchTradePositions(rpc, BASE_RECEIVER, 4)
+
+    expect(getConfig()?.filters).toContainEqual({
+      memcmp: {
+        bytes: BASE_RECEIVER,
+        encoding: 'base58',
+        offset: 8n,
+      },
+    })
+    expect(getConfig()?.filters).toContainEqual({
+      memcmp: {
+        bytes: '6vx8P',
+        encoding: 'base58',
+        offset: 268n,
+      },
+    })
+  })
+
+  it('filters order-book scans on the server and after decoding', async () => {
+    const { getConfig, rpc } = createProgramAccountsRpc([
+      {
+        account: { data: [encodeTradePosition(4, 1), 'base64'] },
+        pubkey: BASE_RECEIVER,
+      },
+      {
+        account: { data: [encodeTradePosition(3, 2), 'base64'] },
+        pubkey: QUOTE_RECEIVER,
+      },
+    ])
+
+    const positions = await fetchMarketTradePositions(rpc, 4)
+
+    expect(getConfig()?.filters).toContainEqual({
+      memcmp: {
+        bytes: '6vx8P',
+        encoding: 'base58',
+        offset: 268n,
+      },
+    })
+    expect(positions.map((position) => position.data.marketId)).toEqual([4])
   })
 })

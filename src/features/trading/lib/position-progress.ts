@@ -233,7 +233,7 @@ export function getActivePositionMetrics({
   const flowLabel = isBuy
     ? `${quoteTicker} → ${baseTicker}`
     : `${baseTicker} → ${quoteTicker}`
-  const positionKey = `${position.authority}:${position.id.toString()}`
+  const positionKey = `${market}:${position.authority}:${position.id.toString()}`
   const estimateCacheKey = `${positionKey}:${position.bookkeepingSnapshot.toString()}:${position.swappedAmountAtSnapshot.toString()}:${position.withdrawnAmount.toString()}`
   const isPaused = isPausedTradePosition(position)
 

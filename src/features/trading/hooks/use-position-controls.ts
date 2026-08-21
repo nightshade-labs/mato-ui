@@ -97,7 +97,8 @@ export function usePositionControls() {
         const connectedAddress = session.account.address.toString()
         await Promise.allSettled([
           queryClient.invalidateQueries({
-            queryKey: tradingQueryKeys.tradePositions(connectedAddress),
+            queryKey:
+              tradingQueryKeys.tradePositionsForAuthority(connectedAddress),
           }),
           queryClient.invalidateQueries({
             queryKey: tradingQueryKeys.marketTradePositions(marketAddress),

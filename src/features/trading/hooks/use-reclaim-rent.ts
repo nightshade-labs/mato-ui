@@ -5,16 +5,14 @@ import {
   useSolanaClient,
   useWalletSession,
 } from '@solana/react-hooks'
-import {
-  MARKET_ID,
-  MAX_RECLAIM_RENT_ACCOUNTS_PER_TRANSACTION,
-} from '../constants'
+import { MAX_RECLAIM_RENT_ACCOUNTS_PER_TRANSACTION } from '../constants'
 import { sendReclaimRent } from '../api/twob-client'
 import { formatTransactionError } from '../lib/transaction-errors'
 import { collectCloseableRentAccountPairs } from '../lib/rent'
 import { tradingQueryKeys } from '../query-keys'
 import { tradingQueries } from '../queries'
 import { useMarketAddress } from './use-market-address'
+import type { MarketId } from '../constants'
 import { fetchMarket } from '@/lib/generated/twob/src/generated/accounts'
 
 type ReclaimRentStatus =
@@ -26,12 +24,12 @@ type ReclaimRentStatus =
 
 const RENT_RUNTIME_QUERY_KEY = 'rent-runtime-context'
 
-export function useReclaimRent(enabled: boolean) {
+export function useReclaimRent(enabled: boolean, marketId: MarketId) {
   const client = useSolanaClient()
   const session = useWalletSession()
   const sendTransaction = useSendTransaction()
   const queryClient = useQueryClient()
-  const marketAddressQuery = useMarketAddress(MARKET_ID)
+  const marketAddressQuery = useMarketAddress(marketId)
   const marketAddress = marketAddressQuery.data
   const ownerAddress = session?.account.address.toString() ?? null
   const shouldFetch = enabled && Boolean(ownerAddress)

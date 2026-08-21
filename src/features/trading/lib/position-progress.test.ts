@@ -64,13 +64,19 @@ function createStreamingState(
   bookkeepingBasePerQuote: bigint,
 ): StreamingMarketState {
   return {
+    baseMint: 'So11111111111111111111111111111111111111112' as Address,
     bookkeepingBasePerQuote,
     bookkeepingLastUpdateSlot: currentSlot,
     bookkeepingQuotePerBase: 0n,
     currentSlot,
     endSlotInterval: 5,
+    isPaused: false,
     marketBaseFlow: 1n,
+    marketId: 1,
     marketQuoteFlow: 1n,
+    minimumBaseDepositAtoms: 1n,
+    minimumQuoteDepositAtoms: 1n,
+    quoteMint: '11111111111111111111111111111111' as Address,
   }
 }
 
@@ -229,6 +235,35 @@ describe('getActivePositionMetrics', () => {
 
     expect(beforeWithdrawal.claimableSwappedAtoms).toBe(100n)
     expect(afterWithdrawal.claimableSwappedAtoms).toBe(0n)
+  })
+
+  it('keeps cached estimates isolated between markets', async () => {
+    const { getActivePositionMetrics } = await import('./position-progress')
+    const position = createPosition()
+    const sharedInput = {
+      baseDecimals: 0,
+      baseTicker: 'SOL',
+      endSlotBookkeepingSnapshot: null,
+      position,
+      quoteDecimals: 0,
+      quoteTicker: 'USDC',
+    }
+
+    getActivePositionMetrics({
+      ...sharedInput,
+      market: 'marketA11111111111111111111111111111111111' as Address,
+      streamingState: createStreamingState(9, 10_000_000_000_000_000n),
+    })
+    const secondMarket = getActivePositionMetrics({
+      ...sharedInput,
+      market: 'marketB11111111111111111111111111111111111' as Address,
+      streamingState: createStreamingState(1, 1_000_000_000_000_000n),
+    })
+
+    expect(secondMarket.positionKey).toContain(
+      'marketB11111111111111111111111111111111111',
+    )
+    expect(secondMarket.swappedAtoms).toBe(10n)
   })
 
   it('matches the program truncation order for small fractional flows', async () => {

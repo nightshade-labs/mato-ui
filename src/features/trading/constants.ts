@@ -1,24 +1,124 @@
-function readMarketId() {
-  const rawMarketId = import.meta.env.VITE_MARKET_ID ?? '1'
-  const marketId = Number(rawMarketId)
+import type { Address } from '@solana/kit'
 
-  if (!Number.isInteger(marketId) || marketId < 0 || marketId > 0xffffffff) {
+const SUPPORTED_MARKET_IDS = [1, 2, 3, 4] as const
+
+export type MarketId = (typeof SUPPORTED_MARKET_IDS)[number]
+
+export interface MarketDefinition {
+  readonly id: MarketId
+  readonly baseSymbol: string
+  readonly quoteSymbol: string
+  readonly baseMint: Address
+  readonly quoteMint: Address
+  readonly baseDecimals: number
+  readonly quoteDecimals: number
+  readonly minimumBaseDepositAtoms: bigint
+  readonly minimumQuoteDepositAtoms: bigint
+}
+
+const DEVNET_USDC_MINT =
+  '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU' as Address
+
+export const MARKET_DEFINITIONS = [
+  {
+    id: 1,
+    baseSymbol: 'SOL',
+    quoteSymbol: 'USDC',
+    baseMint: 'So11111111111111111111111111111111111111112' as Address,
+    quoteMint: DEVNET_USDC_MINT,
+    baseDecimals: 9,
+    quoteDecimals: 6,
+    minimumBaseDepositAtoms: 1_000_000n,
+    minimumQuoteDepositAtoms: 100_000n,
+  },
+  {
+    id: 2,
+    baseSymbol: 'MATO',
+    quoteSymbol: 'USDC',
+    baseMint: '69zmVXSzZptwJo5cy5LfUxmrdE1mRkeRnnEqtYNrKBMc' as Address,
+    quoteMint: DEVNET_USDC_MINT,
+    baseDecimals: 6,
+    quoteDecimals: 6,
+    minimumBaseDepositAtoms: 1_000n,
+    minimumQuoteDepositAtoms: 100_000n,
+  },
+  {
+    id: 3,
+    baseSymbol: 'SB',
+    quoteSymbol: 'USDC',
+    baseMint: '5UodwdrKuvMkpYZqEAoeo5AbeX4fPzSeENEojJLZNUQR' as Address,
+    quoteMint: DEVNET_USDC_MINT,
+    baseDecimals: 6,
+    quoteDecimals: 6,
+    minimumBaseDepositAtoms: 1_000n,
+    minimumQuoteDepositAtoms: 100_000n,
+  },
+  {
+    id: 4,
+    baseSymbol: 'SF',
+    quoteSymbol: 'USDC',
+    baseMint: 'HxMsRrwZdg6fBVcZ5aqP3x18KVpmNG81kSncrCD7k13N' as Address,
+    quoteMint: DEVNET_USDC_MINT,
+    baseDecimals: 6,
+    quoteDecimals: 6,
+    minimumBaseDepositAtoms: 1_000n,
+    minimumQuoteDepositAtoms: 100_000n,
+  },
+] as const satisfies ReadonlyArray<MarketDefinition>
+
+function parseSupportedMarketId(value: unknown): MarketId | null {
+  const marketId =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && /^\d+$/.test(value.trim())
+        ? Number(value.trim())
+        : Number.NaN
+
+  return SUPPORTED_MARKET_IDS.find((id) => id === marketId) ?? null
+}
+
+function readDefaultMarketId(): MarketId {
+  const rawMarketId = import.meta.env.VITE_MARKET_ID ?? '1'
+  const marketId = parseSupportedMarketId(rawMarketId)
+
+  if (marketId === null) {
     throw new Error(
-      `VITE_MARKET_ID must be an unsigned 32-bit integer, got "${rawMarketId}"`,
+      `VITE_MARKET_ID must be one of ${SUPPORTED_MARKET_IDS.join(', ')}, got "${rawMarketId}"`,
     )
   }
 
   return marketId
 }
 
-export const MARKET_ID = readMarketId()
+export const DEFAULT_MARKET_ID = readDefaultMarketId()
+
+export function getMarketDefinition(marketId: MarketId): MarketDefinition {
+  const market = MARKET_DEFINITIONS.find(
+    (definition) => definition.id === marketId,
+  )
+  if (!market) throw new Error(`Unsupported market id: ${marketId}`)
+  return market
+}
+
+export function parseMarketSearch(value: unknown): { market: MarketId } {
+  const candidate =
+    value instanceof URLSearchParams
+      ? value.getAll('market').length === 1
+        ? value.get('market')
+        : null
+      : typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? (value as Record<string, unknown>).market
+        : null
+
+  return { market: parseSupportedMarketId(candidate) ?? DEFAULT_MARKET_ID }
+}
+
 export const ARRAY_LENGTH = 20
 export const SLOT_DURATION_MS = 400
 export const SLOT_DURATION_SECONDS = SLOT_DURATION_MS / 1000
 export const NATIVE_SOL_DECIMALS = 9
 export const NATIVE_FEE_BUFFER_ATOMS = 20_000_000n
 export const MAINTENANCE_TRANSACTION_FEE_BUFFER_ATOMS = 1_000_000n
-export const MIN_TRADE_AMOUNT_ATOMS = 1_000_000n
 export const DEFAULT_MARKET_UPDATES_LIMIT = 200
 export const CHART_HISTORY_REQUEST_BASE_THRESHOLD_BARS = 20
 export const CHART_HISTORY_REQUEST_THRESHOLD_RATIO = 0.35

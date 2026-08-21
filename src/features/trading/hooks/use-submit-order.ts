@@ -78,7 +78,8 @@ export function useSubmitOrder() {
         const connectedAddress = session.account.address.toString()
         void Promise.all([
           queryClient.invalidateQueries({
-            queryKey: tradingQueryKeys.tradePositions(connectedAddress),
+            queryKey:
+              tradingQueryKeys.tradePositionsForAuthority(connectedAddress),
           }),
           queryClient.invalidateQueries({
             queryKey: tradingQueryKeys.ownedExitsAccounts(connectedAddress),

@@ -3,6 +3,7 @@ import {
   Outlet,
   Scripts,
   createRootRouteWithContext,
+  useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
@@ -13,6 +14,10 @@ import { Navbar } from '../components/navbar'
 import { RiskDisclaimerDialog } from '../components/risk-disclaimer-dialog'
 import { Toaster } from '../components/ui/sonner'
 import { WalletConnectionButton } from '../features/trading/components/wallet-connection-button'
+import {
+  DEFAULT_MARKET_ID,
+  parseMarketSearch,
+} from '../features/trading/constants'
 
 import appCss from '../styles.css?url'
 
@@ -110,10 +115,16 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootLayout() {
+  const location = useRouterState({ select: (state) => state.location })
+  const marketId =
+    location.pathname === '/'
+      ? parseMarketSearch(location.search).market
+      : DEFAULT_MARKET_ID
+
   return (
     <>
-      <Navbar>
-        <WalletConnectionButton />
+      <Navbar marketId={marketId}>
+        <WalletConnectionButton marketId={marketId} />
       </Navbar>
       <Outlet />
       <RiskDisclaimerDialog />

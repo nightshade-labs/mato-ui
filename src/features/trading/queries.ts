@@ -106,7 +106,7 @@ export const tradingQueries = {
     marketId: number
   }) =>
     queryOptions({
-      queryKey: tradingQueryKeys.tradePositions(authority),
+      queryKey: tradingQueryKeys.tradePositions(authority, marketId),
       queryFn: async () => {
         if (!authority) return []
         return fetchTradePositions(client.runtime.rpc, authority, marketId)

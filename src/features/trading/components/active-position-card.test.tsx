@@ -50,13 +50,19 @@ function createPosition(paused: boolean): TradePositionRecord {
 }
 
 const STREAMING_STATE: StreamingMarketState = {
+  baseMint: 'So11111111111111111111111111111111111111112' as Address,
   bookkeepingBasePerQuote: 0n,
   bookkeepingLastUpdateSlot: 2,
   bookkeepingQuotePerBase: 0n,
   currentSlot: 2,
   endSlotInterval: 5,
+  isPaused: false,
   marketBaseFlow: 1n,
+  marketId: 1,
   marketQuoteFlow: 1n,
+  minimumBaseDepositAtoms: 1n,
+  minimumQuoteDepositAtoms: 1n,
+  quoteMint: '11111111111111111111111111111111' as Address,
 }
 
 function renderCard({
