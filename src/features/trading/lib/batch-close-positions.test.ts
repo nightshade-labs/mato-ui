@@ -8,11 +8,13 @@ function position(
   address: string,
   lastUpdateSlot: bigint,
   remainingSlots: number,
+  pausedAtSlot = 0n,
 ) {
   return {
     address,
     data: {
       lastUpdateSlot,
+      pausedAtSlot,
       remainingSlots,
     },
   }
@@ -25,6 +27,12 @@ describe('isEndedPosition', () => {
 
     expect(isEndedPosition(ended, 10)).toBe(true)
     expect(isEndedPosition(current, 10)).toBe(false)
+  })
+
+  it('never treats a paused position as ended', () => {
+    const paused = position('paused', 5n, 4, 5n)
+
+    expect(isEndedPosition(paused, 100)).toBe(false)
   })
 })
 

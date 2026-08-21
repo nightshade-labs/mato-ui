@@ -8,6 +8,7 @@ import {
 import {
   getTradePositionEndSlot,
   isBuyTradePosition,
+  isPausedTradePosition,
 } from '../lib/trade-position'
 import type { ReactNode } from 'react'
 import type { TradePositionRecord } from '../domain/models'
@@ -30,6 +31,17 @@ interface OrderBookRow {
   flowAtomsPerSlot: bigint
   position: TradePositionRecord
   startSlot: bigint
+}
+
+export function isVisibleOrderBookPosition(
+  position: TradePositionRecord,
+  currentSlot: number | null,
+) {
+  if (isPausedTradePosition(position.data)) return false
+  return (
+    currentSlot === null ||
+    BigInt(Math.floor(currentSlot)) <= getTradePositionEndSlot(position.data)
+  )
 }
 
 const ORDER_BOOK_COLUMNS = [
@@ -75,12 +87,7 @@ export function OrderBookTable({
 
   const rows = useMemo(() => {
     const activeRows = positions
-      .filter(
-        (position) =>
-          currentSlot === null ||
-          BigInt(Math.floor(currentSlot)) <=
-            getTradePositionEndSlot(position.data),
-      )
+      .filter((position) => isVisibleOrderBookPosition(position, currentSlot))
       .map((position): OrderBookRow => {
         const isBuy = isBuyTradePosition(position.data)
         const direction = isBuy ? 'Buy' : 'Sell'
@@ -125,11 +132,8 @@ export function OrderBookTable({
 
   const activeOrderCount = useMemo(
     () =>
-      positions.filter(
-        (position) =>
-          currentSlot === null ||
-          BigInt(Math.floor(currentSlot)) <=
-            getTradePositionEndSlot(position.data),
+      positions.filter((position) =>
+        isVisibleOrderBookPosition(position, currentSlot),
       ).length,
     [currentSlot, positions],
   )

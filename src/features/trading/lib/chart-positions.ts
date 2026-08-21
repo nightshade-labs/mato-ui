@@ -3,7 +3,11 @@ import { buildClosedPositionSummary } from '../view-models/closed-position'
 import { formatAtoms } from './format'
 import { getActivePositionMetrics } from './position-progress'
 import { mergeAdjacentRanges } from './slot-ranges'
-import { getTradePositionEndSlot, isBuyTradePosition } from './trade-position'
+import {
+  getTradePositionEndSlot,
+  isBuyTradePosition,
+  isPausedTradePosition,
+} from './trade-position'
 import type { Address } from '@solana/kit'
 import type {
   ClosePositionEvent,
@@ -159,8 +163,10 @@ export function buildChartPositionSlotRanges({
   for (const position of activePositions) {
     const startSlot = Number(position.data.startSlot)
     const positionEndSlot = Number(getTradePositionEndSlot(position.data))
-    const endSlot =
-      currentSlot === null
+    const isPaused = isPausedTradePosition(position.data)
+    const endSlot = isPaused
+      ? Number(position.data.pausedAtSlot)
+      : currentSlot === null
         ? positionEndSlot
         : Math.min(Math.max(currentSlot, startSlot), positionEndSlot)
     const range = toSlotRange(startSlot, endSlot)
@@ -219,10 +225,10 @@ export function buildChartPositionOverlays({
 
       const startSlot = Number(position.data.startSlot)
       const positionEndSlot = Number(getTradePositionEndSlot(position.data))
-      const lineEndSlot = Math.min(
-        Math.max(currentSlot, startSlot),
-        positionEndSlot,
-      )
+      const isPaused = isPausedTradePosition(position.data)
+      const lineEndSlot = isPaused
+        ? Number(position.data.pausedAtSlot)
+        : Math.min(Math.max(currentSlot, startSlot), positionEndSlot)
       const startTimeMs = estimateTimeMsForSlot(anchors, startSlot)
       const endTimeMs = estimateTimeMsForSlot(anchors, lineEndSlot)
       if (startTimeMs === null || endTimeMs === null) continue
@@ -237,7 +243,7 @@ export function buildChartPositionOverlays({
         )} ${metrics.depositedToken}`,
         side: isBuyTradePosition(position.data) ? 'buy' : 'sell',
         startTime: Math.floor(startTimeMs / 1000),
-        status: currentSlot < positionEndSlot ? 'active' : 'closed',
+        status: isPaused || currentSlot < positionEndSlot ? 'active' : 'closed',
       })
     }
   }

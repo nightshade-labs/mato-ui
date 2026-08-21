@@ -10,9 +10,11 @@ import { Side } from '@/lib/generated/twob/src/generated/types'
 
 function activePosition({
   endSlot,
+  pausedAtSlot = 0n,
   startSlot,
 }: {
   endSlot: bigint
+  pausedAtSlot?: bigint
   startSlot: bigint
 }): TradePositionRecord {
   return {
@@ -30,7 +32,7 @@ function activePosition({
       lastUpdateSlot: startSlot,
       marketId: 1,
       operator: '44444444444444444444444444444444' as Address,
-      pausedAtSlot: 0n,
+      pausedAtSlot,
       payer: '55555555555555555555555555555555' as Address,
       quoteReceiver: '66666666666666666666666666666666' as Address,
       remainingSlots: Number(endSlot - startSlot),
@@ -110,6 +112,22 @@ describe('buildChartPositionSlotRanges', () => {
         currentSlot: 180,
       }),
     ).toEqual([{ endSlot: 180, startSlot: 100 }])
+  })
+
+  it('stops a paused position range at its pause slot', () => {
+    expect(
+      buildChartPositionSlotRanges({
+        activePositions: [
+          activePosition({
+            endSlot: 300n,
+            pausedAtSlot: 160n,
+            startSlot: 100n,
+          }),
+        ],
+        closedPositions: [],
+        currentSlot: 240,
+      }),
+    ).toEqual([{ endSlot: 160, startSlot: 100 }])
   })
 
   it('uses the close slot for closed positions that were closed early', () => {

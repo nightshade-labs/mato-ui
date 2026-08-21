@@ -101,16 +101,49 @@ function serializeError(value: unknown) {
   }
 }
 
-function isWrongExitsAccountError(...values: Array<unknown>) {
-  const detail = values
+function serializeErrorDetails(values: Array<unknown>) {
+  return values
     .map((value) => (typeof value === 'string' ? value : serializeError(value)))
     .join(' ')
+}
+
+function hasCustomProgramError(
+  detail: string,
+  code: number,
+  hexCode: string,
+  name: string,
+) {
+  return (
+    new RegExp(`"Custom"\\s*:\\s*${code}`).test(detail) ||
+    new RegExp(`custom program error:\\s*0x${hexCode}`, 'i').test(detail) ||
+    new RegExp(name, 'i').test(detail)
+  )
+}
+
+function isStaleMarketAccountError(...values: Array<unknown>) {
+  const detail = serializeErrorDetails(values)
 
   return (
-    /"Custom"\s*:\s*6006/.test(detail) ||
-    /custom program error:\s*0x1776/i.test(detail) ||
-    /WrongExitsAccount/i.test(detail)
+    hasCustomProgramError(detail, 6006, '1776', 'WrongExitsAccount') ||
+    hasCustomProgramError(detail, 6007, '1777', 'WrongPricesAccount') ||
+    hasCustomProgramError(detail, 6010, '177a', 'BookNotUpToDate')
   )
+}
+
+function getPositionControlErrorMessage(...values: Array<unknown>) {
+  const detail = serializeErrorDetails(values)
+
+  if (hasCustomProgramError(detail, 6031, '178f', 'AmountZero')) {
+    return 'There are no new swapped funds to withdraw yet.'
+  }
+  if (hasCustomProgramError(detail, 6029, '178d', 'PositionIsPaused')) {
+    return 'This position is already paused.'
+  }
+  if (hasCustomProgramError(detail, 6030, '178e', 'PositionIsNotPaused')) {
+    return 'This position is not paused.'
+  }
+
+  return null
 }
 
 export function formatTransactionError(error: unknown, fallback: string) {
@@ -125,9 +158,16 @@ export function formatTransactionError(error: unknown, fallback: string) {
   const message =
     extractMessage(nestedError) ?? extractMessage(error) ?? fallback
 
-  if (isWrongExitsAccountError(message, nestedError, error)) {
+  if (isStaleMarketAccountError(message, nestedError, error)) {
     return STALE_MARKET_ACCOUNTS_MESSAGE
   }
+
+  const positionControlMessage = getPositionControlErrorMessage(
+    message,
+    nestedError,
+    error,
+  )
+  if (positionControlMessage) return positionControlMessage
 
   const logs = extractLogs(nestedError) ?? extractLogs(error)
   if (!logs || logs.length === 0) {

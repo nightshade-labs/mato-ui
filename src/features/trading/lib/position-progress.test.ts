@@ -32,7 +32,7 @@ class SessionStorageMock {
   }
 }
 
-function createPosition(): TradePosition {
+function createPosition(overrides: Partial<TradePosition> = {}): TradePosition {
   return {
     amount: 100n,
     authority: 'authority1111111111111111111111111111111111' as Address,
@@ -55,6 +55,7 @@ function createPosition(): TradePosition {
     startSlot: 0n,
     swappedAmountAtSnapshot: 0n,
     withdrawnAmount: 0n,
+    ...overrides,
   }
 }
 
@@ -112,5 +113,137 @@ describe('getActivePositionMetrics', () => {
 
     expect(metrics.hasPositionEnded).toBe(true)
     expect(metrics.swappedAtoms).toBe(100n)
+  })
+
+  it('freezes a paused position and keeps its snapshotted funds withdrawable', async () => {
+    const { getActivePositionMetrics } = await import('./position-progress')
+    const position = createPosition({
+      lastUpdateSlot: 5n,
+      pausedAtSlot: 5n,
+      remainingSlots: 5,
+      swappedAmountAtSnapshot: 40n,
+      withdrawnAmount: 10n,
+    })
+    const input = {
+      baseDecimals: 0,
+      baseTicker: 'SOL',
+      endSlotBookkeepingSnapshot: null,
+      market: 'market111111111111111111111111111111111111' as Address,
+      position,
+      quoteDecimals: 0,
+      quoteTicker: 'USDC',
+    }
+
+    const first = getActivePositionMetrics({
+      ...input,
+      streamingState: createStreamingState(20, 20_000_000_000_000_000n),
+    })
+    const later = getActivePositionMetrics({
+      ...input,
+      streamingState: createStreamingState(100, 100_000_000_000_000_000n),
+    })
+
+    expect(first).toMatchObject({
+      claimableSwappedAtoms: 30n,
+      hasPositionEnded: false,
+      isPaused: true,
+      progressPercent: 50,
+      remainingAtoms: 50n,
+      swappedAtoms: 40n,
+    })
+    expect(later).toMatchObject({
+      claimableSwappedAtoms: 30n,
+      hasPositionEnded: false,
+      progressPercent: 50,
+      remainingAtoms: 50n,
+      swappedAtoms: 40n,
+    })
+  })
+
+  it('adds live accrual to the snapshotted swapped total', async () => {
+    const { getActivePositionMetrics } = await import('./position-progress')
+    const metrics = getActivePositionMetrics({
+      baseDecimals: 0,
+      baseTicker: 'SOL',
+      endSlotBookkeepingSnapshot: null,
+      market: 'market111111111111111111111111111111111111' as Address,
+      position: createPosition({
+        swappedAmountAtSnapshot: 20n,
+        withdrawnAmount: 15n,
+      }),
+      quoteDecimals: 0,
+      quoteTicker: 'USDC',
+      streamingState: createStreamingState(2, 2_000_000_000_000_000n),
+    })
+
+    expect(metrics.swappedAtoms).toBe(40n)
+    expect(metrics.claimableSwappedAtoms).toBe(25n)
+  })
+
+  it('makes only newly accrued funds claimable after a withdrawal', async () => {
+    const { getActivePositionMetrics } = await import('./position-progress')
+    const metrics = getActivePositionMetrics({
+      baseDecimals: 0,
+      baseTicker: 'SOL',
+      endSlotBookkeepingSnapshot: null,
+      market: 'market111111111111111111111111111111111111' as Address,
+      position: createPosition({
+        bookkeepingSnapshot: 2_000_000_000_000_000n,
+        swappedAmountAtSnapshot: 20n,
+        withdrawnAmount: 20n,
+      }),
+      quoteDecimals: 0,
+      quoteTicker: 'USDC',
+      streamingState: createStreamingState(3, 3_000_000_000_000_000n),
+    })
+
+    expect(metrics.swappedAtoms).toBe(30n)
+    expect(metrics.claimableSwappedAtoms).toBe(10n)
+  })
+
+  it('does not carry a pre-withdraw estimate into the updated snapshot', async () => {
+    const { getActivePositionMetrics } = await import('./position-progress')
+    const input = {
+      baseDecimals: 0,
+      baseTicker: 'SOL',
+      endSlotBookkeepingSnapshot: null,
+      market: 'market111111111111111111111111111111111111' as Address,
+      quoteDecimals: 0,
+      quoteTicker: 'USDC',
+    }
+
+    const beforeWithdrawal = getActivePositionMetrics({
+      ...input,
+      position: createPosition(),
+      streamingState: createStreamingState(9, 10_000_000_000_000_000n),
+    })
+    const afterWithdrawal = getActivePositionMetrics({
+      ...input,
+      position: createPosition({
+        bookkeepingSnapshot: 9_000_000_000_000_000n,
+        swappedAmountAtSnapshot: 90n,
+        withdrawnAmount: 90n,
+      }),
+      streamingState: createStreamingState(9, 9_000_000_000_000_000n),
+    })
+
+    expect(beforeWithdrawal.claimableSwappedAtoms).toBe(100n)
+    expect(afterWithdrawal.claimableSwappedAtoms).toBe(0n)
+  })
+
+  it('matches the program truncation order for small fractional flows', async () => {
+    const { getActivePositionMetrics } = await import('./position-progress')
+    const metrics = getActivePositionMetrics({
+      baseDecimals: 0,
+      baseTicker: 'SOL',
+      endSlotBookkeepingSnapshot: null,
+      market: 'market111111111111111111111111111111111111' as Address,
+      position: createPosition({ flow: 19_999n }),
+      quoteDecimals: 0,
+      quoteTicker: 'USDC',
+      streamingState: createStreamingState(1, 60_000_000_000_000_000_000n),
+    })
+
+    expect(metrics.swappedAtoms).toBe(0n)
   })
 })

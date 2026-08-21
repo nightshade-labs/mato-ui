@@ -1,5 +1,9 @@
 import { computeAveragePrice } from './market'
-import { getTradePositionEndSlot, isBuyTradePosition } from './trade-position'
+import {
+  getTradePositionEndSlot,
+  isBuyTradePosition,
+  isPausedTradePosition,
+} from './trade-position'
 import type { Address } from '@solana/kit'
 import type { TradePosition } from '@/lib/generated/twob/src/generated/accounts'
 import type { StreamingMarketState } from '../domain/models'
@@ -7,12 +11,14 @@ import type { StreamingMarketState } from '../domain/models'
 export interface PositionProgressMetrics {
   amountAtoms: bigint
   averagePrice: number | null
+  claimableSwappedAtoms: bigint | null
   consumedAtoms: bigint
   depositedDecimals: number
   depositedToken: string
   flowAtomsPerSlot: bigint
   flowLabel: string
   hasPositionEnded: boolean
+  isPaused: boolean
   market: Address
   position: TradePosition
   positionKey: string
@@ -26,7 +32,10 @@ export interface PositionProgressMetrics {
 }
 
 const BOOKKEEPING_PRECISION_FACTOR = 1_000_000_000_000_000n
+const FLOW_PRECISION_PART_ONE = 10_000n
+const FLOW_PRECISION_PART_TWO = 100_000n
 const FLOW_PRECISION_FACTOR = 1_000_000_000n
+const MAX_U128 = (1n << 128n) - 1n
 const POSITION_PROGRESS_STORAGE_KEY = 'twob:position-progress:v1'
 
 type CachedSwappedEstimate = {
@@ -62,6 +71,22 @@ function clampToRange(value: number, min: number, max: number) {
   if (value < min) return min
   if (value > max) return max
   return value
+}
+
+function calculateSwappedAmount(flow: bigint, accumulatedPrices: bigint) {
+  const scaledFlow = flow / FLOW_PRECISION_PART_ONE
+  if (scaledFlow === 0n || accumulatedPrices <= MAX_U128 / scaledFlow) {
+    return (
+      (scaledFlow * accumulatedPrices) /
+      BOOKKEEPING_PRECISION_FACTOR /
+      FLOW_PRECISION_PART_TWO
+    )
+  }
+
+  return (
+    ((flow / FLOW_PRECISION_FACTOR) * accumulatedPrices) /
+    BOOKKEEPING_PRECISION_FACTOR
+  )
 }
 
 function getPositionProgressStorage() {
@@ -209,49 +234,38 @@ export function getActivePositionMetrics({
     ? `${quoteTicker} → ${baseTicker}`
     : `${baseTicker} → ${quoteTicker}`
   const positionKey = `${position.authority}:${position.id.toString()}`
+  const estimateCacheKey = `${positionKey}:${position.bookkeepingSnapshot.toString()}:${position.swappedAmountAtSnapshot.toString()}:${position.withdrawnAmount.toString()}`
+  const isPaused = isPausedTradePosition(position)
 
   const amountAtoms = position.amount
-  const startSlot = Number(position.startSlot)
   const endSlot = Number(getTradePositionEndSlot(position))
-  const durationSlots = Math.max(1, endSlot - startSlot)
-  const scaledFlowAtomsPerSlot =
-    (amountAtoms * FLOW_PRECISION_FACTOR) / BigInt(durationSlots)
+  const lastUpdateSlot = Number(position.lastUpdateSlot)
+  const scaledFlowAtomsPerSlot = position.flow
   const flowAtomsPerSlot = scaledFlowAtomsPerSlot / FLOW_PRECISION_FACTOR
 
   const currentSlot = streamingState
-    ? clampToRange(streamingState.currentSlot, startSlot, endSlot)
-    : startSlot
-  const hasPositionEnded = streamingState
-    ? streamingState.currentSlot > endSlot
-    : false
-  const elapsedSlots = clampToRange(currentSlot - startSlot, 0, durationSlots)
-  const scaledDepositAtoms = amountAtoms * FLOW_PRECISION_FACTOR
-  const scaledSpentAtomsUncapped = BigInt(elapsedSlots) * scaledFlowAtomsPerSlot
-  const scaledSpentAtoms =
-    scaledSpentAtomsUncapped > scaledDepositAtoms
-      ? scaledDepositAtoms
-      : scaledSpentAtomsUncapped
-  const scaledRemainingAtoms =
-    scaledDepositAtoms > scaledSpentAtoms
-      ? scaledDepositAtoms - scaledSpentAtoms
-      : 0n
-  const remainingAtoms = scaledRemainingAtoms / FLOW_PRECISION_FACTOR
+    ? isPaused
+      ? lastUpdateSlot
+      : clampToRange(streamingState.currentSlot, lastUpdateSlot, endSlot)
+    : lastUpdateSlot
+  const hasPositionEnded =
+    streamingState && !isPaused ? streamingState.currentSlot > endSlot : false
+  const elapsedSlots = isPaused
+    ? 0
+    : clampToRange(currentSlot - lastUpdateSlot, 0, position.remainingSlots)
+  const remainingSlotCount = Math.max(0, position.remainingSlots - elapsedSlots)
+  const streamingRemainingAtoms =
+    (scaledFlowAtomsPerSlot * BigInt(remainingSlotCount)) /
+    FLOW_PRECISION_FACTOR
+  const uncappedRemainingAtoms =
+    position.inactiveRefund + streamingRemainingAtoms
+  const remainingAtoms =
+    uncappedRemainingAtoms > amountAtoms ? amountAtoms : uncappedRemainingAtoms
   const consumedAtoms =
     amountAtoms > remainingAtoms ? amountAtoms - remainingAtoms : 0n
-
-  const scaledSpentAtEndUncapped =
-    BigInt(durationSlots) * scaledFlowAtomsPerSlot
-  const scaledSpentAtEnd =
-    scaledSpentAtEndUncapped > scaledDepositAtoms
-      ? scaledDepositAtoms
-      : scaledSpentAtEndUncapped
-  const scaledRemainingAtEnd =
-    scaledDepositAtoms > scaledSpentAtEnd
-      ? scaledDepositAtoms - scaledSpentAtEnd
-      : 0n
   const consumedAtomsAtEnd =
-    amountAtoms > scaledRemainingAtEnd / FLOW_PRECISION_FACTOR
-      ? amountAtoms - scaledRemainingAtEnd / FLOW_PRECISION_FACTOR
+    amountAtoms > position.inactiveRefund
+      ? amountAtoms - position.inactiveRefund
       : 0n
 
   const remainingPercent =
@@ -260,10 +274,19 @@ export function getActivePositionMetrics({
       : 0
   const progressPercent = Math.max(0, 100 - remainingPercent)
 
-  let swappedAtoms: bigint | null = null
+  let swappedAtoms: bigint | null =
+    isPaused || position.swappedAmountAtSnapshot > 0n
+      ? position.swappedAmountAtSnapshot
+      : null
   let consumedAtomsForAverage = consumedAtoms
 
-  if (streamingState) {
+  if (isPaused) {
+    setCachedSwappedEstimate(estimateCacheKey, {
+      amount: position.swappedAmountAtSnapshot,
+      consumedAtoms,
+      source: 'snapshot',
+    })
+  } else if (streamingState) {
     const bookkeepingSnapshot = position.bookkeepingSnapshot
     const liveBookkeeping = isBuy
       ? streamingState.bookkeepingBasePerQuote
@@ -301,8 +324,8 @@ export function getActivePositionMetrics({
 
     const liveAccumulatedPrice = liveBookkeepingDelta + staleAccumulator
     const liveSwappedEstimate =
-      (scaledFlowAtomsPerSlot * liveAccumulatedPrice) /
-      (FLOW_PRECISION_FACTOR * BOOKKEEPING_PRECISION_FACTOR)
+      position.swappedAmountAtSnapshot +
+      calculateSwappedAmount(scaledFlowAtomsPerSlot, liveAccumulatedPrice)
 
     let perSlotBookkeepingAccumulator = 0n
     if (isBuy) {
@@ -321,24 +344,25 @@ export function getActivePositionMetrics({
     const projectedAccumulatedAtEnd =
       liveAccumulatedPrice + perSlotBookkeepingAccumulator * BigInt(slotsToEnd)
     const projectedEndSwappedEstimate =
-      (scaledFlowAtomsPerSlot * projectedAccumulatedAtEnd) /
-      (FLOW_PRECISION_FACTOR * BOOKKEEPING_PRECISION_FACTOR)
+      position.swappedAmountAtSnapshot +
+      calculateSwappedAmount(scaledFlowAtomsPerSlot, projectedAccumulatedAtEnd)
 
     if (!hasPositionEnded) {
       swappedAtoms = liveSwappedEstimate
       consumedAtomsForAverage = consumedAtoms
-      setCachedSwappedEstimate(positionKey, {
+      setCachedSwappedEstimate(estimateCacheKey, {
         amount: liveSwappedEstimate,
         consumedAtoms,
         source: 'active',
       })
-      setProjectedEndEstimate(positionKey, {
+      setProjectedEndEstimate(estimateCacheKey, {
         amount: projectedEndSwappedEstimate,
         consumedAtoms: consumedAtomsAtEnd,
       })
     } else {
-      const cachedEstimate = getCachedSwappedEstimate(positionKey)
-      const projectedTerminalEstimate = getProjectedEndEstimate(positionKey)
+      const cachedEstimate = getCachedSwappedEstimate(estimateCacheKey)
+      const projectedTerminalEstimate =
+        getProjectedEndEstimate(estimateCacheKey)
       const snapshotDelta =
         endSlotBookkeepingSnapshot !== null &&
         endSlotBookkeepingSnapshot > bookkeepingSnapshot
@@ -347,8 +371,8 @@ export function getActivePositionMetrics({
       const snapshotSwappedEstimate =
         snapshotDelta === null
           ? null
-          : (scaledFlowAtomsPerSlot * snapshotDelta) /
-            (FLOW_PRECISION_FACTOR * BOOKKEEPING_PRECISION_FACTOR)
+          : position.swappedAmountAtSnapshot +
+            calculateSwappedAmount(scaledFlowAtomsPerSlot, snapshotDelta)
 
       const frozenAtEnd = cachedEstimate?.amount ?? null
       const frozenConsumedAtEnd = cachedEstimate?.consumedAtoms ?? null
@@ -370,7 +394,7 @@ export function getActivePositionMetrics({
         } else {
           swappedAtoms = liveSwappedEstimate
           consumedAtomsForAverage = consumedAtoms
-          setCachedSwappedEstimate(positionKey, {
+          setCachedSwappedEstimate(estimateCacheKey, {
             amount: liveSwappedEstimate,
             consumedAtoms,
             source: 'fallback',
@@ -389,7 +413,7 @@ export function getActivePositionMetrics({
         ) {
           swappedAtoms = terminalFallbackAmount
           consumedAtomsForAverage = terminalFallbackConsumed
-          setCachedSwappedEstimate(positionKey, {
+          setCachedSwappedEstimate(estimateCacheKey, {
             amount: terminalFallbackAmount,
             consumedAtoms: consumedAtomsForAverage,
             source:
@@ -400,7 +424,7 @@ export function getActivePositionMetrics({
         } else {
           swappedAtoms = snapshotSwappedEstimate
           consumedAtomsForAverage = consumedAtoms
-          setCachedSwappedEstimate(positionKey, {
+          setCachedSwappedEstimate(estimateCacheKey, {
             amount: swappedAtoms,
             consumedAtoms,
             source: 'snapshot',
@@ -409,19 +433,26 @@ export function getActivePositionMetrics({
       }
     }
 
-    const cachedMetrics = getCachedSwappedEstimate(positionKey)
+    const cachedMetrics = getCachedSwappedEstimate(estimateCacheKey)
     if (cachedMetrics !== null && swappedAtoms < cachedMetrics.amount) {
       swappedAtoms = cachedMetrics.amount
       consumedAtomsForAverage = cachedMetrics.consumedAtoms
     }
 
-    const cachedSource = getCachedSwappedEstimate(positionKey)?.source
-    setCachedSwappedEstimate(positionKey, {
+    const cachedSource = getCachedSwappedEstimate(estimateCacheKey)?.source
+    setCachedSwappedEstimate(estimateCacheKey, {
       amount: swappedAtoms,
       consumedAtoms: consumedAtomsForAverage,
       source: cachedSource ?? (hasPositionEnded ? 'snapshot' : 'active'),
     })
   }
+
+  const claimableSwappedAtoms =
+    swappedAtoms === null
+      ? null
+      : swappedAtoms > position.withdrawnAmount
+        ? swappedAtoms - position.withdrawnAmount
+        : 0n
 
   const averagePrice = (() => {
     if (swappedAtoms === null) return null
@@ -438,12 +469,14 @@ export function getActivePositionMetrics({
   return {
     amountAtoms,
     averagePrice,
+    claimableSwappedAtoms,
     consumedAtoms,
     depositedDecimals,
     depositedToken,
     flowAtomsPerSlot: flowAtomsPerSlot > 0n ? flowAtomsPerSlot : 0n,
     flowLabel,
     hasPositionEnded,
+    isPaused,
     market,
     position,
     positionKey,

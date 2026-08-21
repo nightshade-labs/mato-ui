@@ -55,6 +55,7 @@ import { useWalletSolBalance } from '../hooks/use-wallet-sol-balance'
 import { useWalletTokenBalance } from '../hooks/use-wallet-token-balance'
 import { useSubmitOrder } from '../hooks/use-submit-order'
 import { useClosePosition } from '../hooks/use-close-position'
+import { usePositionControls } from '../hooks/use-position-controls'
 import { useReclaimRent } from '../hooks/use-reclaim-rent'
 import {
   buildChartPositionOverlays,
@@ -179,6 +180,7 @@ export function TradingDashboard() {
 
   const submitOrder = useSubmitOrder()
   const closePosition = useClosePosition()
+  const positionControls = usePositionControls()
   const reclaimRent = useReclaimRent(walletConnection.connected)
 
   const {
@@ -254,7 +256,10 @@ export function TradingDashboard() {
     ? `Your wallet has ${nativeSolBalanceDisplay} SOL. Add SOL before submitting orders; at least ${requiredSubmitNativeSolDisplay} SOL is required for fees and rent.`
     : null
   const lowMaintenanceNativeSolWarning = hasLowMaintenanceNativeSolBalance
-    ? `Your wallet has ${nativeSolBalanceDisplay} SOL. Add SOL before closing positions; at least ${requiredMaintenanceNativeSolDisplay} SOL is required for fees.`
+    ? `Your wallet has ${nativeSolBalanceDisplay} SOL. Add SOL before updating positions; at least ${requiredMaintenanceNativeSolDisplay} SOL is required for fees.`
+    : null
+  const lowPositionRentNativeSolWarning = hasLowSubmitNativeSolBalance
+    ? `Your wallet has ${nativeSolBalanceDisplay} SOL. Add SOL before updating this position; at least ${requiredSubmitNativeSolDisplay} SOL is required for fees and possible account rent.`
     : null
   const lowReclaimRentNativeSolWarning = hasLowMaintenanceNativeSolBalance
     ? `Your wallet has ${nativeSolBalanceDisplay} SOL. Add SOL before reclaiming rent; at least ${requiredMaintenanceNativeSolDisplay} SOL is required for fees.`
@@ -555,6 +560,63 @@ export function TradingDashboard() {
       id: 'close-position-error',
     })
   }, [closePosition.error])
+
+  useEffect(() => {
+    const signature = positionControls.signature
+    const action = positionControls.action
+    if (
+      positionControls.status !== 'success' ||
+      !signature ||
+      action === null
+    ) {
+      return
+    }
+
+    const title =
+      action === 'pause'
+        ? 'Position paused'
+        : action === 'resume'
+          ? 'Position resumed'
+          : 'Swapped funds withdrawn'
+    const description =
+      action === 'pause'
+        ? 'The position has stopped streaming.'
+        : action === 'resume'
+          ? 'The position is streaming again.'
+          : 'Available swapped funds were sent to the position receiver.'
+
+    toast.success(title, {
+      action: {
+        label: 'View',
+        onClick: () => {
+          window.open(
+            formatExplorerTransactionUrl(signature, endpoint),
+            '_blank',
+            'noopener,noreferrer',
+          )
+        },
+      },
+      description,
+      id: `position-control-success-${signature}`,
+    })
+  }, [
+    positionControls.action,
+    positionControls.signature,
+    positionControls.status,
+  ])
+
+  useEffect(() => {
+    if (!positionControls.error) return
+
+    const title =
+      positionControls.action === 'withdraw'
+        ? 'Withdraw failed'
+        : 'Position update failed'
+    toast.error(title, {
+      description: positionControls.error,
+      id: 'position-control-error',
+    })
+  }, [positionControls.action, positionControls.error])
 
   useEffect(() => {
     const signature = reclaimRent.signature
@@ -962,6 +1024,7 @@ export function TradingDashboard() {
                       className="rounded-full"
                       disabled={
                         closePosition.isClosing ||
+                        positionControls.isPending ||
                         endedBatchPositions.length === 0
                       }
                       onClick={() => {
@@ -984,6 +1047,7 @@ export function TradingDashboard() {
                       className="rounded-full"
                       disabled={
                         closePosition.isClosing ||
+                        positionControls.isPending ||
                         allBatchPositions.length === 0
                       }
                       onClick={() => {
@@ -1025,9 +1089,26 @@ export function TradingDashboard() {
                         key={position.address}
                         baseDecimals={baseDecimals}
                         baseTicker={baseTicker}
-                        isCloseDisabled={closePosition.isClosing}
+                        isCloseDisabled={
+                          closePosition.isClosing || positionControls.isPending
+                        }
                         isClosing={closePosition.isClosingPosition(
                           position.address,
+                        )}
+                        isControlDisabled={
+                          closePosition.isClosing || positionControls.isPending
+                        }
+                        isPausing={positionControls.isPendingAction(
+                          position.address,
+                          'pause',
+                        )}
+                        isResuming={positionControls.isPendingAction(
+                          position.address,
+                          'resume',
+                        )}
+                        isWithdrawing={positionControls.isPendingAction(
+                          position.address,
+                          'withdraw',
                         )}
                         marketAddress={marketAddress}
                         onClose={async (tradePositionAddress) => {
@@ -1043,6 +1124,50 @@ export function TradingDashboard() {
                             marketAddress,
                             tradePositionAddress,
                           })
+                          if (success) {
+                            await refreshBalances()
+                          }
+                        }}
+                        onPauseToggle={async (tradePositionAddress) => {
+                          const isPaused = position.data.pausedAtSlot > 0n
+                          const balanceWarning = isPaused
+                            ? lowPositionRentNativeSolWarning
+                            : lowMaintenanceNativeSolWarning
+                          if (balanceWarning) {
+                            toast.warning('Not enough SOL', {
+                              description: balanceWarning,
+                              id: 'position-control-validation',
+                            })
+                            return
+                          }
+
+                          const success = isPaused
+                            ? await positionControls.resumePosition({
+                                marketAddress,
+                                tradePositionAddress,
+                              })
+                            : await positionControls.pausePosition({
+                                marketAddress,
+                                tradePositionAddress,
+                              })
+                          if (success) {
+                            await refreshBalances()
+                          }
+                        }}
+                        onWithdraw={async (tradePositionAddress) => {
+                          if (lowPositionRentNativeSolWarning) {
+                            toast.warning('Not enough SOL', {
+                              description: lowPositionRentNativeSolWarning,
+                              id: 'position-control-validation',
+                            })
+                            return
+                          }
+
+                          const success =
+                            await positionControls.withdrawSwapped({
+                              marketAddress,
+                              tradePositionAddress,
+                            })
                           if (success) {
                             await refreshBalances()
                           }

@@ -6,6 +6,7 @@ type BatchClosePositionLike = {
   address: string
   data: {
     lastUpdateSlot: bigint
+    pausedAtSlot: bigint
     remainingSlots: number
   }
 }
@@ -26,7 +27,7 @@ export function isEndedPosition(
   position: BatchClosePositionLike,
   currentSlot: number | null,
 ) {
-  if (currentSlot === null) return false
+  if (currentSlot === null || position.data.pausedAtSlot > 0n) return false
   return (
     BigInt(Math.floor(currentSlot)) > getTradePositionEndSlot(position.data)
   )

@@ -69,4 +69,27 @@ describe('formatTransactionError', () => {
       'Market state changed while the transaction was awaiting approval. Please try again.',
     )
   })
+
+  it.each([6007, 6010])(
+    'asks for a retry when market state error %s is stale',
+    (code) => {
+      const error = new Error(
+        `Transaction failed during confirmation: {"InstructionError":[0,{"Custom":${code}}]}`,
+      )
+
+      expect(formatTransactionError(error, 'fallback')).toBe(
+        'Market state changed while the transaction was awaiting approval. Please try again.',
+      )
+    },
+  )
+
+  it('explains when no newly swapped funds are available', () => {
+    const error = new Error(
+      'Transaction failed during confirmation: {"InstructionError":[0,{"Custom":6031}]}',
+    )
+
+    expect(formatTransactionError(error, 'fallback')).toBe(
+      'There are no new swapped funds to withdraw yet.',
+    )
+  })
 })

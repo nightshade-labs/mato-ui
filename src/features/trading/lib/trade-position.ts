@@ -10,3 +10,9 @@ export function getTradePositionEndSlot(
 export function isBuyTradePosition(position: Pick<TradePosition, 'side'>) {
   return position.side === Side.Buy
 }
+
+export function isPausedTradePosition(
+  position: Pick<TradePosition, 'pausedAtSlot'>,
+) {
+  return position.pausedAtSlot > 0n
+}
