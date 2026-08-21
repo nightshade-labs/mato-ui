@@ -656,7 +656,7 @@ export function TradingDashboard() {
       amount: amountAtoms,
       durationSlots,
       existingWrappedAtoms: selectedBalance.existingWrappedAtoms,
-      id: BigInt(Date.now()),
+      id: crypto.getRandomValues(new Uint32Array(1))[0],
       inputMintAddress: side === 'buy' ? (quoteMint ?? '') : (baseMint ?? ''),
       isBuy: side === 'buy',
       marketAddress,

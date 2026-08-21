@@ -25,6 +25,8 @@ import {
   getStructEncoder,
   getU128Decoder,
   getU128Encoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -53,28 +55,40 @@ export function getExitsDiscriminatorBytes() {
 
 export type Exits = {
   discriminator: ReadonlyUint8Array
-  /** Address which created this account, used to determine where the rent goes if account is closed */
-  owner: Address
+  /**
+   * Market this account belongs to, kept first so it can be read without deserializing
+   * the whole account
+   */
+  market: Address
+  /** Reference interval this account covers, kept next to `market` for the same reason */
+  index: bigint
+  /** Address which funded this account, used to determine where the rent goes if account is closed */
+  payer: Address
   /** Stores the base flow that is removed from the market at a given slot because an order ended */
   baseExits: Array<bigint>
   /** Stores the quote flow that is removed from the market at a given slot because an order ended */
   quoteExits: Array<bigint>
   /** Number of open trade positions that end in this reference interval */
-  openPositions: bigint
-  index: bigint
+  openPositions: number
   bump: number
 }
 
 export type ExitsArgs = {
-  /** Address which created this account, used to determine where the rent goes if account is closed */
-  owner: Address
+  /**
+   * Market this account belongs to, kept first so it can be read without deserializing
+   * the whole account
+   */
+  market: Address
+  /** Reference interval this account covers, kept next to `market` for the same reason */
+  index: number | bigint
+  /** Address which funded this account, used to determine where the rent goes if account is closed */
+  payer: Address
   /** Stores the base flow that is removed from the market at a given slot because an order ended */
   baseExits: Array<number | bigint>
   /** Stores the quote flow that is removed from the market at a given slot because an order ended */
   quoteExits: Array<number | bigint>
   /** Number of open trade positions that end in this reference interval */
-  openPositions: number | bigint
-  index: number | bigint
+  openPositions: number
   bump: number
 }
 
@@ -83,11 +97,12 @@ export function getExitsEncoder(): FixedSizeEncoder<ExitsArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['owner', getAddressEncoder()],
-      ['baseExits', getArrayEncoder(getU128Encoder(), { size: 10 })],
-      ['quoteExits', getArrayEncoder(getU128Encoder(), { size: 10 })],
-      ['openPositions', getU64Encoder()],
+      ['market', getAddressEncoder()],
       ['index', getU64Encoder()],
+      ['payer', getAddressEncoder()],
+      ['baseExits', getArrayEncoder(getU128Encoder(), { size: 20 })],
+      ['quoteExits', getArrayEncoder(getU128Encoder(), { size: 20 })],
+      ['openPositions', getU32Encoder()],
       ['bump', getU8Encoder()],
     ]),
     (value) => ({ ...value, discriminator: EXITS_DISCRIMINATOR }),
@@ -98,11 +113,12 @@ export function getExitsEncoder(): FixedSizeEncoder<ExitsArgs> {
 export function getExitsDecoder(): FixedSizeDecoder<Exits> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['owner', getAddressDecoder()],
-    ['baseExits', getArrayDecoder(getU128Decoder(), { size: 10 })],
-    ['quoteExits', getArrayDecoder(getU128Decoder(), { size: 10 })],
-    ['openPositions', getU64Decoder()],
+    ['market', getAddressDecoder()],
     ['index', getU64Decoder()],
+    ['payer', getAddressDecoder()],
+    ['baseExits', getArrayDecoder(getU128Decoder(), { size: 20 })],
+    ['quoteExits', getArrayDecoder(getU128Decoder(), { size: 20 })],
+    ['openPositions', getU32Decoder()],
     ['bump', getU8Decoder()],
   ])
 }
@@ -166,5 +182,5 @@ export async function fetchAllMaybeExits(
 }
 
 export function getExitsSize(): number {
-  return 377
+  return 725
 }

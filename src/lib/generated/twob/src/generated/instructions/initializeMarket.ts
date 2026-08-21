@@ -16,6 +16,10 @@ import {
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
+  getU16Decoder,
+  getU16Encoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -125,17 +129,21 @@ export type InitializeMarketInstruction<
 
 export type InitializeMarketInstructionData = {
   discriminator: ReadonlyUint8Array
-  id: bigint
+  id: number
+  minimumBaseDeposit: bigint
+  minimumQuoteDeposit: bigint
   startSlot: bigint
-  endSlotInterval: bigint
+  endSlotInterval: number
   feeBps: number
   unhealthyLiquidityFeeBps: number
 }
 
 export type InitializeMarketInstructionDataArgs = {
-  id: number | bigint
+  id: number
+  minimumBaseDeposit: number | bigint
+  minimumQuoteDeposit: number | bigint
   startSlot: number | bigint
-  endSlotInterval: number | bigint
+  endSlotInterval: number
   feeBps: number
   unhealthyLiquidityFeeBps: number
 }
@@ -144,9 +152,11 @@ export function getInitializeMarketInstructionDataEncoder(): FixedSizeEncoder<In
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['id', getU64Encoder()],
+      ['id', getU32Encoder()],
+      ['minimumBaseDeposit', getU64Encoder()],
+      ['minimumQuoteDeposit', getU64Encoder()],
       ['startSlot', getU64Encoder()],
-      ['endSlotInterval', getU64Encoder()],
+      ['endSlotInterval', getU16Encoder()],
       ['feeBps', getU8Encoder()],
       ['unhealthyLiquidityFeeBps', getU8Encoder()],
     ]),
@@ -157,9 +167,11 @@ export function getInitializeMarketInstructionDataEncoder(): FixedSizeEncoder<In
 export function getInitializeMarketInstructionDataDecoder(): FixedSizeDecoder<InitializeMarketInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['id', getU64Decoder()],
+    ['id', getU32Decoder()],
+    ['minimumBaseDeposit', getU64Decoder()],
+    ['minimumQuoteDeposit', getU64Decoder()],
     ['startSlot', getU64Decoder()],
-    ['endSlotInterval', getU64Decoder()],
+    ['endSlotInterval', getU16Decoder()],
     ['feeBps', getU8Decoder()],
     ['unhealthyLiquidityFeeBps', getU8Decoder()],
   ])
@@ -204,6 +216,8 @@ export type InitializeMarketAsyncInput<
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>
   systemProgram?: Address<TAccountSystemProgram>
   id: InitializeMarketInstructionDataArgs['id']
+  minimumBaseDeposit: InitializeMarketInstructionDataArgs['minimumBaseDeposit']
+  minimumQuoteDeposit: InitializeMarketInstructionDataArgs['minimumQuoteDeposit']
   startSlot: InitializeMarketInstructionDataArgs['startSlot']
   endSlotInterval: InitializeMarketInstructionDataArgs['endSlotInterval']
   feeBps: InitializeMarketInstructionDataArgs['feeBps']
@@ -314,7 +328,7 @@ export async function getInitializeMarketInstructionAsync<
       programAddress,
       seeds: [
         getBytesEncoder().encode(new Uint8Array([109, 97, 114, 107, 101, 116])),
-        getU64Encoder().encode(
+        getU32Encoder().encode(
           getNonNullResolvedInstructionInput('id', args.id),
         ),
       ],
@@ -467,6 +481,8 @@ export type InitializeMarketInput<
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>
   systemProgram?: Address<TAccountSystemProgram>
   id: InitializeMarketInstructionDataArgs['id']
+  minimumBaseDeposit: InitializeMarketInstructionDataArgs['minimumBaseDeposit']
+  minimumQuoteDeposit: InitializeMarketInstructionDataArgs['minimumQuoteDeposit']
   startSlot: InitializeMarketInstructionDataArgs['startSlot']
   endSlotInterval: InitializeMarketInstructionDataArgs['endSlotInterval']
   feeBps: InitializeMarketInstructionDataArgs['feeBps']

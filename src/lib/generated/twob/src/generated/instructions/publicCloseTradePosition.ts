@@ -43,30 +43,35 @@ import {
 } from '@solana/program-client-core'
 import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '../programs'
 
-export const AUTHORITY_CLOSE_LIQUIDITY_POSITION_DISCRIMINATOR = new Uint8Array([
-  169, 197, 227, 231, 81, 124, 125, 1,
+export const PUBLIC_CLOSE_TRADE_POSITION_DISCRIMINATOR = new Uint8Array([
+  84, 88, 98, 249, 38, 129, 179, 30,
 ])
 
-export function getAuthorityCloseLiquidityPositionDiscriminatorBytes() {
+export function getPublicCloseTradePositionDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    AUTHORITY_CLOSE_LIQUIDITY_POSITION_DISCRIMINATOR,
+    PUBLIC_CLOSE_TRADE_POSITION_DISCRIMINATOR,
   )
 }
 
-export type AuthorityCloseLiquidityPositionInstruction<
+export type PublicCloseTradePositionInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
-  TAccountAuthority extends string | AccountMeta<string> = string,
+  TAccountSigner extends string | AccountMeta<string> = string,
+  TAccountPayer extends string | AccountMeta<string> = string,
+  TAccountBaseReceiver extends string | AccountMeta<string> = string,
+  TAccountQuoteReceiver extends string | AccountMeta<string> = string,
   TAccountBaseMint extends string | AccountMeta<string> = string,
   TAccountQuoteMint extends string | AccountMeta<string> = string,
-  TAccountAuthorityBaseTokenAccount extends string | AccountMeta<string> =
+  TAccountReceiverBaseTokenAccount extends string | AccountMeta<string> =
     string,
-  TAccountAuthorityQuoteTokenAccount extends string | AccountMeta<string> =
+  TAccountReceiverQuoteTokenAccount extends string | AccountMeta<string> =
     string,
   TAccountMarket extends string | AccountMeta<string> = string,
-  TAccountLiquidityPosition extends string | AccountMeta<string> = string,
+  TAccountTradePosition extends string | AccountMeta<string> = string,
   TAccountBaseVault extends string | AccountMeta<string> = string,
   TAccountQuoteVault extends string | AccountMeta<string> = string,
   TAccountBookkeeping extends string | AccountMeta<string> = string,
+  TAccountFutureExits extends string | AccountMeta<string> = string,
+  TAccountFuturePrices extends string | AccountMeta<string> = string,
   TAccountCurrentExits extends string | AccountMeta<string> = string,
   TAccountPreviousExits extends string | AccountMeta<string> = string,
   TAccountCurrentPrices extends string | AccountMeta<string> = string,
@@ -82,28 +87,37 @@ export type AuthorityCloseLiquidityPositionInstruction<
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
-      TAccountAuthority extends string
-        ? WritableSignerAccount<TAccountAuthority> &
-            AccountSignerMeta<TAccountAuthority>
-        : TAccountAuthority,
+      TAccountSigner extends string
+        ? WritableSignerAccount<TAccountSigner> &
+            AccountSignerMeta<TAccountSigner>
+        : TAccountSigner,
+      TAccountPayer extends string
+        ? WritableAccount<TAccountPayer>
+        : TAccountPayer,
+      TAccountBaseReceiver extends string
+        ? WritableAccount<TAccountBaseReceiver>
+        : TAccountBaseReceiver,
+      TAccountQuoteReceiver extends string
+        ? WritableAccount<TAccountQuoteReceiver>
+        : TAccountQuoteReceiver,
       TAccountBaseMint extends string
         ? ReadonlyAccount<TAccountBaseMint>
         : TAccountBaseMint,
       TAccountQuoteMint extends string
         ? ReadonlyAccount<TAccountQuoteMint>
         : TAccountQuoteMint,
-      TAccountAuthorityBaseTokenAccount extends string
-        ? WritableAccount<TAccountAuthorityBaseTokenAccount>
-        : TAccountAuthorityBaseTokenAccount,
-      TAccountAuthorityQuoteTokenAccount extends string
-        ? WritableAccount<TAccountAuthorityQuoteTokenAccount>
-        : TAccountAuthorityQuoteTokenAccount,
+      TAccountReceiverBaseTokenAccount extends string
+        ? WritableAccount<TAccountReceiverBaseTokenAccount>
+        : TAccountReceiverBaseTokenAccount,
+      TAccountReceiverQuoteTokenAccount extends string
+        ? WritableAccount<TAccountReceiverQuoteTokenAccount>
+        : TAccountReceiverQuoteTokenAccount,
       TAccountMarket extends string
         ? WritableAccount<TAccountMarket>
         : TAccountMarket,
-      TAccountLiquidityPosition extends string
-        ? WritableAccount<TAccountLiquidityPosition>
-        : TAccountLiquidityPosition,
+      TAccountTradePosition extends string
+        ? WritableAccount<TAccountTradePosition>
+        : TAccountTradePosition,
       TAccountBaseVault extends string
         ? WritableAccount<TAccountBaseVault>
         : TAccountBaseVault,
@@ -113,6 +127,12 @@ export type AuthorityCloseLiquidityPositionInstruction<
       TAccountBookkeeping extends string
         ? WritableAccount<TAccountBookkeeping>
         : TAccountBookkeeping,
+      TAccountFutureExits extends string
+        ? WritableAccount<TAccountFutureExits>
+        : TAccountFutureExits,
+      TAccountFuturePrices extends string
+        ? WritableAccount<TAccountFuturePrices>
+        : TAccountFuturePrices,
       TAccountCurrentExits extends string
         ? ReadonlyAccount<TAccountCurrentExits>
         : TAccountCurrentExits,
@@ -141,16 +161,16 @@ export type AuthorityCloseLiquidityPositionInstruction<
     ]
   >
 
-export type AuthorityCloseLiquidityPositionInstructionData = {
+export type PublicCloseTradePositionInstructionData = {
   discriminator: ReadonlyUint8Array
   referenceIndex: bigint
 }
 
-export type AuthorityCloseLiquidityPositionInstructionDataArgs = {
+export type PublicCloseTradePositionInstructionDataArgs = {
   referenceIndex: number | bigint
 }
 
-export function getAuthorityCloseLiquidityPositionInstructionDataEncoder(): FixedSizeEncoder<AuthorityCloseLiquidityPositionInstructionDataArgs> {
+export function getPublicCloseTradePositionInstructionDataEncoder(): FixedSizeEncoder<PublicCloseTradePositionInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
@@ -158,39 +178,44 @@ export function getAuthorityCloseLiquidityPositionInstructionDataEncoder(): Fixe
     ]),
     (value) => ({
       ...value,
-      discriminator: AUTHORITY_CLOSE_LIQUIDITY_POSITION_DISCRIMINATOR,
+      discriminator: PUBLIC_CLOSE_TRADE_POSITION_DISCRIMINATOR,
     }),
   )
 }
 
-export function getAuthorityCloseLiquidityPositionInstructionDataDecoder(): FixedSizeDecoder<AuthorityCloseLiquidityPositionInstructionData> {
+export function getPublicCloseTradePositionInstructionDataDecoder(): FixedSizeDecoder<PublicCloseTradePositionInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['referenceIndex', getU64Decoder()],
   ])
 }
 
-export function getAuthorityCloseLiquidityPositionInstructionDataCodec(): FixedSizeCodec<
-  AuthorityCloseLiquidityPositionInstructionDataArgs,
-  AuthorityCloseLiquidityPositionInstructionData
+export function getPublicCloseTradePositionInstructionDataCodec(): FixedSizeCodec<
+  PublicCloseTradePositionInstructionDataArgs,
+  PublicCloseTradePositionInstructionData
 > {
   return combineCodec(
-    getAuthorityCloseLiquidityPositionInstructionDataEncoder(),
-    getAuthorityCloseLiquidityPositionInstructionDataDecoder(),
+    getPublicCloseTradePositionInstructionDataEncoder(),
+    getPublicCloseTradePositionInstructionDataDecoder(),
   )
 }
 
-export type AuthorityCloseLiquidityPositionAsyncInput<
-  TAccountAuthority extends string = string,
+export type PublicCloseTradePositionAsyncInput<
+  TAccountSigner extends string = string,
+  TAccountPayer extends string = string,
+  TAccountBaseReceiver extends string = string,
+  TAccountQuoteReceiver extends string = string,
   TAccountBaseMint extends string = string,
   TAccountQuoteMint extends string = string,
-  TAccountAuthorityBaseTokenAccount extends string = string,
-  TAccountAuthorityQuoteTokenAccount extends string = string,
+  TAccountReceiverBaseTokenAccount extends string = string,
+  TAccountReceiverQuoteTokenAccount extends string = string,
   TAccountMarket extends string = string,
-  TAccountLiquidityPosition extends string = string,
+  TAccountTradePosition extends string = string,
   TAccountBaseVault extends string = string,
   TAccountQuoteVault extends string = string,
   TAccountBookkeeping extends string = string,
+  TAccountFutureExits extends string = string,
+  TAccountFuturePrices extends string = string,
   TAccountCurrentExits extends string = string,
   TAccountPreviousExits extends string = string,
   TAccountCurrentPrices extends string = string,
@@ -200,16 +225,21 @@ export type AuthorityCloseLiquidityPositionAsyncInput<
   TAccountAssociatedTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  authority: TransactionSigner<TAccountAuthority>
+  signer: TransactionSigner<TAccountSigner>
+  payer: Address<TAccountPayer>
+  baseReceiver: Address<TAccountBaseReceiver>
+  quoteReceiver: Address<TAccountQuoteReceiver>
   baseMint: Address<TAccountBaseMint>
   quoteMint: Address<TAccountQuoteMint>
-  authorityBaseTokenAccount?: Address<TAccountAuthorityBaseTokenAccount>
-  authorityQuoteTokenAccount?: Address<TAccountAuthorityQuoteTokenAccount>
+  receiverBaseTokenAccount: Address<TAccountReceiverBaseTokenAccount>
+  receiverQuoteTokenAccount: Address<TAccountReceiverQuoteTokenAccount>
   market: Address<TAccountMarket>
-  liquidityPosition?: Address<TAccountLiquidityPosition>
+  tradePosition: Address<TAccountTradePosition>
   baseVault?: Address<TAccountBaseVault>
   quoteVault?: Address<TAccountQuoteVault>
   bookkeeping?: Address<TAccountBookkeeping>
+  futureExits: Address<TAccountFutureExits>
+  futurePrices: Address<TAccountFuturePrices>
   currentExits: Address<TAccountCurrentExits>
   previousExits: Address<TAccountPreviousExits>
   currentPrices: Address<TAccountCurrentPrices>
@@ -218,20 +248,25 @@ export type AuthorityCloseLiquidityPositionAsyncInput<
   quoteTokenProgram: Address<TAccountQuoteTokenProgram>
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>
   systemProgram?: Address<TAccountSystemProgram>
-  referenceIndex: AuthorityCloseLiquidityPositionInstructionDataArgs['referenceIndex']
+  referenceIndex: PublicCloseTradePositionInstructionDataArgs['referenceIndex']
 }
 
-export async function getAuthorityCloseLiquidityPositionInstructionAsync<
-  TAccountAuthority extends string,
+export async function getPublicCloseTradePositionInstructionAsync<
+  TAccountSigner extends string,
+  TAccountPayer extends string,
+  TAccountBaseReceiver extends string,
+  TAccountQuoteReceiver extends string,
   TAccountBaseMint extends string,
   TAccountQuoteMint extends string,
-  TAccountAuthorityBaseTokenAccount extends string,
-  TAccountAuthorityQuoteTokenAccount extends string,
+  TAccountReceiverBaseTokenAccount extends string,
+  TAccountReceiverQuoteTokenAccount extends string,
   TAccountMarket extends string,
-  TAccountLiquidityPosition extends string,
+  TAccountTradePosition extends string,
   TAccountBaseVault extends string,
   TAccountQuoteVault extends string,
   TAccountBookkeeping extends string,
+  TAccountFutureExits extends string,
+  TAccountFuturePrices extends string,
   TAccountCurrentExits extends string,
   TAccountPreviousExits extends string,
   TAccountCurrentPrices extends string,
@@ -242,17 +277,22 @@ export async function getAuthorityCloseLiquidityPositionInstructionAsync<
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
-  input: AuthorityCloseLiquidityPositionAsyncInput<
-    TAccountAuthority,
+  input: PublicCloseTradePositionAsyncInput<
+    TAccountSigner,
+    TAccountPayer,
+    TAccountBaseReceiver,
+    TAccountQuoteReceiver,
     TAccountBaseMint,
     TAccountQuoteMint,
-    TAccountAuthorityBaseTokenAccount,
-    TAccountAuthorityQuoteTokenAccount,
+    TAccountReceiverBaseTokenAccount,
+    TAccountReceiverQuoteTokenAccount,
     TAccountMarket,
-    TAccountLiquidityPosition,
+    TAccountTradePosition,
     TAccountBaseVault,
     TAccountQuoteVault,
     TAccountBookkeeping,
+    TAccountFutureExits,
+    TAccountFuturePrices,
     TAccountCurrentExits,
     TAccountPreviousExits,
     TAccountCurrentPrices,
@@ -264,18 +304,23 @@ export async function getAuthorityCloseLiquidityPositionInstructionAsync<
   >,
   config?: { programAddress?: TProgramAddress },
 ): Promise<
-  AuthorityCloseLiquidityPositionInstruction<
+  PublicCloseTradePositionInstruction<
     TProgramAddress,
-    TAccountAuthority,
+    TAccountSigner,
+    TAccountPayer,
+    TAccountBaseReceiver,
+    TAccountQuoteReceiver,
     TAccountBaseMint,
     TAccountQuoteMint,
-    TAccountAuthorityBaseTokenAccount,
-    TAccountAuthorityQuoteTokenAccount,
+    TAccountReceiverBaseTokenAccount,
+    TAccountReceiverQuoteTokenAccount,
     TAccountMarket,
-    TAccountLiquidityPosition,
+    TAccountTradePosition,
     TAccountBaseVault,
     TAccountQuoteVault,
     TAccountBookkeeping,
+    TAccountFutureExits,
+    TAccountFuturePrices,
     TAccountCurrentExits,
     TAccountPreviousExits,
     TAccountCurrentPrices,
@@ -291,25 +336,27 @@ export async function getAuthorityCloseLiquidityPositionInstructionAsync<
 
   // Original accounts.
   const originalAccounts = {
-    authority: { value: input.authority ?? null, isWritable: true },
+    signer: { value: input.signer ?? null, isWritable: true },
+    payer: { value: input.payer ?? null, isWritable: true },
+    baseReceiver: { value: input.baseReceiver ?? null, isWritable: true },
+    quoteReceiver: { value: input.quoteReceiver ?? null, isWritable: true },
     baseMint: { value: input.baseMint ?? null, isWritable: false },
     quoteMint: { value: input.quoteMint ?? null, isWritable: false },
-    authorityBaseTokenAccount: {
-      value: input.authorityBaseTokenAccount ?? null,
+    receiverBaseTokenAccount: {
+      value: input.receiverBaseTokenAccount ?? null,
       isWritable: true,
     },
-    authorityQuoteTokenAccount: {
-      value: input.authorityQuoteTokenAccount ?? null,
+    receiverQuoteTokenAccount: {
+      value: input.receiverQuoteTokenAccount ?? null,
       isWritable: true,
     },
     market: { value: input.market ?? null, isWritable: true },
-    liquidityPosition: {
-      value: input.liquidityPosition ?? null,
-      isWritable: true,
-    },
+    tradePosition: { value: input.tradePosition ?? null, isWritable: true },
     baseVault: { value: input.baseVault ?? null, isWritable: true },
     quoteVault: { value: input.quoteVault ?? null, isWritable: true },
     bookkeeping: { value: input.bookkeeping ?? null, isWritable: true },
+    futureExits: { value: input.futureExits ?? null, isWritable: true },
+    futurePrices: { value: input.futurePrices ?? null, isWritable: true },
     currentExits: { value: input.currentExits ?? null, isWritable: false },
     previousExits: { value: input.previousExits ?? null, isWritable: false },
     currentPrices: { value: input.currentPrices ?? null, isWritable: true },
@@ -337,83 +384,6 @@ export async function getAuthorityCloseLiquidityPositionInstructionAsync<
   const args = { ...input }
 
   // Resolve default values.
-  if (!accounts.authorityBaseTokenAccount.value) {
-    accounts.authorityBaseTokenAccount.value = await getProgramDerivedAddress({
-      programAddress:
-        'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
-      seeds: [
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            'authority',
-            accounts.authority.value,
-          ),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            'baseTokenProgram',
-            accounts.baseTokenProgram.value,
-          ),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            'baseMint',
-            accounts.baseMint.value,
-          ),
-        ),
-      ],
-    })
-  }
-  if (!accounts.authorityQuoteTokenAccount.value) {
-    accounts.authorityQuoteTokenAccount.value = await getProgramDerivedAddress({
-      programAddress:
-        'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
-      seeds: [
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            'authority',
-            accounts.authority.value,
-          ),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            'quoteTokenProgram',
-            accounts.quoteTokenProgram.value,
-          ),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            'quoteMint',
-            accounts.quoteMint.value,
-          ),
-        ),
-      ],
-    })
-  }
-  if (!accounts.liquidityPosition.value) {
-    accounts.liquidityPosition.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([
-            108, 105, 113, 117, 105, 100, 105, 116, 121, 95, 112, 111, 115, 105,
-            116, 105, 111, 110,
-          ]),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            'market',
-            accounts.market.value,
-          ),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            'authority',
-            accounts.authority.value,
-          ),
-        ),
-      ],
-    })
-  }
   if (!accounts.baseVault.value) {
     accounts.baseVault.value = await getProgramDerivedAddress({
       programAddress:
@@ -496,22 +466,27 @@ export async function getAuthorityCloseLiquidityPositionInstructionAsync<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
-      getAccountMeta('authority', accounts.authority),
+      getAccountMeta('signer', accounts.signer),
+      getAccountMeta('payer', accounts.payer),
+      getAccountMeta('baseReceiver', accounts.baseReceiver),
+      getAccountMeta('quoteReceiver', accounts.quoteReceiver),
       getAccountMeta('baseMint', accounts.baseMint),
       getAccountMeta('quoteMint', accounts.quoteMint),
       getAccountMeta(
-        'authorityBaseTokenAccount',
-        accounts.authorityBaseTokenAccount,
+        'receiverBaseTokenAccount',
+        accounts.receiverBaseTokenAccount,
       ),
       getAccountMeta(
-        'authorityQuoteTokenAccount',
-        accounts.authorityQuoteTokenAccount,
+        'receiverQuoteTokenAccount',
+        accounts.receiverQuoteTokenAccount,
       ),
       getAccountMeta('market', accounts.market),
-      getAccountMeta('liquidityPosition', accounts.liquidityPosition),
+      getAccountMeta('tradePosition', accounts.tradePosition),
       getAccountMeta('baseVault', accounts.baseVault),
       getAccountMeta('quoteVault', accounts.quoteVault),
       getAccountMeta('bookkeeping', accounts.bookkeeping),
+      getAccountMeta('futureExits', accounts.futureExits),
+      getAccountMeta('futurePrices', accounts.futurePrices),
       getAccountMeta('currentExits', accounts.currentExits),
       getAccountMeta('previousExits', accounts.previousExits),
       getAccountMeta('currentPrices', accounts.currentPrices),
@@ -521,22 +496,27 @@ export async function getAuthorityCloseLiquidityPositionInstructionAsync<
       getAccountMeta('associatedTokenProgram', accounts.associatedTokenProgram),
       getAccountMeta('systemProgram', accounts.systemProgram),
     ],
-    data: getAuthorityCloseLiquidityPositionInstructionDataEncoder().encode(
-      args as AuthorityCloseLiquidityPositionInstructionDataArgs,
+    data: getPublicCloseTradePositionInstructionDataEncoder().encode(
+      args as PublicCloseTradePositionInstructionDataArgs,
     ),
     programAddress,
-  } as AuthorityCloseLiquidityPositionInstruction<
+  } as PublicCloseTradePositionInstruction<
     TProgramAddress,
-    TAccountAuthority,
+    TAccountSigner,
+    TAccountPayer,
+    TAccountBaseReceiver,
+    TAccountQuoteReceiver,
     TAccountBaseMint,
     TAccountQuoteMint,
-    TAccountAuthorityBaseTokenAccount,
-    TAccountAuthorityQuoteTokenAccount,
+    TAccountReceiverBaseTokenAccount,
+    TAccountReceiverQuoteTokenAccount,
     TAccountMarket,
-    TAccountLiquidityPosition,
+    TAccountTradePosition,
     TAccountBaseVault,
     TAccountQuoteVault,
     TAccountBookkeeping,
+    TAccountFutureExits,
+    TAccountFuturePrices,
     TAccountCurrentExits,
     TAccountPreviousExits,
     TAccountCurrentPrices,
@@ -548,17 +528,22 @@ export async function getAuthorityCloseLiquidityPositionInstructionAsync<
   >)
 }
 
-export type AuthorityCloseLiquidityPositionInput<
-  TAccountAuthority extends string = string,
+export type PublicCloseTradePositionInput<
+  TAccountSigner extends string = string,
+  TAccountPayer extends string = string,
+  TAccountBaseReceiver extends string = string,
+  TAccountQuoteReceiver extends string = string,
   TAccountBaseMint extends string = string,
   TAccountQuoteMint extends string = string,
-  TAccountAuthorityBaseTokenAccount extends string = string,
-  TAccountAuthorityQuoteTokenAccount extends string = string,
+  TAccountReceiverBaseTokenAccount extends string = string,
+  TAccountReceiverQuoteTokenAccount extends string = string,
   TAccountMarket extends string = string,
-  TAccountLiquidityPosition extends string = string,
+  TAccountTradePosition extends string = string,
   TAccountBaseVault extends string = string,
   TAccountQuoteVault extends string = string,
   TAccountBookkeeping extends string = string,
+  TAccountFutureExits extends string = string,
+  TAccountFuturePrices extends string = string,
   TAccountCurrentExits extends string = string,
   TAccountPreviousExits extends string = string,
   TAccountCurrentPrices extends string = string,
@@ -568,16 +553,21 @@ export type AuthorityCloseLiquidityPositionInput<
   TAccountAssociatedTokenProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  authority: TransactionSigner<TAccountAuthority>
+  signer: TransactionSigner<TAccountSigner>
+  payer: Address<TAccountPayer>
+  baseReceiver: Address<TAccountBaseReceiver>
+  quoteReceiver: Address<TAccountQuoteReceiver>
   baseMint: Address<TAccountBaseMint>
   quoteMint: Address<TAccountQuoteMint>
-  authorityBaseTokenAccount: Address<TAccountAuthorityBaseTokenAccount>
-  authorityQuoteTokenAccount: Address<TAccountAuthorityQuoteTokenAccount>
+  receiverBaseTokenAccount: Address<TAccountReceiverBaseTokenAccount>
+  receiverQuoteTokenAccount: Address<TAccountReceiverQuoteTokenAccount>
   market: Address<TAccountMarket>
-  liquidityPosition: Address<TAccountLiquidityPosition>
+  tradePosition: Address<TAccountTradePosition>
   baseVault: Address<TAccountBaseVault>
   quoteVault: Address<TAccountQuoteVault>
   bookkeeping: Address<TAccountBookkeeping>
+  futureExits: Address<TAccountFutureExits>
+  futurePrices: Address<TAccountFuturePrices>
   currentExits: Address<TAccountCurrentExits>
   previousExits: Address<TAccountPreviousExits>
   currentPrices: Address<TAccountCurrentPrices>
@@ -586,20 +576,25 @@ export type AuthorityCloseLiquidityPositionInput<
   quoteTokenProgram: Address<TAccountQuoteTokenProgram>
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>
   systemProgram?: Address<TAccountSystemProgram>
-  referenceIndex: AuthorityCloseLiquidityPositionInstructionDataArgs['referenceIndex']
+  referenceIndex: PublicCloseTradePositionInstructionDataArgs['referenceIndex']
 }
 
-export function getAuthorityCloseLiquidityPositionInstruction<
-  TAccountAuthority extends string,
+export function getPublicCloseTradePositionInstruction<
+  TAccountSigner extends string,
+  TAccountPayer extends string,
+  TAccountBaseReceiver extends string,
+  TAccountQuoteReceiver extends string,
   TAccountBaseMint extends string,
   TAccountQuoteMint extends string,
-  TAccountAuthorityBaseTokenAccount extends string,
-  TAccountAuthorityQuoteTokenAccount extends string,
+  TAccountReceiverBaseTokenAccount extends string,
+  TAccountReceiverQuoteTokenAccount extends string,
   TAccountMarket extends string,
-  TAccountLiquidityPosition extends string,
+  TAccountTradePosition extends string,
   TAccountBaseVault extends string,
   TAccountQuoteVault extends string,
   TAccountBookkeeping extends string,
+  TAccountFutureExits extends string,
+  TAccountFuturePrices extends string,
   TAccountCurrentExits extends string,
   TAccountPreviousExits extends string,
   TAccountCurrentPrices extends string,
@@ -610,17 +605,22 @@ export function getAuthorityCloseLiquidityPositionInstruction<
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
-  input: AuthorityCloseLiquidityPositionInput<
-    TAccountAuthority,
+  input: PublicCloseTradePositionInput<
+    TAccountSigner,
+    TAccountPayer,
+    TAccountBaseReceiver,
+    TAccountQuoteReceiver,
     TAccountBaseMint,
     TAccountQuoteMint,
-    TAccountAuthorityBaseTokenAccount,
-    TAccountAuthorityQuoteTokenAccount,
+    TAccountReceiverBaseTokenAccount,
+    TAccountReceiverQuoteTokenAccount,
     TAccountMarket,
-    TAccountLiquidityPosition,
+    TAccountTradePosition,
     TAccountBaseVault,
     TAccountQuoteVault,
     TAccountBookkeeping,
+    TAccountFutureExits,
+    TAccountFuturePrices,
     TAccountCurrentExits,
     TAccountPreviousExits,
     TAccountCurrentPrices,
@@ -631,18 +631,23 @@ export function getAuthorityCloseLiquidityPositionInstruction<
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress },
-): AuthorityCloseLiquidityPositionInstruction<
+): PublicCloseTradePositionInstruction<
   TProgramAddress,
-  TAccountAuthority,
+  TAccountSigner,
+  TAccountPayer,
+  TAccountBaseReceiver,
+  TAccountQuoteReceiver,
   TAccountBaseMint,
   TAccountQuoteMint,
-  TAccountAuthorityBaseTokenAccount,
-  TAccountAuthorityQuoteTokenAccount,
+  TAccountReceiverBaseTokenAccount,
+  TAccountReceiverQuoteTokenAccount,
   TAccountMarket,
-  TAccountLiquidityPosition,
+  TAccountTradePosition,
   TAccountBaseVault,
   TAccountQuoteVault,
   TAccountBookkeeping,
+  TAccountFutureExits,
+  TAccountFuturePrices,
   TAccountCurrentExits,
   TAccountPreviousExits,
   TAccountCurrentPrices,
@@ -657,25 +662,27 @@ export function getAuthorityCloseLiquidityPositionInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    authority: { value: input.authority ?? null, isWritable: true },
+    signer: { value: input.signer ?? null, isWritable: true },
+    payer: { value: input.payer ?? null, isWritable: true },
+    baseReceiver: { value: input.baseReceiver ?? null, isWritable: true },
+    quoteReceiver: { value: input.quoteReceiver ?? null, isWritable: true },
     baseMint: { value: input.baseMint ?? null, isWritable: false },
     quoteMint: { value: input.quoteMint ?? null, isWritable: false },
-    authorityBaseTokenAccount: {
-      value: input.authorityBaseTokenAccount ?? null,
+    receiverBaseTokenAccount: {
+      value: input.receiverBaseTokenAccount ?? null,
       isWritable: true,
     },
-    authorityQuoteTokenAccount: {
-      value: input.authorityQuoteTokenAccount ?? null,
+    receiverQuoteTokenAccount: {
+      value: input.receiverQuoteTokenAccount ?? null,
       isWritable: true,
     },
     market: { value: input.market ?? null, isWritable: true },
-    liquidityPosition: {
-      value: input.liquidityPosition ?? null,
-      isWritable: true,
-    },
+    tradePosition: { value: input.tradePosition ?? null, isWritable: true },
     baseVault: { value: input.baseVault ?? null, isWritable: true },
     quoteVault: { value: input.quoteVault ?? null, isWritable: true },
     bookkeeping: { value: input.bookkeeping ?? null, isWritable: true },
+    futureExits: { value: input.futureExits ?? null, isWritable: true },
+    futurePrices: { value: input.futurePrices ?? null, isWritable: true },
     currentExits: { value: input.currentExits ?? null, isWritable: false },
     previousExits: { value: input.previousExits ?? null, isWritable: false },
     currentPrices: { value: input.currentPrices ?? null, isWritable: true },
@@ -715,22 +722,27 @@ export function getAuthorityCloseLiquidityPositionInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
-      getAccountMeta('authority', accounts.authority),
+      getAccountMeta('signer', accounts.signer),
+      getAccountMeta('payer', accounts.payer),
+      getAccountMeta('baseReceiver', accounts.baseReceiver),
+      getAccountMeta('quoteReceiver', accounts.quoteReceiver),
       getAccountMeta('baseMint', accounts.baseMint),
       getAccountMeta('quoteMint', accounts.quoteMint),
       getAccountMeta(
-        'authorityBaseTokenAccount',
-        accounts.authorityBaseTokenAccount,
+        'receiverBaseTokenAccount',
+        accounts.receiverBaseTokenAccount,
       ),
       getAccountMeta(
-        'authorityQuoteTokenAccount',
-        accounts.authorityQuoteTokenAccount,
+        'receiverQuoteTokenAccount',
+        accounts.receiverQuoteTokenAccount,
       ),
       getAccountMeta('market', accounts.market),
-      getAccountMeta('liquidityPosition', accounts.liquidityPosition),
+      getAccountMeta('tradePosition', accounts.tradePosition),
       getAccountMeta('baseVault', accounts.baseVault),
       getAccountMeta('quoteVault', accounts.quoteVault),
       getAccountMeta('bookkeeping', accounts.bookkeeping),
+      getAccountMeta('futureExits', accounts.futureExits),
+      getAccountMeta('futurePrices', accounts.futurePrices),
       getAccountMeta('currentExits', accounts.currentExits),
       getAccountMeta('previousExits', accounts.previousExits),
       getAccountMeta('currentPrices', accounts.currentPrices),
@@ -740,22 +752,27 @@ export function getAuthorityCloseLiquidityPositionInstruction<
       getAccountMeta('associatedTokenProgram', accounts.associatedTokenProgram),
       getAccountMeta('systemProgram', accounts.systemProgram),
     ],
-    data: getAuthorityCloseLiquidityPositionInstructionDataEncoder().encode(
-      args as AuthorityCloseLiquidityPositionInstructionDataArgs,
+    data: getPublicCloseTradePositionInstructionDataEncoder().encode(
+      args as PublicCloseTradePositionInstructionDataArgs,
     ),
     programAddress,
-  } as AuthorityCloseLiquidityPositionInstruction<
+  } as PublicCloseTradePositionInstruction<
     TProgramAddress,
-    TAccountAuthority,
+    TAccountSigner,
+    TAccountPayer,
+    TAccountBaseReceiver,
+    TAccountQuoteReceiver,
     TAccountBaseMint,
     TAccountQuoteMint,
-    TAccountAuthorityBaseTokenAccount,
-    TAccountAuthorityQuoteTokenAccount,
+    TAccountReceiverBaseTokenAccount,
+    TAccountReceiverQuoteTokenAccount,
     TAccountMarket,
-    TAccountLiquidityPosition,
+    TAccountTradePosition,
     TAccountBaseVault,
     TAccountQuoteVault,
     TAccountBookkeeping,
+    TAccountFutureExits,
+    TAccountFuturePrices,
     TAccountCurrentExits,
     TAccountPreviousExits,
     TAccountCurrentPrices,
@@ -767,48 +784,53 @@ export function getAuthorityCloseLiquidityPositionInstruction<
   >)
 }
 
-export type ParsedAuthorityCloseLiquidityPositionInstruction<
+export type ParsedPublicCloseTradePositionInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
   programAddress: Address<TProgram>
   accounts: {
-    authority: TAccountMetas[0]
-    baseMint: TAccountMetas[1]
-    quoteMint: TAccountMetas[2]
-    authorityBaseTokenAccount: TAccountMetas[3]
-    authorityQuoteTokenAccount: TAccountMetas[4]
-    market: TAccountMetas[5]
-    liquidityPosition: TAccountMetas[6]
-    baseVault: TAccountMetas[7]
-    quoteVault: TAccountMetas[8]
-    bookkeeping: TAccountMetas[9]
-    currentExits: TAccountMetas[10]
-    previousExits: TAccountMetas[11]
-    currentPrices: TAccountMetas[12]
-    previousPrices: TAccountMetas[13]
-    baseTokenProgram: TAccountMetas[14]
-    quoteTokenProgram: TAccountMetas[15]
-    associatedTokenProgram: TAccountMetas[16]
-    systemProgram: TAccountMetas[17]
+    signer: TAccountMetas[0]
+    payer: TAccountMetas[1]
+    baseReceiver: TAccountMetas[2]
+    quoteReceiver: TAccountMetas[3]
+    baseMint: TAccountMetas[4]
+    quoteMint: TAccountMetas[5]
+    receiverBaseTokenAccount: TAccountMetas[6]
+    receiverQuoteTokenAccount: TAccountMetas[7]
+    market: TAccountMetas[8]
+    tradePosition: TAccountMetas[9]
+    baseVault: TAccountMetas[10]
+    quoteVault: TAccountMetas[11]
+    bookkeeping: TAccountMetas[12]
+    futureExits: TAccountMetas[13]
+    futurePrices: TAccountMetas[14]
+    currentExits: TAccountMetas[15]
+    previousExits: TAccountMetas[16]
+    currentPrices: TAccountMetas[17]
+    previousPrices: TAccountMetas[18]
+    baseTokenProgram: TAccountMetas[19]
+    quoteTokenProgram: TAccountMetas[20]
+    associatedTokenProgram: TAccountMetas[21]
+    systemProgram: TAccountMetas[22]
   }
-  data: AuthorityCloseLiquidityPositionInstructionData
+  data: PublicCloseTradePositionInstructionData
 }
 
-export function parseAuthorityCloseLiquidityPositionInstruction<
+export function parsePublicCloseTradePositionInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
-): ParsedAuthorityCloseLiquidityPositionInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 18) {
+): ParsedPublicCloseTradePositionInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 23) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 18,
+        expectedAccountMetas: 23,
       },
     )
   }
@@ -821,16 +843,21 @@ export function parseAuthorityCloseLiquidityPositionInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      authority: getNextAccount(),
+      signer: getNextAccount(),
+      payer: getNextAccount(),
+      baseReceiver: getNextAccount(),
+      quoteReceiver: getNextAccount(),
       baseMint: getNextAccount(),
       quoteMint: getNextAccount(),
-      authorityBaseTokenAccount: getNextAccount(),
-      authorityQuoteTokenAccount: getNextAccount(),
+      receiverBaseTokenAccount: getNextAccount(),
+      receiverQuoteTokenAccount: getNextAccount(),
       market: getNextAccount(),
-      liquidityPosition: getNextAccount(),
+      tradePosition: getNextAccount(),
       baseVault: getNextAccount(),
       quoteVault: getNextAccount(),
       bookkeeping: getNextAccount(),
+      futureExits: getNextAccount(),
+      futurePrices: getNextAccount(),
       currentExits: getNextAccount(),
       previousExits: getNextAccount(),
       currentPrices: getNextAccount(),
@@ -840,7 +867,7 @@ export function parseAuthorityCloseLiquidityPositionInstruction<
       associatedTokenProgram: getNextAccount(),
       systemProgram: getNextAccount(),
     },
-    data: getAuthorityCloseLiquidityPositionInstructionDataDecoder().decode(
+    data: getPublicCloseTradePositionInstructionDataDecoder().decode(
       instruction.data,
     ),
   }

@@ -4,19 +4,24 @@ import {
   selectBatchClosePositions,
 } from './batch-close-positions'
 
-function position(address: string, endSlot: bigint) {
+function position(
+  address: string,
+  lastUpdateSlot: bigint,
+  remainingSlots: number,
+) {
   return {
     address,
     data: {
-      endSlot,
+      lastUpdateSlot,
+      remainingSlots,
     },
   }
 }
 
 describe('isEndedPosition', () => {
   it('requires the current slot to be larger than the end slot', () => {
-    const ended = position('ended', 9n)
-    const current = position('current', 10n)
+    const ended = position('ended', 5n, 4)
+    const current = position('current', 8n, 2)
 
     expect(isEndedPosition(ended, 10)).toBe(true)
     expect(isEndedPosition(current, 10)).toBe(false)
@@ -26,9 +31,9 @@ describe('isEndedPosition', () => {
 describe('selectBatchClosePositions', () => {
   it('selects ended positions only for the ended mode', () => {
     const positions = [
-      position('active', 20n),
-      position('ended-2', 8n),
-      position('ended-1', 7n),
+      position('active', 15n, 5),
+      position('ended-2', 5n, 3),
+      position('ended-1', 4n, 3),
     ]
 
     expect(
@@ -43,9 +48,9 @@ describe('selectBatchClosePositions', () => {
 
   it('caps all mode conservatively and keeps deterministic order', () => {
     const positions = [
-      position('third', 30n),
-      position('first', 10n),
-      position('second', 20n),
+      position('third', 25n, 5),
+      position('first', 5n, 5),
+      position('second', 15n, 5),
     ]
 
     expect(

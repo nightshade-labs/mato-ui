@@ -1,4 +1,4 @@
-const DEFAULT_SOLANA_RPC_ENDPOINT = 'https://api.mainnet.solana.com'
+const DEFAULT_SOLANA_RPC_ENDPOINT = 'https://api.devnet.solana.com'
 
 function normalizeEnvValue(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0
@@ -20,7 +20,9 @@ function firstDefined(
   values: Array<string | undefined>,
   fallback: string,
 ): string {
-  return values.find((value): value is string => value !== undefined) ?? fallback
+  return (
+    values.find((value): value is string => value !== undefined) ?? fallback
+  )
 }
 
 function toWebsocketEndpoint(endpoint: string) {

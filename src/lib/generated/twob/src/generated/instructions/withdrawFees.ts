@@ -54,7 +54,6 @@ export function getWithdrawFeesDiscriminatorBytes() {
 export type WithdrawFeesInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountAuthority extends string | AccountMeta<string> = string,
-  TAccountPayer extends string | AccountMeta<string> = string,
   TAccountProgramConfig extends string | AccountMeta<string> = string,
   TAccountBaseMint extends string | AccountMeta<string> = string,
   TAccountQuoteMint extends string | AccountMeta<string> = string,
@@ -80,10 +79,6 @@ export type WithdrawFeesInstruction<
         ? WritableSignerAccount<TAccountAuthority> &
             AccountSignerMeta<TAccountAuthority>
         : TAccountAuthority,
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            AccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
       TAccountProgramConfig extends string
         ? ReadonlyAccount<TAccountProgramConfig>
         : TAccountProgramConfig,
@@ -153,7 +148,6 @@ export function getWithdrawFeesInstructionDataCodec(): FixedSizeCodec<
 
 export type WithdrawFeesAsyncInput<
   TAccountAuthority extends string = string,
-  TAccountPayer extends string = string,
   TAccountProgramConfig extends string = string,
   TAccountBaseMint extends string = string,
   TAccountQuoteMint extends string = string,
@@ -168,7 +162,6 @@ export type WithdrawFeesAsyncInput<
   TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
-  payer: TransactionSigner<TAccountPayer>
   programConfig?: Address<TAccountProgramConfig>
   baseMint: Address<TAccountBaseMint>
   quoteMint: Address<TAccountQuoteMint>
@@ -185,7 +178,6 @@ export type WithdrawFeesAsyncInput<
 
 export async function getWithdrawFeesInstructionAsync<
   TAccountAuthority extends string,
-  TAccountPayer extends string,
   TAccountProgramConfig extends string,
   TAccountBaseMint extends string,
   TAccountQuoteMint extends string,
@@ -202,7 +194,6 @@ export async function getWithdrawFeesInstructionAsync<
 >(
   input: WithdrawFeesAsyncInput<
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
     TAccountBaseMint,
     TAccountQuoteMint,
@@ -221,7 +212,6 @@ export async function getWithdrawFeesInstructionAsync<
   WithdrawFeesInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
     TAccountBaseMint,
     TAccountQuoteMint,
@@ -242,7 +232,6 @@ export async function getWithdrawFeesInstructionAsync<
   // Original accounts.
   const originalAccounts = {
     authority: { value: input.authority ?? null, isWritable: true },
-    payer: { value: input.payer ?? null, isWritable: true },
     programConfig: { value: input.programConfig ?? null, isWritable: false },
     baseMint: { value: input.baseMint ?? null, isWritable: false },
     quoteMint: { value: input.quoteMint ?? null, isWritable: false },
@@ -354,7 +343,6 @@ export async function getWithdrawFeesInstructionAsync<
   return Object.freeze({
     accounts: [
       getAccountMeta('authority', accounts.authority),
-      getAccountMeta('payer', accounts.payer),
       getAccountMeta('programConfig', accounts.programConfig),
       getAccountMeta('baseMint', accounts.baseMint),
       getAccountMeta('quoteMint', accounts.quoteMint),
@@ -379,7 +367,6 @@ export async function getWithdrawFeesInstructionAsync<
   } as WithdrawFeesInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
     TAccountBaseMint,
     TAccountQuoteMint,
@@ -397,7 +384,6 @@ export async function getWithdrawFeesInstructionAsync<
 
 export type WithdrawFeesInput<
   TAccountAuthority extends string = string,
-  TAccountPayer extends string = string,
   TAccountProgramConfig extends string = string,
   TAccountBaseMint extends string = string,
   TAccountQuoteMint extends string = string,
@@ -412,7 +398,6 @@ export type WithdrawFeesInput<
   TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
-  payer: TransactionSigner<TAccountPayer>
   programConfig: Address<TAccountProgramConfig>
   baseMint: Address<TAccountBaseMint>
   quoteMint: Address<TAccountQuoteMint>
@@ -429,7 +414,6 @@ export type WithdrawFeesInput<
 
 export function getWithdrawFeesInstruction<
   TAccountAuthority extends string,
-  TAccountPayer extends string,
   TAccountProgramConfig extends string,
   TAccountBaseMint extends string,
   TAccountQuoteMint extends string,
@@ -446,7 +430,6 @@ export function getWithdrawFeesInstruction<
 >(
   input: WithdrawFeesInput<
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
     TAccountBaseMint,
     TAccountQuoteMint,
@@ -464,7 +447,6 @@ export function getWithdrawFeesInstruction<
 ): WithdrawFeesInstruction<
   TProgramAddress,
   TAccountAuthority,
-  TAccountPayer,
   TAccountProgramConfig,
   TAccountBaseMint,
   TAccountQuoteMint,
@@ -484,7 +466,6 @@ export function getWithdrawFeesInstruction<
   // Original accounts.
   const originalAccounts = {
     authority: { value: input.authority ?? null, isWritable: true },
-    payer: { value: input.payer ?? null, isWritable: true },
     programConfig: { value: input.programConfig ?? null, isWritable: false },
     baseMint: { value: input.baseMint ?? null, isWritable: false },
     quoteMint: { value: input.quoteMint ?? null, isWritable: false },
@@ -532,7 +513,6 @@ export function getWithdrawFeesInstruction<
   return Object.freeze({
     accounts: [
       getAccountMeta('authority', accounts.authority),
-      getAccountMeta('payer', accounts.payer),
       getAccountMeta('programConfig', accounts.programConfig),
       getAccountMeta('baseMint', accounts.baseMint),
       getAccountMeta('quoteMint', accounts.quoteMint),
@@ -557,7 +537,6 @@ export function getWithdrawFeesInstruction<
   } as WithdrawFeesInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountPayer,
     TAccountProgramConfig,
     TAccountBaseMint,
     TAccountQuoteMint,
@@ -580,19 +559,18 @@ export type ParsedWithdrawFeesInstruction<
   programAddress: Address<TProgram>
   accounts: {
     authority: TAccountMetas[0]
-    payer: TAccountMetas[1]
-    programConfig: TAccountMetas[2]
-    baseMint: TAccountMetas[3]
-    quoteMint: TAccountMetas[4]
-    market: TAccountMetas[5]
-    baseVault: TAccountMetas[6]
-    quoteVault: TAccountMetas[7]
-    baseDestinationTokenAccount: TAccountMetas[8]
-    quoteDestinationTokenAccount: TAccountMetas[9]
-    baseTokenProgram: TAccountMetas[10]
-    quoteTokenProgram: TAccountMetas[11]
-    associatedTokenProgram: TAccountMetas[12]
-    systemProgram: TAccountMetas[13]
+    programConfig: TAccountMetas[1]
+    baseMint: TAccountMetas[2]
+    quoteMint: TAccountMetas[3]
+    market: TAccountMetas[4]
+    baseVault: TAccountMetas[5]
+    quoteVault: TAccountMetas[6]
+    baseDestinationTokenAccount: TAccountMetas[7]
+    quoteDestinationTokenAccount: TAccountMetas[8]
+    baseTokenProgram: TAccountMetas[9]
+    quoteTokenProgram: TAccountMetas[10]
+    associatedTokenProgram: TAccountMetas[11]
+    systemProgram: TAccountMetas[12]
   }
   data: WithdrawFeesInstructionData
 }
@@ -605,12 +583,12 @@ export function parseWithdrawFeesInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedWithdrawFeesInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 14) {
+  if (instruction.accounts.length < 13) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 14,
+        expectedAccountMetas: 13,
       },
     )
   }
@@ -624,7 +602,6 @@ export function parseWithdrawFeesInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       authority: getNextAccount(),
-      payer: getNextAccount(),
       programConfig: getNextAccount(),
       baseMint: getNextAccount(),
       quoteMint: getNextAccount(),

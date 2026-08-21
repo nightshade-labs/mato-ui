@@ -19,21 +19,29 @@ import {
   getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
+  getOptionDecoder,
+  getOptionEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU32Decoder,
+  getU32Encoder,
+  getU64Decoder,
+  getU64Encoder,
   getU8Decoder,
   getU8Encoder,
   transformEncoder,
   type Account,
   type Address,
+  type Codec,
+  type Decoder,
   type EncodedAccount,
+  type Encoder,
   type FetchAccountConfig,
   type FetchAccountsConfig,
-  type FixedSizeCodec,
-  type FixedSizeDecoder,
-  type FixedSizeEncoder,
   type MaybeAccount,
   type MaybeEncodedAccount,
+  type Option,
+  type OptionOrNullable,
   type ReadonlyUint8Array,
 } from '@solana/kit'
 
@@ -49,40 +57,64 @@ export function getProgramConfigDiscriminatorBytes() {
 
 export type ProgramConfig = {
   discriminator: ReadonlyUint8Array
-  /** The authority which can create and close market and use special instructions */
+  /** The authority can call admin instruction */
   authority: Address
+  /** Two step authority change: 1. Nominate pending authority, 2. Accept authority */
+  pendingAuthority: Option<Address>
+  /** Slot at which nomination was made */
+  pendingAuthoritySlot: Option<bigint>
+  /** Required cooldown before accept */
+  authorityTransferDelaySlots: number
   bump: number
+  /** Reserved for future fields */
+  reserved: ReadonlyUint8Array
 }
 
 export type ProgramConfigArgs = {
-  /** The authority which can create and close market and use special instructions */
+  /** The authority can call admin instruction */
   authority: Address
+  /** Two step authority change: 1. Nominate pending authority, 2. Accept authority */
+  pendingAuthority: OptionOrNullable<Address>
+  /** Slot at which nomination was made */
+  pendingAuthoritySlot: OptionOrNullable<number | bigint>
+  /** Required cooldown before accept */
+  authorityTransferDelaySlots: number
   bump: number
+  /** Reserved for future fields */
+  reserved: ReadonlyUint8Array
 }
 
 /** Gets the encoder for {@link ProgramConfigArgs} account data. */
-export function getProgramConfigEncoder(): FixedSizeEncoder<ProgramConfigArgs> {
+export function getProgramConfigEncoder(): Encoder<ProgramConfigArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['authority', getAddressEncoder()],
+      ['pendingAuthority', getOptionEncoder(getAddressEncoder())],
+      ['pendingAuthoritySlot', getOptionEncoder(getU64Encoder())],
+      ['authorityTransferDelaySlots', getU32Encoder()],
       ['bump', getU8Encoder()],
+      ['reserved', fixEncoderSize(getBytesEncoder(), 64)],
     ]),
     (value) => ({ ...value, discriminator: PROGRAM_CONFIG_DISCRIMINATOR }),
   )
 }
 
 /** Gets the decoder for {@link ProgramConfig} account data. */
-export function getProgramConfigDecoder(): FixedSizeDecoder<ProgramConfig> {
+export function getProgramConfigDecoder(): Decoder<ProgramConfig> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['authority', getAddressDecoder()],
+    ['pendingAuthority', getOptionDecoder(getAddressDecoder())],
+    ['pendingAuthoritySlot', getOptionDecoder(getU64Decoder())],
+    ['authorityTransferDelaySlots', getU32Decoder()],
     ['bump', getU8Decoder()],
+    ['reserved', fixDecoderSize(getBytesDecoder(), 64)],
   ])
 }
 
 /** Gets the codec for {@link ProgramConfig} account data. */
-export function getProgramConfigCodec(): FixedSizeCodec<
+export function getProgramConfigCodec(): Codec<
   ProgramConfigArgs,
   ProgramConfig
 > {
@@ -140,8 +172,4 @@ export async function fetchAllMaybeProgramConfig(
 ): Promise<MaybeAccount<ProgramConfig>[]> {
   const maybeAccounts = await fetchEncodedAccounts(rpc, addresses, config)
   return maybeAccounts.map((maybeAccount) => decodeProgramConfig(maybeAccount))
-}
-
-export function getProgramConfigSize(): number {
-  return 41
 }

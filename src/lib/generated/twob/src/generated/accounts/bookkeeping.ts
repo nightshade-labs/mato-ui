@@ -21,6 +21,8 @@ import {
   getStructEncoder,
   getU128Decoder,
   getU128Encoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   getU8Decoder,
@@ -54,21 +56,30 @@ export type Bookkeeping = {
    * per slot multiplied by BOOKKEEPING_PRECISION_FACTOR
    */
   basePerQuote: bigint
-  /** Older snapshot to calculate average price */
+  /** Staged snapshot, becomes the start of the average price window on the next roll */
   previousBasePerQuote: bigint
+  /** Snapshot at the start of the average price window */
+  windowBasePerQuote: bigint
   /**
    * Defines how many quote token atoms are exchanged per base token atom
    * per slot multiplied by BOOKKEEPING_PRECISION_FACTOR
    */
   quotePerBase: bigint
-  /** Older snapshot to calculate average price */
+  /** Staged snapshot, becomes the start of the average price window on the next roll */
   previousQuotePerBase: bigint
+  /** Snapshot at the start of the average price window */
+  windowQuotePerBase: bigint
   /** Slots without trades since market start and last_update_slot */
-  slotsWithoutTrade: bigint
+  slotsWithoutTrade: number
   /** Slot when Bookkeeping was last updated */
   lastUpdateSlot: bigint
   /** Slot when previous base/quote ratio was determined */
   previousUpdateSlot: bigint
+  /**
+   * Slot the average price window starts at, always at least MIN_AVERAGE_PRICE_INTERVAL
+   * slots before last_update_slot
+   */
+  windowStartSlot: bigint
   bump: number
 }
 
@@ -78,21 +89,30 @@ export type BookkeepingArgs = {
    * per slot multiplied by BOOKKEEPING_PRECISION_FACTOR
    */
   basePerQuote: number | bigint
-  /** Older snapshot to calculate average price */
+  /** Staged snapshot, becomes the start of the average price window on the next roll */
   previousBasePerQuote: number | bigint
+  /** Snapshot at the start of the average price window */
+  windowBasePerQuote: number | bigint
   /**
    * Defines how many quote token atoms are exchanged per base token atom
    * per slot multiplied by BOOKKEEPING_PRECISION_FACTOR
    */
   quotePerBase: number | bigint
-  /** Older snapshot to calculate average price */
+  /** Staged snapshot, becomes the start of the average price window on the next roll */
   previousQuotePerBase: number | bigint
+  /** Snapshot at the start of the average price window */
+  windowQuotePerBase: number | bigint
   /** Slots without trades since market start and last_update_slot */
-  slotsWithoutTrade: number | bigint
+  slotsWithoutTrade: number
   /** Slot when Bookkeeping was last updated */
   lastUpdateSlot: number | bigint
   /** Slot when previous base/quote ratio was determined */
   previousUpdateSlot: number | bigint
+  /**
+   * Slot the average price window starts at, always at least MIN_AVERAGE_PRICE_INTERVAL
+   * slots before last_update_slot
+   */
+  windowStartSlot: number | bigint
   bump: number
 }
 
@@ -103,11 +123,14 @@ export function getBookkeepingEncoder(): FixedSizeEncoder<BookkeepingArgs> {
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['basePerQuote', getU128Encoder()],
       ['previousBasePerQuote', getU128Encoder()],
+      ['windowBasePerQuote', getU128Encoder()],
       ['quotePerBase', getU128Encoder()],
       ['previousQuotePerBase', getU128Encoder()],
-      ['slotsWithoutTrade', getU64Encoder()],
+      ['windowQuotePerBase', getU128Encoder()],
+      ['slotsWithoutTrade', getU32Encoder()],
       ['lastUpdateSlot', getU64Encoder()],
       ['previousUpdateSlot', getU64Encoder()],
+      ['windowStartSlot', getU64Encoder()],
       ['bump', getU8Encoder()],
     ]),
     (value) => ({ ...value, discriminator: BOOKKEEPING_DISCRIMINATOR }),
@@ -120,11 +143,14 @@ export function getBookkeepingDecoder(): FixedSizeDecoder<Bookkeeping> {
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['basePerQuote', getU128Decoder()],
     ['previousBasePerQuote', getU128Decoder()],
+    ['windowBasePerQuote', getU128Decoder()],
     ['quotePerBase', getU128Decoder()],
     ['previousQuotePerBase', getU128Decoder()],
-    ['slotsWithoutTrade', getU64Decoder()],
+    ['windowQuotePerBase', getU128Decoder()],
+    ['slotsWithoutTrade', getU32Decoder()],
     ['lastUpdateSlot', getU64Decoder()],
     ['previousUpdateSlot', getU64Decoder()],
+    ['windowStartSlot', getU64Decoder()],
     ['bump', getU8Decoder()],
   ])
 }
@@ -191,5 +217,5 @@ export async function fetchAllMaybeBookkeeping(
 }
 
 export function getBookkeepingSize(): number {
-  return 97
+  return 133
 }

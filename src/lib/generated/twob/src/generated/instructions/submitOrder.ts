@@ -16,6 +16,8 @@ import {
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
@@ -55,6 +57,10 @@ export function getSubmitOrderDiscriminatorBytes() {
 export type SubmitOrderInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountAuthority extends string | AccountMeta<string> = string,
+  TAccountPayer extends string | AccountMeta<string> = string,
+  TAccountOperator extends string | AccountMeta<string> = string,
+  TAccountBaseReceiver extends string | AccountMeta<string> = string,
+  TAccountQuoteReceiver extends string | AccountMeta<string> = string,
   TAccountAuthorityAta extends string | AccountMeta<string> = string,
   TAccountMint extends string | AccountMeta<string> = string,
   TAccountMarket extends string | AccountMeta<string> = string,
@@ -82,6 +88,19 @@ export type SubmitOrderInstruction<
         ? WritableSignerAccount<TAccountAuthority> &
             AccountSignerMeta<TAccountAuthority>
         : TAccountAuthority,
+      TAccountPayer extends string
+        ? WritableSignerAccount<TAccountPayer> &
+            AccountSignerMeta<TAccountPayer>
+        : TAccountPayer,
+      TAccountOperator extends string
+        ? ReadonlyAccount<TAccountOperator>
+        : TAccountOperator,
+      TAccountBaseReceiver extends string
+        ? ReadonlyAccount<TAccountBaseReceiver>
+        : TAccountBaseReceiver,
+      TAccountQuoteReceiver extends string
+        ? ReadonlyAccount<TAccountQuoteReceiver>
+        : TAccountQuoteReceiver,
       TAccountAuthorityAta extends string
         ? WritableAccount<TAccountAuthorityAta>
         : TAccountAuthorityAta,
@@ -133,30 +152,30 @@ export type SubmitOrderInstruction<
 
 export type SubmitOrderInstructionData = {
   discriminator: ReadonlyUint8Array
-  id: bigint
+  id: number
   futureIndex: bigint
   referenceIndex: bigint
   amount: bigint
-  endSlot: bigint
+  duration: number
 }
 
 export type SubmitOrderInstructionDataArgs = {
-  id: number | bigint
+  id: number
   futureIndex: number | bigint
   referenceIndex: number | bigint
   amount: number | bigint
-  endSlot: number | bigint
+  duration: number
 }
 
 export function getSubmitOrderInstructionDataEncoder(): FixedSizeEncoder<SubmitOrderInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['id', getU64Encoder()],
+      ['id', getU32Encoder()],
       ['futureIndex', getU64Encoder()],
       ['referenceIndex', getU64Encoder()],
       ['amount', getU64Encoder()],
-      ['endSlot', getU64Encoder()],
+      ['duration', getU32Encoder()],
     ]),
     (value) => ({ ...value, discriminator: SUBMIT_ORDER_DISCRIMINATOR }),
   )
@@ -165,11 +184,11 @@ export function getSubmitOrderInstructionDataEncoder(): FixedSizeEncoder<SubmitO
 export function getSubmitOrderInstructionDataDecoder(): FixedSizeDecoder<SubmitOrderInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['id', getU64Decoder()],
+    ['id', getU32Decoder()],
     ['futureIndex', getU64Decoder()],
     ['referenceIndex', getU64Decoder()],
     ['amount', getU64Decoder()],
-    ['endSlot', getU64Decoder()],
+    ['duration', getU32Decoder()],
   ])
 }
 
@@ -185,6 +204,10 @@ export function getSubmitOrderInstructionDataCodec(): FixedSizeCodec<
 
 export type SubmitOrderAsyncInput<
   TAccountAuthority extends string = string,
+  TAccountPayer extends string = string,
+  TAccountOperator extends string = string,
+  TAccountBaseReceiver extends string = string,
+  TAccountQuoteReceiver extends string = string,
   TAccountAuthorityAta extends string = string,
   TAccountMint extends string = string,
   TAccountMarket extends string = string,
@@ -202,6 +225,10 @@ export type SubmitOrderAsyncInput<
   TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
+  payer: TransactionSigner<TAccountPayer>
+  operator: Address<TAccountOperator>
+  baseReceiver: Address<TAccountBaseReceiver>
+  quoteReceiver: Address<TAccountQuoteReceiver>
   authorityAta?: Address<TAccountAuthorityAta>
   mint: Address<TAccountMint>
   market: Address<TAccountMarket>
@@ -221,11 +248,15 @@ export type SubmitOrderAsyncInput<
   futureIndex: SubmitOrderInstructionDataArgs['futureIndex']
   referenceIndex: SubmitOrderInstructionDataArgs['referenceIndex']
   amount: SubmitOrderInstructionDataArgs['amount']
-  endSlot: SubmitOrderInstructionDataArgs['endSlot']
+  duration: SubmitOrderInstructionDataArgs['duration']
 }
 
 export async function getSubmitOrderInstructionAsync<
   TAccountAuthority extends string,
+  TAccountPayer extends string,
+  TAccountOperator extends string,
+  TAccountBaseReceiver extends string,
+  TAccountQuoteReceiver extends string,
   TAccountAuthorityAta extends string,
   TAccountMint extends string,
   TAccountMarket extends string,
@@ -245,6 +276,10 @@ export async function getSubmitOrderInstructionAsync<
 >(
   input: SubmitOrderAsyncInput<
     TAccountAuthority,
+    TAccountPayer,
+    TAccountOperator,
+    TAccountBaseReceiver,
+    TAccountQuoteReceiver,
     TAccountAuthorityAta,
     TAccountMint,
     TAccountMarket,
@@ -266,6 +301,10 @@ export async function getSubmitOrderInstructionAsync<
   SubmitOrderInstruction<
     TProgramAddress,
     TAccountAuthority,
+    TAccountPayer,
+    TAccountOperator,
+    TAccountBaseReceiver,
+    TAccountQuoteReceiver,
     TAccountAuthorityAta,
     TAccountMint,
     TAccountMarket,
@@ -289,6 +328,10 @@ export async function getSubmitOrderInstructionAsync<
   // Original accounts.
   const originalAccounts = {
     authority: { value: input.authority ?? null, isWritable: true },
+    payer: { value: input.payer ?? null, isWritable: true },
+    operator: { value: input.operator ?? null, isWritable: false },
+    baseReceiver: { value: input.baseReceiver ?? null, isWritable: false },
+    quoteReceiver: { value: input.quoteReceiver ?? null, isWritable: false },
     authorityAta: { value: input.authorityAta ?? null, isWritable: true },
     mint: { value: input.mint ?? null, isWritable: false },
     market: { value: input.market ?? null, isWritable: true },
@@ -365,7 +408,7 @@ export async function getSubmitOrderInstructionAsync<
             accounts.authority.value,
           ),
         ),
-        getU64Encoder().encode(
+        getU32Encoder().encode(
           getNonNullResolvedInstructionInput('id', args.id),
         ),
       ],
@@ -459,6 +502,10 @@ export async function getSubmitOrderInstructionAsync<
   return Object.freeze({
     accounts: [
       getAccountMeta('authority', accounts.authority),
+      getAccountMeta('payer', accounts.payer),
+      getAccountMeta('operator', accounts.operator),
+      getAccountMeta('baseReceiver', accounts.baseReceiver),
+      getAccountMeta('quoteReceiver', accounts.quoteReceiver),
       getAccountMeta('authorityAta', accounts.authorityAta),
       getAccountMeta('mint', accounts.mint),
       getAccountMeta('market', accounts.market),
@@ -482,6 +529,10 @@ export async function getSubmitOrderInstructionAsync<
   } as SubmitOrderInstruction<
     TProgramAddress,
     TAccountAuthority,
+    TAccountPayer,
+    TAccountOperator,
+    TAccountBaseReceiver,
+    TAccountQuoteReceiver,
     TAccountAuthorityAta,
     TAccountMint,
     TAccountMarket,
@@ -502,6 +553,10 @@ export async function getSubmitOrderInstructionAsync<
 
 export type SubmitOrderInput<
   TAccountAuthority extends string = string,
+  TAccountPayer extends string = string,
+  TAccountOperator extends string = string,
+  TAccountBaseReceiver extends string = string,
+  TAccountQuoteReceiver extends string = string,
   TAccountAuthorityAta extends string = string,
   TAccountMint extends string = string,
   TAccountMarket extends string = string,
@@ -519,6 +574,10 @@ export type SubmitOrderInput<
   TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
+  payer: TransactionSigner<TAccountPayer>
+  operator: Address<TAccountOperator>
+  baseReceiver: Address<TAccountBaseReceiver>
+  quoteReceiver: Address<TAccountQuoteReceiver>
   authorityAta: Address<TAccountAuthorityAta>
   mint: Address<TAccountMint>
   market: Address<TAccountMarket>
@@ -538,11 +597,15 @@ export type SubmitOrderInput<
   futureIndex: SubmitOrderInstructionDataArgs['futureIndex']
   referenceIndex: SubmitOrderInstructionDataArgs['referenceIndex']
   amount: SubmitOrderInstructionDataArgs['amount']
-  endSlot: SubmitOrderInstructionDataArgs['endSlot']
+  duration: SubmitOrderInstructionDataArgs['duration']
 }
 
 export function getSubmitOrderInstruction<
   TAccountAuthority extends string,
+  TAccountPayer extends string,
+  TAccountOperator extends string,
+  TAccountBaseReceiver extends string,
+  TAccountQuoteReceiver extends string,
   TAccountAuthorityAta extends string,
   TAccountMint extends string,
   TAccountMarket extends string,
@@ -562,6 +625,10 @@ export function getSubmitOrderInstruction<
 >(
   input: SubmitOrderInput<
     TAccountAuthority,
+    TAccountPayer,
+    TAccountOperator,
+    TAccountBaseReceiver,
+    TAccountQuoteReceiver,
     TAccountAuthorityAta,
     TAccountMint,
     TAccountMarket,
@@ -582,6 +649,10 @@ export function getSubmitOrderInstruction<
 ): SubmitOrderInstruction<
   TProgramAddress,
   TAccountAuthority,
+  TAccountPayer,
+  TAccountOperator,
+  TAccountBaseReceiver,
+  TAccountQuoteReceiver,
   TAccountAuthorityAta,
   TAccountMint,
   TAccountMarket,
@@ -604,6 +675,10 @@ export function getSubmitOrderInstruction<
   // Original accounts.
   const originalAccounts = {
     authority: { value: input.authority ?? null, isWritable: true },
+    payer: { value: input.payer ?? null, isWritable: true },
+    operator: { value: input.operator ?? null, isWritable: false },
+    baseReceiver: { value: input.baseReceiver ?? null, isWritable: false },
+    quoteReceiver: { value: input.quoteReceiver ?? null, isWritable: false },
     authorityAta: { value: input.authorityAta ?? null, isWritable: true },
     mint: { value: input.mint ?? null, isWritable: false },
     market: { value: input.market ?? null, isWritable: true },
@@ -649,6 +724,10 @@ export function getSubmitOrderInstruction<
   return Object.freeze({
     accounts: [
       getAccountMeta('authority', accounts.authority),
+      getAccountMeta('payer', accounts.payer),
+      getAccountMeta('operator', accounts.operator),
+      getAccountMeta('baseReceiver', accounts.baseReceiver),
+      getAccountMeta('quoteReceiver', accounts.quoteReceiver),
       getAccountMeta('authorityAta', accounts.authorityAta),
       getAccountMeta('mint', accounts.mint),
       getAccountMeta('market', accounts.market),
@@ -672,6 +751,10 @@ export function getSubmitOrderInstruction<
   } as SubmitOrderInstruction<
     TProgramAddress,
     TAccountAuthority,
+    TAccountPayer,
+    TAccountOperator,
+    TAccountBaseReceiver,
+    TAccountQuoteReceiver,
     TAccountAuthorityAta,
     TAccountMint,
     TAccountMarket,
@@ -697,21 +780,25 @@ export type ParsedSubmitOrderInstruction<
   programAddress: Address<TProgram>
   accounts: {
     authority: TAccountMetas[0]
-    authorityAta: TAccountMetas[1]
-    mint: TAccountMetas[2]
-    market: TAccountMetas[3]
-    tradePosition: TAccountMetas[4]
-    vault: TAccountMetas[5]
-    bookkeeping: TAccountMetas[6]
-    currentExits: TAccountMetas[7]
-    previousExits: TAccountMetas[8]
-    currentPrices: TAccountMetas[9]
-    previousPrices: TAccountMetas[10]
-    futureExits: TAccountMetas[11]
-    futurePrices: TAccountMetas[12]
-    tokenProgram: TAccountMetas[13]
-    associatedTokenProgram: TAccountMetas[14]
-    systemProgram: TAccountMetas[15]
+    payer: TAccountMetas[1]
+    operator: TAccountMetas[2]
+    baseReceiver: TAccountMetas[3]
+    quoteReceiver: TAccountMetas[4]
+    authorityAta: TAccountMetas[5]
+    mint: TAccountMetas[6]
+    market: TAccountMetas[7]
+    tradePosition: TAccountMetas[8]
+    vault: TAccountMetas[9]
+    bookkeeping: TAccountMetas[10]
+    currentExits: TAccountMetas[11]
+    previousExits: TAccountMetas[12]
+    currentPrices: TAccountMetas[13]
+    previousPrices: TAccountMetas[14]
+    futureExits: TAccountMetas[15]
+    futurePrices: TAccountMetas[16]
+    tokenProgram: TAccountMetas[17]
+    associatedTokenProgram: TAccountMetas[18]
+    systemProgram: TAccountMetas[19]
   }
   data: SubmitOrderInstructionData
 }
@@ -724,12 +811,12 @@ export function parseSubmitOrderInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedSubmitOrderInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 16) {
+  if (instruction.accounts.length < 20) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 16,
+        expectedAccountMetas: 20,
       },
     )
   }
@@ -743,6 +830,10 @@ export function parseSubmitOrderInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       authority: getNextAccount(),
+      payer: getNextAccount(),
+      operator: getNextAccount(),
+      baseReceiver: getNextAccount(),
+      quoteReceiver: getNextAccount(),
       authorityAta: getNextAccount(),
       mint: getNextAccount(),
       market: getNextAccount(),

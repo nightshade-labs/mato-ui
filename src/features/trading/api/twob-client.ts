@@ -8,13 +8,13 @@ import {
   normalizeSignature,
 } from '@solana/client'
 import {
-  AccountRole,
   appendTransactionMessageInstructions,
   createTransactionMessage,
   getAddressEncoder,
   getBase58Decoder,
   getBytesEncoder,
   getProgramDerivedAddress,
+  getU32Encoder,
   getU64Encoder,
   isTransactionMessageWithSingleSendingSigner,
   pipe,
@@ -29,14 +29,15 @@ import {
 } from '../constants'
 import { encodeBase58 } from '../lib/base58'
 import { decodeBase64 } from '../lib/bytes'
-import { collectCloseableRentAccounts } from '../lib/rent'
+import { collectCloseableRentAccountPairs } from '../lib/rent'
+import { getTradePositionEndSlot } from '../lib/trade-position'
 import {
   fetchOwnedExitsAccounts,
   fetchOwnedPricesAccounts,
 } from './rent-accounts'
 import type { SolanaClient, WalletSession } from '@solana/client'
 import type { UseSendTransactionReturnType } from '@solana/react-hooks'
-import type { Address, Instruction } from '@solana/kit'
+import type { Address } from '@solana/kit'
 import type {
   StreamingMarketState,
   TradePositionRecord,
@@ -51,18 +52,15 @@ import {
   getTradePositionDiscriminatorBytes,
 } from '@/lib/generated/twob/src/generated/accounts'
 import {
-  getAuthorityClosePositionInstructionAsync,
+  getAuthorityCloseTradePositionInstructionAsync,
+  getCloseExitsAndPricesAccountInstructionAsync,
   getSubmitOrderInstructionAsync,
 } from '@/lib/generated/twob/src/generated/instructions'
-import { getCloseExitsAccountInstructionDataEncoder } from '@/lib/generated/twob/src/generated/instructions/closeExitsAccount'
-import { getClosePricesAccountInstructionDataEncoder } from '@/lib/generated/twob/src/generated/instructions/closePricesAccount'
 import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '@/lib/generated/twob/src/generated/programs'
 
 const textEncoder = new TextEncoder()
 const BOOKKEEPING_DELAY_SLOTS = 20
 const SIGNATURE_POLL_INTERVAL_MS = 1_000
-const SYSTEM_PROGRAM_ADDRESS =
-  '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
 
 export type TwobRpcClient = SolanaClient['runtime']['rpc']
 
@@ -115,96 +113,10 @@ async function waitForConfirmedSignature(
   throw new Error('Transaction confirmation timed out.')
 }
 
-function buildCloseExitsAccountInstruction({
-  bookkeepingAddress,
-  currentExits,
-  currentPrices,
-  exitsAddress,
-  marketAddress,
-  ownerAddress,
-  previousExits,
-  previousPrices,
-  referenceIndex,
-  signerAddress,
-}: {
-  bookkeepingAddress: Address
-  currentExits: Address
-  currentPrices: Address
-  exitsAddress: Address
-  marketAddress: Address
-  ownerAddress: Address
-  previousExits: Address
-  previousPrices: Address
-  referenceIndex: bigint
-  signerAddress: Address
-}): Instruction {
-  return Object.freeze({
-    accounts: [
-      { address: signerAddress, role: AccountRole.WRITABLE_SIGNER },
-      { address: ownerAddress, role: AccountRole.WRITABLE },
-      { address: exitsAddress, role: AccountRole.WRITABLE },
-      { address: marketAddress, role: AccountRole.WRITABLE },
-      { address: bookkeepingAddress, role: AccountRole.WRITABLE },
-      { address: currentExits, role: AccountRole.READONLY },
-      { address: previousExits, role: AccountRole.READONLY },
-      { address: currentPrices, role: AccountRole.WRITABLE },
-      { address: previousPrices, role: AccountRole.WRITABLE },
-      { address: SYSTEM_PROGRAM_ADDRESS, role: AccountRole.READONLY },
-    ],
-    data: getCloseExitsAccountInstructionDataEncoder().encode({
-      referenceIndex,
-    }),
-    programAddress: TWOB_ANCHOR_PROGRAM_ADDRESS,
-  })
-}
-
-function buildClosePricesAccountInstruction({
-  bookkeepingAddress,
-  currentExits,
-  currentPrices,
-  marketAddress,
-  ownerAddress,
-  previousExits,
-  previousPrices,
-  pricesAddress,
-  referenceIndex,
-  signerAddress,
-}: {
-  bookkeepingAddress: Address
-  currentExits: Address
-  currentPrices: Address
-  marketAddress: Address
-  ownerAddress: Address
-  previousExits: Address
-  previousPrices: Address
-  pricesAddress: Address
-  referenceIndex: bigint
-  signerAddress: Address
-}): Instruction {
-  return Object.freeze({
-    accounts: [
-      { address: signerAddress, role: AccountRole.WRITABLE_SIGNER },
-      { address: ownerAddress, role: AccountRole.WRITABLE },
-      { address: pricesAddress, role: AccountRole.WRITABLE },
-      { address: marketAddress, role: AccountRole.WRITABLE },
-      { address: bookkeepingAddress, role: AccountRole.WRITABLE },
-      { address: currentExits, role: AccountRole.READONLY },
-      { address: previousExits, role: AccountRole.READONLY },
-      { address: currentPrices, role: AccountRole.WRITABLE },
-      { address: previousPrices, role: AccountRole.WRITABLE },
-      { address: SYSTEM_PROGRAM_ADDRESS, role: AccountRole.READONLY },
-    ],
-    data: getClosePricesAccountInstructionDataEncoder().encode({
-      referenceIndex,
-    }),
-    programAddress: TWOB_ANCHOR_PROGRAM_ADDRESS,
-  })
-}
-
-export async function deriveMarketAddress(marketId: bigint | number) {
+export async function deriveMarketAddress(marketId: number) {
   const [address] = await getProgramDerivedAddress({
     programAddress: TWOB_ANCHOR_PROGRAM_ADDRESS,
-    seeds: [seed('market'), getU64Encoder().encode(BigInt(marketId))],
+    seeds: [seed('market'), getU32Encoder().encode(marketId)],
   })
   return address
 }
@@ -249,12 +161,15 @@ export async function derivePricesAddress(
 
 export function getReferenceIndex(
   currentSlot: number,
-  endSlotInterval: bigint,
+  endSlotInterval: bigint | number,
 ) {
   return BigInt(
-    Math.floor(
-      (currentSlot + BOOKKEEPING_DELAY_SLOTS) /
-        (ARRAY_LENGTH * Number(endSlotInterval)),
+    Math.max(
+      1,
+      Math.floor(
+        (currentSlot + BOOKKEEPING_DELAY_SLOTS) /
+          (ARRAY_LENGTH * Number(endSlotInterval)),
+      ),
     ),
   )
 }
@@ -263,14 +178,17 @@ export function getPreviousIndex(referenceIndex: bigint) {
   return referenceIndex - 1n
 }
 
-export function getFutureIndex(endSlot: bigint, endSlotInterval: bigint) {
-  return endSlot / BigInt(ARRAY_LENGTH) / endSlotInterval
+export function getFutureIndex(
+  endSlot: bigint,
+  endSlotInterval: bigint | number,
+) {
+  return endSlot / BigInt(ARRAY_LENGTH) / BigInt(endSlotInterval)
 }
 
 export function alignEndSlot(
   currentSlot: number,
   durationSlots: number,
-  endSlotInterval: bigint,
+  endSlotInterval: bigint | number,
 ) {
   const interval = Number(endSlotInterval)
   return BigInt(
@@ -317,8 +235,9 @@ export async function fetchStreamingMarketState(
 export async function fetchTradePositions(
   rpcClient: TwobRpcClient,
   authority: string,
+  marketId: number,
 ): Promise<Array<TradePositionRecord>> {
-  return fetchTradePositionAccounts(rpcClient, [
+  const positions = await fetchTradePositionAccounts(rpcClient, [
     {
       memcmp: {
         bytes: authority as never,
@@ -327,6 +246,7 @@ export async function fetchTradePositions(
       },
     },
   ])
+  return positions.filter((position) => position.data.marketId === marketId)
 }
 
 async function fetchTradePositionAccounts(
@@ -372,19 +292,21 @@ async function fetchTradePositionAccounts(
 
 export async function fetchMarketTradePositions(
   rpcClient: TwobRpcClient,
+  marketId: number,
 ): Promise<Array<TradePositionRecord>> {
-  return fetchTradePositionAccounts(rpcClient)
+  const positions = await fetchTradePositionAccounts(rpcClient)
+  return positions.filter((position) => position.data.marketId === marketId)
 }
 
 export async function fetchEndSlotBookkeepingSnapshot({
-  currentSlot,
+  bookkeepingLastUpdateSlot,
   endSlot,
   endSlotInterval,
   isBuy,
   marketAddress,
   rpcClient,
 }: {
-  currentSlot: number | null
+  bookkeepingLastUpdateSlot: number | null
   endSlot: number
   endSlotInterval: number | null
   isBuy: boolean
@@ -398,15 +320,9 @@ export async function fetchEndSlotBookkeepingSnapshot({
 
   if (!snapshotLocation) return null
 
-  const snapshotReadySlot =
-    endSlotInterval === null || endSlotInterval <= 0
-      ? null
-      : endSlot + ARRAY_LENGTH * endSlotInterval
-
   if (
-    currentSlot === null ||
-    snapshotReadySlot === null ||
-    currentSlot < snapshotReadySlot
+    bookkeepingLastUpdateSlot === null ||
+    bookkeepingLastUpdateSlot < endSlot
   ) {
     return null
   }
@@ -477,7 +393,7 @@ export async function sendSubmitOrder({
     amount: bigint
     durationSlots: number
     existingWrappedAtoms?: bigint
-    id: bigint
+    id: number
     inputMintAddress: string
     isBuy: boolean
     marketAddress: Address
@@ -493,6 +409,17 @@ export async function sendSubmitOrder({
     isBuy,
     marketAddress,
   } = request
+
+  if (!Number.isInteger(id) || id < 0 || id > 0xffffffff) {
+    throw new Error('Order id must be an unsigned 32-bit integer.')
+  }
+  if (
+    !Number.isInteger(durationSlots) ||
+    durationSlots <= 0 ||
+    durationSlots > 0xffffffff
+  ) {
+    throw new Error('Order duration must be a positive 32-bit slot count.')
+  }
 
   const walletSigner = createWalletTransactionSigner(session).signer
   const wrapShortfall =
@@ -518,8 +445,12 @@ export async function sendSubmitOrder({
     marketAccount.data.endSlotInterval,
   )
   const previousIndex = getPreviousIndex(referenceIndex)
-  const endSlot = alignEndSlot(
+  const positionStartSlot = Math.max(
     currentSlot,
+    Number(marketAccount.data.startSlot),
+  )
+  const endSlot = alignEndSlot(
+    positionStartSlot,
     durationSlots,
     marketAccount.data.endSlotInterval,
   )
@@ -539,15 +470,19 @@ export async function sendSubmitOrder({
   const instruction = await getSubmitOrderInstructionAsync({
     amount,
     authority: walletSigner,
+    baseReceiver: session.account.address,
     currentExits,
     currentPrices,
-    endSlot,
+    duration: durationSlots,
     futureIndex,
     id,
     market: marketAddress,
     mint,
+    operator: session.account.address,
+    payer: walletSigner,
     previousExits,
     previousPrices,
+    quoteReceiver: session.account.address,
     referenceIndex,
     tokenProgram: tokenProgram.programAddress,
   })
@@ -705,8 +640,12 @@ export async function sendClosePositions({
         throw new Error('Failed to resolve position address.')
       }
 
+      const tradePosition = tradePositionAccount.data
+      if (tradePosition.marketId !== marketAccount.data.id) {
+        throw new Error('Trade position belongs to a different market.')
+      }
       const futureIndex = getFutureIndex(
-        tradePositionAccount.data.endSlot,
+        getTradePositionEndSlot(tradePosition),
         marketAccount.data.endSlotInterval,
       )
       const [futureExits, futurePrices] = await Promise.all([
@@ -740,18 +679,21 @@ export async function sendClosePositions({
         )
       }
 
-      return getAuthorityClosePositionInstructionAsync({
+      return getAuthorityCloseTradePositionInstructionAsync({
         authority: walletSigner,
         baseMint: marketAccount.data.baseMint,
+        baseReceiver: tradePosition.baseReceiver,
         baseTokenProgram: baseTokenProgram.programAddress,
         currentExits,
         currentPrices,
         futureExits,
         futurePrices,
         market: marketAddress,
+        payer: tradePosition.payer,
         previousExits,
         previousPrices,
         quoteMint: marketAccount.data.quoteMint,
+        quoteReceiver: tradePosition.quoteReceiver,
         quoteTokenProgram: quoteTokenProgram.programAddress,
         referenceIndex,
         tradePosition: tradePositionAddress,
@@ -794,7 +736,6 @@ export async function sendReclaimRent({
 }) {
   const { marketAddress, maxAccounts } = request
   const walletSigner = createWalletTransactionSigner(session).signer
-  const signerAddress = walletSigner.address
   const ownerAddress = session.account.address
   const owner = ownerAddress.toString()
 
@@ -813,6 +754,9 @@ export async function sendReclaimRent({
       address: account.address,
       index: account.data.index,
       lamports: account.lamports,
+      market: account.data.market,
+      openPositions: account.data.openPositions,
+      payer: account.data.payer,
     }),
   )
   const pricesAccounts: Array<PricesRentAccount> = ownedPricesAccounts.map(
@@ -820,13 +764,9 @@ export async function sendReclaimRent({
       address: account.address,
       index: account.data.index,
       lamports: account.lamports,
-      openPositions: account.data.openPositions,
+      market: account.data.market,
+      payer: account.data.payer,
     }),
-  )
-  const indicesWithOpenPositions = new Set<bigint>(
-    pricesAccounts
-      .filter((account) => account.openPositions > 0n)
-      .map((account) => account.index),
   )
 
   const referenceIndex = getReferenceIndex(
@@ -837,30 +777,25 @@ export async function sendReclaimRent({
     throw new Error('Reclaim rent is not available yet for this market.')
   }
   const previousIndex = getPreviousIndex(referenceIndex)
-
-  const candidateAccounts = collectCloseableRentAccounts({
+  const candidatePairs = collectCloseableRentAccountPairs({
     currentSlot: Number(currentSlot),
     endSlotInterval: marketAccount.data.endSlotInterval,
     exitsAccounts,
     maxAccounts: exitsAccounts.length + pricesAccounts.length,
+    market: marketAddress,
+    payer: ownerAddress,
     pricesAccounts,
   })
-  const closeableAccounts = candidateAccounts
-    .filter((account) => account.index < previousIndex)
-    .filter(
-      (account) =>
-        !(
-          account.kind === 'exits' &&
-          indicesWithOpenPositions.has(account.index)
-        ),
-    )
-    .slice(0, Math.max(0, Math.floor(maxAccounts)))
+  const closeablePairs = candidatePairs.slice(
+    0,
+    Math.max(0, Math.floor(maxAccounts / 2)),
+  )
 
-  if (closeableAccounts.length === 0) {
+  if (closeablePairs.length === 0) {
     throw new Error('No reclaimable rent accounts available.')
   }
-  const reclaimedLamports = closeableAccounts.reduce(
-    (sum, account) => sum + account.lamports,
+  const reclaimedLamports = closeablePairs.reduce(
+    (sum, pair) => sum + pair.exits.lamports + pair.prices.lamports,
     0n,
   )
   const [
@@ -878,35 +813,21 @@ export async function sendReclaimRent({
   ])
 
   const instructions = await Promise.all(
-    closeableAccounts.map((account) => {
-      if (account.kind === 'exits') {
-        return buildCloseExitsAccountInstruction({
-          bookkeepingAddress,
-          currentExits,
-          currentPrices,
-          exitsAddress: account.address,
-          marketAddress,
-          ownerAddress,
-          previousExits,
-          previousPrices,
-          referenceIndex,
-          signerAddress,
-        })
-      }
-
-      return buildClosePricesAccountInstruction({
-        bookkeepingAddress,
+    closeablePairs.map((pair) =>
+      getCloseExitsAndPricesAccountInstructionAsync({
+        bookkeeping: bookkeepingAddress,
         currentExits,
         currentPrices,
-        marketAddress,
-        ownerAddress,
+        exits: pair.exits.address,
+        market: marketAddress,
+        payer: pair.exits.payer,
         previousExits,
         previousPrices,
-        pricesAddress: account.address,
+        prices: pair.prices.address,
         referenceIndex,
-        signerAddress,
-      })
-    }),
+        signer: walletSigner,
+      }),
+    ),
   )
 
   const { value: blockhashLifetime } = await client.runtime.rpc

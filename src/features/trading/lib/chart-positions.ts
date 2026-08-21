@@ -3,6 +3,7 @@ import { buildClosedPositionSummary } from '../view-models/closed-position'
 import { formatAtoms } from './format'
 import { getActivePositionMetrics } from './position-progress'
 import { mergeAdjacentRanges } from './slot-ranges'
+import { getTradePositionEndSlot, isBuyTradePosition } from './trade-position'
 import type { Address } from '@solana/kit'
 import type {
   ClosePositionEvent,
@@ -157,7 +158,7 @@ export function buildChartPositionSlotRanges({
 
   for (const position of activePositions) {
     const startSlot = Number(position.data.startSlot)
-    const positionEndSlot = Number(position.data.endSlot)
+    const positionEndSlot = Number(getTradePositionEndSlot(position.data))
     const endSlot =
       currentSlot === null
         ? positionEndSlot
@@ -217,7 +218,7 @@ export function buildChartPositionOverlays({
       if (metrics.averagePrice === null) continue
 
       const startSlot = Number(position.data.startSlot)
-      const positionEndSlot = Number(position.data.endSlot)
+      const positionEndSlot = Number(getTradePositionEndSlot(position.data))
       const lineEndSlot = Math.min(
         Math.max(currentSlot, startSlot),
         positionEndSlot,
@@ -234,7 +235,7 @@ export function buildChartPositionOverlays({
           metrics.amountAtoms,
           metrics.depositedDecimals,
         )} ${metrics.depositedToken}`,
-        side: position.data.isBuy === 1 ? 'buy' : 'sell',
+        side: isBuyTradePosition(position.data) ? 'buy' : 'sell',
         startTime: Math.floor(startTimeMs / 1000),
         status: currentSlot < positionEndSlot ? 'active' : 'closed',
       })

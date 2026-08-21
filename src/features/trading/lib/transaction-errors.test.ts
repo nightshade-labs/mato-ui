@@ -59,4 +59,14 @@ describe('formatTransactionError', () => {
       'fallback Details: SimulationFailure / 1001 / Instruction 0 failed',
     )
   })
+
+  it('asks for a retry when signing crossed a market account boundary', () => {
+    const error = new Error(
+      'Transaction failed during confirmation: {"InstructionError":[0,{"Custom":6006}]}',
+    )
+
+    expect(formatTransactionError(error, 'fallback')).toBe(
+      'Market state changed while the transaction was awaiting approval. Please try again.',
+    )
+  })
 })

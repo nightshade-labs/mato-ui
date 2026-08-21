@@ -6,6 +6,7 @@ import {
 import type { Address } from '@solana/kit'
 import type { ClosePositionEvent } from '@/integrations/read-api'
 import type { TradePositionRecord } from '../domain/models'
+import { Side } from '@/lib/generated/twob/src/generated/types'
 
 function activePosition({
   endSlot,
@@ -20,13 +21,24 @@ function activePosition({
       discriminator: new Uint8Array(),
       amount: 1_000_000n,
       authority: '22222222222222222222222222222222' as Address,
+      baseReceiver: '33333333333333333333333333333333' as Address,
       bookkeepingSnapshot: 0n,
       bump: 255,
-      endSlot,
-      id: 1n,
-      isBuy: 1,
-      slotsWithoutTradesSnapshot: 0n,
+      flow: 0n,
+      id: 1,
+      inactiveRefund: 0n,
+      lastUpdateSlot: startSlot,
+      marketId: 1,
+      operator: '44444444444444444444444444444444' as Address,
+      pausedAtSlot: 0n,
+      payer: '55555555555555555555555555555555' as Address,
+      quoteReceiver: '66666666666666666666666666666666' as Address,
+      remainingSlots: Number(endSlot - startSlot),
+      side: Side.Buy,
+      slotsWithoutTradesSnapshot: 0,
       startSlot,
+      swappedAmountAtSnapshot: 0n,
+      withdrawnAmount: 0n,
     },
   }
 }

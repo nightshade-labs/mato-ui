@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Address } from '@solana/kit'
 import type { TradePosition } from '@/lib/generated/twob/src/generated/accounts'
 import type { StreamingMarketState } from '../domain/models'
+import { Side } from '@/lib/generated/twob/src/generated/types'
 
 class SessionStorageMock {
   private readonly store = new Map<string, string>()
@@ -35,14 +36,25 @@ function createPosition(): TradePosition {
   return {
     amount: 100n,
     authority: 'authority1111111111111111111111111111111111' as Address,
+    baseReceiver: 'baseReceiver111111111111111111111111111111' as Address,
     bookkeepingSnapshot: 0n,
     bump: 0,
     discriminator: new Uint8Array(8),
-    endSlot: 10n,
-    id: 42n,
-    isBuy: 1,
-    slotsWithoutTradesSnapshot: 0n,
+    flow: 10_000_000_000n,
+    id: 42,
+    inactiveRefund: 0n,
+    lastUpdateSlot: 0n,
+    marketId: 1,
+    operator: 'operator111111111111111111111111111111111' as Address,
+    pausedAtSlot: 0n,
+    payer: 'payer1111111111111111111111111111111111111' as Address,
+    quoteReceiver: 'quoteReceiver11111111111111111111111111111' as Address,
+    remainingSlots: 10,
+    side: Side.Buy,
+    slotsWithoutTradesSnapshot: 0,
     startSlot: 0n,
+    swappedAmountAtSnapshot: 0n,
+    withdrawnAmount: 0n,
   }
 }
 

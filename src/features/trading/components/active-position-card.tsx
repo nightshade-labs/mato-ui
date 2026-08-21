@@ -2,6 +2,10 @@ import { useId, useMemo, useState } from 'react'
 import { ArrowUpRight, ChevronDown, Waves } from 'lucide-react'
 import { formatAtoms, formatPrice } from '../lib/format'
 import { getActivePositionMetrics } from '../lib/position-progress'
+import {
+  getTradePositionEndSlot,
+  isBuyTradePosition,
+} from '../lib/trade-position'
 import { useEndSlotBookkeepingSnapshot } from '../hooks/use-end-slot-bookkeeping-snapshot'
 import type { Address } from '@solana/kit'
 import type {
@@ -38,15 +42,17 @@ export function ActivePositionCard({
 }) {
   const [expanded, setExpanded] = useState(false)
   const detailsId = useId()
+  const positionEndSlot = Number(getTradePositionEndSlot(position.data))
+  const isBuy = isBuyTradePosition(position.data)
   const snapshotQuery = useEndSlotBookkeepingSnapshot({
-    currentSlot: streamingState?.currentSlot ?? null,
+    bookkeepingLastUpdateSlot:
+      streamingState?.bookkeepingLastUpdateSlot ?? null,
     enabled: Boolean(
-      streamingState &&
-      streamingState.currentSlot > Number(position.data.endSlot),
+      streamingState && streamingState.currentSlot > positionEndSlot,
     ),
-    endSlot: Number(position.data.endSlot),
+    endSlot: positionEndSlot,
     endSlotInterval: streamingState?.endSlotInterval ?? null,
-    isBuy: position.data.isBuy === 1,
+    isBuy,
     marketAddress,
   })
 
@@ -86,9 +92,7 @@ export function ActivePositionCard({
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Badge
-                variant={position.data.isBuy === 1 ? 'positive' : 'negative'}
-              >
+              <Badge variant={isBuy ? 'positive' : 'negative'}>
                 {metrics.sideLabel}
               </Badge>
               <div>

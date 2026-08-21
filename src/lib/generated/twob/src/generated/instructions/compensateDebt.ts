@@ -43,20 +43,19 @@ import {
 } from '@solana/program-client-core'
 import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '../programs'
 
-export const PUBLIC_COMPENSATE_DEBT_DISCRIMINATOR = new Uint8Array([
-  244, 213, 26, 253, 142, 158, 25, 31,
+export const COMPENSATE_DEBT_DISCRIMINATOR = new Uint8Array([
+  179, 164, 115, 50, 11, 123, 101, 15,
 ])
 
-export function getPublicCompensateDebtDiscriminatorBytes() {
+export function getCompensateDebtDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    PUBLIC_COMPENSATE_DEBT_DISCRIMINATOR,
+    COMPENSATE_DEBT_DISCRIMINATOR,
   )
 }
 
-export type PublicCompensateDebtInstruction<
+export type CompensateDebtInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountSigner extends string | AccountMeta<string> = string,
-  TAccountPositionAuthority extends string | AccountMeta<string> = string,
   TAccountBaseMint extends string | AccountMeta<string> = string,
   TAccountQuoteMint extends string | AccountMeta<string> = string,
   TAccountSignerBaseTokenAccount extends string | AccountMeta<string> = string,
@@ -85,9 +84,6 @@ export type PublicCompensateDebtInstruction<
         ? WritableSignerAccount<TAccountSigner> &
             AccountSignerMeta<TAccountSigner>
         : TAccountSigner,
-      TAccountPositionAuthority extends string
-        ? WritableAccount<TAccountPositionAuthority>
-        : TAccountPositionAuthority,
       TAccountBaseMint extends string
         ? ReadonlyAccount<TAccountBaseMint>
         : TAccountBaseMint,
@@ -143,32 +139,29 @@ export type PublicCompensateDebtInstruction<
     ]
   >
 
-export type PublicCompensateDebtInstructionData = {
+export type CompensateDebtInstructionData = {
   discriminator: ReadonlyUint8Array
   referenceIndex: bigint
   minAmountOutAtoms: bigint
 }
 
-export type PublicCompensateDebtInstructionDataArgs = {
+export type CompensateDebtInstructionDataArgs = {
   referenceIndex: number | bigint
   minAmountOutAtoms: number | bigint
 }
 
-export function getPublicCompensateDebtInstructionDataEncoder(): FixedSizeEncoder<PublicCompensateDebtInstructionDataArgs> {
+export function getCompensateDebtInstructionDataEncoder(): FixedSizeEncoder<CompensateDebtInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['referenceIndex', getU64Encoder()],
       ['minAmountOutAtoms', getU64Encoder()],
     ]),
-    (value) => ({
-      ...value,
-      discriminator: PUBLIC_COMPENSATE_DEBT_DISCRIMINATOR,
-    }),
+    (value) => ({ ...value, discriminator: COMPENSATE_DEBT_DISCRIMINATOR }),
   )
 }
 
-export function getPublicCompensateDebtInstructionDataDecoder(): FixedSizeDecoder<PublicCompensateDebtInstructionData> {
+export function getCompensateDebtInstructionDataDecoder(): FixedSizeDecoder<CompensateDebtInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['referenceIndex', getU64Decoder()],
@@ -176,19 +169,18 @@ export function getPublicCompensateDebtInstructionDataDecoder(): FixedSizeDecode
   ])
 }
 
-export function getPublicCompensateDebtInstructionDataCodec(): FixedSizeCodec<
-  PublicCompensateDebtInstructionDataArgs,
-  PublicCompensateDebtInstructionData
+export function getCompensateDebtInstructionDataCodec(): FixedSizeCodec<
+  CompensateDebtInstructionDataArgs,
+  CompensateDebtInstructionData
 > {
   return combineCodec(
-    getPublicCompensateDebtInstructionDataEncoder(),
-    getPublicCompensateDebtInstructionDataDecoder(),
+    getCompensateDebtInstructionDataEncoder(),
+    getCompensateDebtInstructionDataDecoder(),
   )
 }
 
-export type PublicCompensateDebtAsyncInput<
+export type CompensateDebtAsyncInput<
   TAccountSigner extends string = string,
-  TAccountPositionAuthority extends string = string,
   TAccountBaseMint extends string = string,
   TAccountQuoteMint extends string = string,
   TAccountSignerBaseTokenAccount extends string = string,
@@ -208,13 +200,12 @@ export type PublicCompensateDebtAsyncInput<
   TAccountSystemProgram extends string = string,
 > = {
   signer: TransactionSigner<TAccountSigner>
-  positionAuthority: Address<TAccountPositionAuthority>
   baseMint: Address<TAccountBaseMint>
   quoteMint: Address<TAccountQuoteMint>
   signerBaseTokenAccount?: Address<TAccountSignerBaseTokenAccount>
   signerQuoteTokenAccount?: Address<TAccountSignerQuoteTokenAccount>
   market: Address<TAccountMarket>
-  liquidityPosition?: Address<TAccountLiquidityPosition>
+  liquidityPosition: Address<TAccountLiquidityPosition>
   baseVault?: Address<TAccountBaseVault>
   quoteVault?: Address<TAccountQuoteVault>
   bookkeeping?: Address<TAccountBookkeeping>
@@ -226,13 +217,12 @@ export type PublicCompensateDebtAsyncInput<
   quoteTokenProgram: Address<TAccountQuoteTokenProgram>
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>
   systemProgram?: Address<TAccountSystemProgram>
-  referenceIndex: PublicCompensateDebtInstructionDataArgs['referenceIndex']
-  minAmountOutAtoms: PublicCompensateDebtInstructionDataArgs['minAmountOutAtoms']
+  referenceIndex: CompensateDebtInstructionDataArgs['referenceIndex']
+  minAmountOutAtoms: CompensateDebtInstructionDataArgs['minAmountOutAtoms']
 }
 
-export async function getPublicCompensateDebtInstructionAsync<
+export async function getCompensateDebtInstructionAsync<
   TAccountSigner extends string,
-  TAccountPositionAuthority extends string,
   TAccountBaseMint extends string,
   TAccountQuoteMint extends string,
   TAccountSignerBaseTokenAccount extends string,
@@ -252,9 +242,8 @@ export async function getPublicCompensateDebtInstructionAsync<
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
-  input: PublicCompensateDebtAsyncInput<
+  input: CompensateDebtAsyncInput<
     TAccountSigner,
-    TAccountPositionAuthority,
     TAccountBaseMint,
     TAccountQuoteMint,
     TAccountSignerBaseTokenAccount,
@@ -275,10 +264,9 @@ export async function getPublicCompensateDebtInstructionAsync<
   >,
   config?: { programAddress?: TProgramAddress },
 ): Promise<
-  PublicCompensateDebtInstruction<
+  CompensateDebtInstruction<
     TProgramAddress,
     TAccountSigner,
-    TAccountPositionAuthority,
     TAccountBaseMint,
     TAccountQuoteMint,
     TAccountSignerBaseTokenAccount,
@@ -304,10 +292,6 @@ export async function getPublicCompensateDebtInstructionAsync<
   // Original accounts.
   const originalAccounts = {
     signer: { value: input.signer ?? null, isWritable: true },
-    positionAuthority: {
-      value: input.positionAuthority ?? null,
-      isWritable: true,
-    },
     baseMint: { value: input.baseMint ?? null, isWritable: false },
     quoteMint: { value: input.quoteMint ?? null, isWritable: false },
     signerBaseTokenAccount: {
@@ -405,31 +389,6 @@ export async function getPublicCompensateDebtInstructionAsync<
       ],
     })
   }
-  if (!accounts.liquidityPosition.value) {
-    accounts.liquidityPosition.value = await getProgramDerivedAddress({
-      programAddress,
-      seeds: [
-        getBytesEncoder().encode(
-          new Uint8Array([
-            108, 105, 113, 117, 105, 100, 105, 116, 121, 95, 112, 111, 115, 105,
-            116, 105, 111, 110,
-          ]),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            'market',
-            accounts.market.value,
-          ),
-        ),
-        getAddressEncoder().encode(
-          getAddressFromResolvedInstructionAccount(
-            'positionAuthority',
-            accounts.positionAuthority.value,
-          ),
-        ),
-      ],
-    })
-  }
   if (!accounts.baseVault.value) {
     accounts.baseVault.value = await getProgramDerivedAddress({
       programAddress:
@@ -513,7 +472,6 @@ export async function getPublicCompensateDebtInstructionAsync<
   return Object.freeze({
     accounts: [
       getAccountMeta('signer', accounts.signer),
-      getAccountMeta('positionAuthority', accounts.positionAuthority),
       getAccountMeta('baseMint', accounts.baseMint),
       getAccountMeta('quoteMint', accounts.quoteMint),
       getAccountMeta('signerBaseTokenAccount', accounts.signerBaseTokenAccount),
@@ -535,14 +493,13 @@ export async function getPublicCompensateDebtInstructionAsync<
       getAccountMeta('associatedTokenProgram', accounts.associatedTokenProgram),
       getAccountMeta('systemProgram', accounts.systemProgram),
     ],
-    data: getPublicCompensateDebtInstructionDataEncoder().encode(
-      args as PublicCompensateDebtInstructionDataArgs,
+    data: getCompensateDebtInstructionDataEncoder().encode(
+      args as CompensateDebtInstructionDataArgs,
     ),
     programAddress,
-  } as PublicCompensateDebtInstruction<
+  } as CompensateDebtInstruction<
     TProgramAddress,
     TAccountSigner,
-    TAccountPositionAuthority,
     TAccountBaseMint,
     TAccountQuoteMint,
     TAccountSignerBaseTokenAccount,
@@ -563,9 +520,8 @@ export async function getPublicCompensateDebtInstructionAsync<
   >)
 }
 
-export type PublicCompensateDebtInput<
+export type CompensateDebtInput<
   TAccountSigner extends string = string,
-  TAccountPositionAuthority extends string = string,
   TAccountBaseMint extends string = string,
   TAccountQuoteMint extends string = string,
   TAccountSignerBaseTokenAccount extends string = string,
@@ -585,7 +541,6 @@ export type PublicCompensateDebtInput<
   TAccountSystemProgram extends string = string,
 > = {
   signer: TransactionSigner<TAccountSigner>
-  positionAuthority: Address<TAccountPositionAuthority>
   baseMint: Address<TAccountBaseMint>
   quoteMint: Address<TAccountQuoteMint>
   signerBaseTokenAccount: Address<TAccountSignerBaseTokenAccount>
@@ -603,13 +558,12 @@ export type PublicCompensateDebtInput<
   quoteTokenProgram: Address<TAccountQuoteTokenProgram>
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>
   systemProgram?: Address<TAccountSystemProgram>
-  referenceIndex: PublicCompensateDebtInstructionDataArgs['referenceIndex']
-  minAmountOutAtoms: PublicCompensateDebtInstructionDataArgs['minAmountOutAtoms']
+  referenceIndex: CompensateDebtInstructionDataArgs['referenceIndex']
+  minAmountOutAtoms: CompensateDebtInstructionDataArgs['minAmountOutAtoms']
 }
 
-export function getPublicCompensateDebtInstruction<
+export function getCompensateDebtInstruction<
   TAccountSigner extends string,
-  TAccountPositionAuthority extends string,
   TAccountBaseMint extends string,
   TAccountQuoteMint extends string,
   TAccountSignerBaseTokenAccount extends string,
@@ -629,9 +583,8 @@ export function getPublicCompensateDebtInstruction<
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
-  input: PublicCompensateDebtInput<
+  input: CompensateDebtInput<
     TAccountSigner,
-    TAccountPositionAuthority,
     TAccountBaseMint,
     TAccountQuoteMint,
     TAccountSignerBaseTokenAccount,
@@ -651,10 +604,9 @@ export function getPublicCompensateDebtInstruction<
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress },
-): PublicCompensateDebtInstruction<
+): CompensateDebtInstruction<
   TProgramAddress,
   TAccountSigner,
-  TAccountPositionAuthority,
   TAccountBaseMint,
   TAccountQuoteMint,
   TAccountSignerBaseTokenAccount,
@@ -679,10 +631,6 @@ export function getPublicCompensateDebtInstruction<
   // Original accounts.
   const originalAccounts = {
     signer: { value: input.signer ?? null, isWritable: true },
-    positionAuthority: {
-      value: input.positionAuthority ?? null,
-      isWritable: true,
-    },
     baseMint: { value: input.baseMint ?? null, isWritable: false },
     quoteMint: { value: input.quoteMint ?? null, isWritable: false },
     signerBaseTokenAccount: {
@@ -741,7 +689,6 @@ export function getPublicCompensateDebtInstruction<
   return Object.freeze({
     accounts: [
       getAccountMeta('signer', accounts.signer),
-      getAccountMeta('positionAuthority', accounts.positionAuthority),
       getAccountMeta('baseMint', accounts.baseMint),
       getAccountMeta('quoteMint', accounts.quoteMint),
       getAccountMeta('signerBaseTokenAccount', accounts.signerBaseTokenAccount),
@@ -763,14 +710,13 @@ export function getPublicCompensateDebtInstruction<
       getAccountMeta('associatedTokenProgram', accounts.associatedTokenProgram),
       getAccountMeta('systemProgram', accounts.systemProgram),
     ],
-    data: getPublicCompensateDebtInstructionDataEncoder().encode(
-      args as PublicCompensateDebtInstructionDataArgs,
+    data: getCompensateDebtInstructionDataEncoder().encode(
+      args as CompensateDebtInstructionDataArgs,
     ),
     programAddress,
-  } as PublicCompensateDebtInstruction<
+  } as CompensateDebtInstruction<
     TProgramAddress,
     TAccountSigner,
-    TAccountPositionAuthority,
     TAccountBaseMint,
     TAccountQuoteMint,
     TAccountSignerBaseTokenAccount,
@@ -791,49 +737,48 @@ export function getPublicCompensateDebtInstruction<
   >)
 }
 
-export type ParsedPublicCompensateDebtInstruction<
+export type ParsedCompensateDebtInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
   programAddress: Address<TProgram>
   accounts: {
     signer: TAccountMetas[0]
-    positionAuthority: TAccountMetas[1]
-    baseMint: TAccountMetas[2]
-    quoteMint: TAccountMetas[3]
-    signerBaseTokenAccount: TAccountMetas[4]
-    signerQuoteTokenAccount: TAccountMetas[5]
-    market: TAccountMetas[6]
-    liquidityPosition: TAccountMetas[7]
-    baseVault: TAccountMetas[8]
-    quoteVault: TAccountMetas[9]
-    bookkeeping: TAccountMetas[10]
-    currentExits: TAccountMetas[11]
-    previousExits: TAccountMetas[12]
-    currentPrices: TAccountMetas[13]
-    previousPrices: TAccountMetas[14]
-    baseTokenProgram: TAccountMetas[15]
-    quoteTokenProgram: TAccountMetas[16]
-    associatedTokenProgram: TAccountMetas[17]
-    systemProgram: TAccountMetas[18]
+    baseMint: TAccountMetas[1]
+    quoteMint: TAccountMetas[2]
+    signerBaseTokenAccount: TAccountMetas[3]
+    signerQuoteTokenAccount: TAccountMetas[4]
+    market: TAccountMetas[5]
+    liquidityPosition: TAccountMetas[6]
+    baseVault: TAccountMetas[7]
+    quoteVault: TAccountMetas[8]
+    bookkeeping: TAccountMetas[9]
+    currentExits: TAccountMetas[10]
+    previousExits: TAccountMetas[11]
+    currentPrices: TAccountMetas[12]
+    previousPrices: TAccountMetas[13]
+    baseTokenProgram: TAccountMetas[14]
+    quoteTokenProgram: TAccountMetas[15]
+    associatedTokenProgram: TAccountMetas[16]
+    systemProgram: TAccountMetas[17]
   }
-  data: PublicCompensateDebtInstructionData
+  data: CompensateDebtInstructionData
 }
 
-export function parsePublicCompensateDebtInstruction<
+export function parseCompensateDebtInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
-): ParsedPublicCompensateDebtInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 19) {
+): ParsedCompensateDebtInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 18) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 19,
+        expectedAccountMetas: 18,
       },
     )
   }
@@ -847,7 +792,6 @@ export function parsePublicCompensateDebtInstruction<
     programAddress: instruction.programAddress,
     accounts: {
       signer: getNextAccount(),
-      positionAuthority: getNextAccount(),
       baseMint: getNextAccount(),
       quoteMint: getNextAccount(),
       signerBaseTokenAccount: getNextAccount(),
@@ -866,8 +810,6 @@ export function parsePublicCompensateDebtInstruction<
       associatedTokenProgram: getNextAccount(),
       systemProgram: getNextAccount(),
     },
-    data: getPublicCompensateDebtInstructionDataDecoder().decode(
-      instruction.data,
-    ),
+    data: getCompensateDebtInstructionDataDecoder().decode(instruction.data),
   }
 }

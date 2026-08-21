@@ -9,13 +9,9 @@ import {
   MARKET_ID,
   MAX_RECLAIM_RENT_ACCOUNTS_PER_TRANSACTION,
 } from '../constants'
-import {
-  getPreviousIndex,
-  getReferenceIndex,
-  sendReclaimRent,
-} from '../api/twob-client'
+import { sendReclaimRent } from '../api/twob-client'
 import { formatTransactionError } from '../lib/transaction-errors'
-import { collectCloseableRentAccounts } from '../lib/rent'
+import { collectCloseableRentAccountPairs } from '../lib/rent'
 import { tradingQueryKeys } from '../query-keys'
 import { tradingQueries } from '../queries'
 import { useMarketAddress } from './use-market-address'
@@ -70,17 +66,9 @@ export function useReclaimRent(enabled: boolean) {
           commitment: 'confirmed',
         }),
       ])
-      const referenceIndex = getReferenceIndex(
-        Number(currentSlot),
-        marketAccount.data.endSlotInterval,
-      )
-
       return {
         currentSlot: Number(currentSlot),
         endSlotInterval: marketAccount.data.endSlotInterval,
-        previousIndex:
-          referenceIndex > 0n ? getPreviousIndex(referenceIndex) : null,
-        referenceIndex,
       }
     },
     enabled: shouldFetch && Boolean(marketAddress),
@@ -94,6 +82,9 @@ export function useReclaimRent(enabled: boolean) {
         address: account.address,
         index: account.data.index,
         lamports: account.lamports,
+        market: account.data.market,
+        openPositions: account.data.openPositions,
+        payer: account.data.payer,
       })),
     [exitsQuery.data],
   )
@@ -103,42 +94,33 @@ export function useReclaimRent(enabled: boolean) {
         address: account.address,
         index: account.data.index,
         lamports: account.lamports,
-        openPositions: account.data.openPositions,
+        market: account.data.market,
+        payer: account.data.payer,
       })),
     [pricesQuery.data],
   )
 
   const closeableCount = useMemo(() => {
-    if (!runtimeContextQuery.data) return 0
+    if (!marketAddress || !runtimeContextQuery.data || !session) return 0
 
-    const indicesWithOpenPositions = new Set<bigint>(
-      pricesAccounts
-        .filter((account) => account.openPositions > 0n)
-        .map((account) => account.index),
-    )
-
-    const allCandidates = collectCloseableRentAccounts({
+    const pairs = collectCloseableRentAccountPairs({
       currentSlot: runtimeContextQuery.data.currentSlot,
       endSlotInterval: runtimeContextQuery.data.endSlotInterval,
       exitsAccounts,
+      market: marketAddress,
       maxAccounts: exitsAccounts.length + pricesAccounts.length,
+      payer: session.account.address,
       pricesAccounts,
     })
 
-    const previousIndex = runtimeContextQuery.data.previousIndex
-    if (previousIndex === null) return 0
-
-    return allCandidates.filter((account) => {
-      if (account.index >= previousIndex) return false
-      if (
-        account.kind === 'exits' &&
-        indicesWithOpenPositions.has(account.index)
-      ) {
-        return false
-      }
-      return true
-    }).length
-  }, [exitsAccounts, pricesAccounts, runtimeContextQuery.data])
+    return Math.min(pairs.length * 2, MAX_RECLAIM_RENT_ACCOUNTS_PER_TRANSACTION)
+  }, [
+    exitsAccounts,
+    marketAddress,
+    pricesAccounts,
+    runtimeContextQuery.data,
+    session,
+  ])
 
   const reclaimRent = useCallback(async () => {
     if (!session) {

@@ -18,6 +18,8 @@ import {
   getStructEncoder,
   getU64Decoder,
   getU64Encoder,
+  SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
+  SolanaError,
   transformEncoder,
   type AccountMeta,
   type AccountSignerMeta,
@@ -34,24 +36,24 @@ import {
   type WritableAccount,
   type WritableSignerAccount,
 } from '@solana/kit'
-import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '../programs'
 import {
-  expectAddress,
   getAccountMetaFactory,
-  type ResolvedAccount,
-} from '../shared'
+  getAddressFromResolvedInstructionAccount,
+  type ResolvedInstructionAccount,
+} from '@solana/program-client-core'
+import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '../programs'
 
-export const WITHDRAW_LIQUIDITY_DISCRIMINATOR = new Uint8Array([
-  149, 158, 33, 185, 47, 243, 253, 31,
+export const CLOSE_LIQUIDITY_POSITION_DISCRIMINATOR = new Uint8Array([
+  34, 168, 107, 163, 194, 68, 131, 24,
 ])
 
-export function getWithdrawLiquidityDiscriminatorBytes() {
+export function getCloseLiquidityPositionDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    WITHDRAW_LIQUIDITY_DISCRIMINATOR,
+    CLOSE_LIQUIDITY_POSITION_DISCRIMINATOR,
   )
 }
 
-export type WithdrawLiquidityInstruction<
+export type CloseLiquidityPositionInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountAuthority extends string | AccountMeta<string> = string,
   TAccountBaseMint extends string | AccountMeta<string> = string,
@@ -139,51 +141,46 @@ export type WithdrawLiquidityInstruction<
     ]
   >
 
-export type WithdrawLiquidityInstructionData = {
+export type CloseLiquidityPositionInstructionData = {
   discriminator: ReadonlyUint8Array
   referenceIndex: bigint
-  baseLamports: bigint
-  quoteLamports: bigint
 }
 
-export type WithdrawLiquidityInstructionDataArgs = {
+export type CloseLiquidityPositionInstructionDataArgs = {
   referenceIndex: number | bigint
-  baseLamports: number | bigint
-  quoteLamports: number | bigint
 }
 
-export function getWithdrawLiquidityInstructionDataEncoder(): FixedSizeEncoder<WithdrawLiquidityInstructionDataArgs> {
+export function getCloseLiquidityPositionInstructionDataEncoder(): FixedSizeEncoder<CloseLiquidityPositionInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['referenceIndex', getU64Encoder()],
-      ['baseLamports', getU64Encoder()],
-      ['quoteLamports', getU64Encoder()],
     ]),
-    (value) => ({ ...value, discriminator: WITHDRAW_LIQUIDITY_DISCRIMINATOR }),
+    (value) => ({
+      ...value,
+      discriminator: CLOSE_LIQUIDITY_POSITION_DISCRIMINATOR,
+    }),
   )
 }
 
-export function getWithdrawLiquidityInstructionDataDecoder(): FixedSizeDecoder<WithdrawLiquidityInstructionData> {
+export function getCloseLiquidityPositionInstructionDataDecoder(): FixedSizeDecoder<CloseLiquidityPositionInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['referenceIndex', getU64Decoder()],
-    ['baseLamports', getU64Decoder()],
-    ['quoteLamports', getU64Decoder()],
   ])
 }
 
-export function getWithdrawLiquidityInstructionDataCodec(): FixedSizeCodec<
-  WithdrawLiquidityInstructionDataArgs,
-  WithdrawLiquidityInstructionData
+export function getCloseLiquidityPositionInstructionDataCodec(): FixedSizeCodec<
+  CloseLiquidityPositionInstructionDataArgs,
+  CloseLiquidityPositionInstructionData
 > {
   return combineCodec(
-    getWithdrawLiquidityInstructionDataEncoder(),
-    getWithdrawLiquidityInstructionDataDecoder(),
+    getCloseLiquidityPositionInstructionDataEncoder(),
+    getCloseLiquidityPositionInstructionDataDecoder(),
   )
 }
 
-export type WithdrawLiquidityAsyncInput<
+export type CloseLiquidityPositionAsyncInput<
   TAccountAuthority extends string = string,
   TAccountBaseMint extends string = string,
   TAccountQuoteMint extends string = string,
@@ -221,12 +218,10 @@ export type WithdrawLiquidityAsyncInput<
   quoteTokenProgram: Address<TAccountQuoteTokenProgram>
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>
   systemProgram?: Address<TAccountSystemProgram>
-  referenceIndex: WithdrawLiquidityInstructionDataArgs['referenceIndex']
-  baseLamports: WithdrawLiquidityInstructionDataArgs['baseLamports']
-  quoteLamports: WithdrawLiquidityInstructionDataArgs['quoteLamports']
+  referenceIndex: CloseLiquidityPositionInstructionDataArgs['referenceIndex']
 }
 
-export async function getWithdrawLiquidityInstructionAsync<
+export async function getCloseLiquidityPositionInstructionAsync<
   TAccountAuthority extends string,
   TAccountBaseMint extends string,
   TAccountQuoteMint extends string,
@@ -247,7 +242,7 @@ export async function getWithdrawLiquidityInstructionAsync<
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
-  input: WithdrawLiquidityAsyncInput<
+  input: CloseLiquidityPositionAsyncInput<
     TAccountAuthority,
     TAccountBaseMint,
     TAccountQuoteMint,
@@ -269,7 +264,7 @@ export async function getWithdrawLiquidityInstructionAsync<
   >,
   config?: { programAddress?: TProgramAddress },
 ): Promise<
-  WithdrawLiquidityInstruction<
+  CloseLiquidityPositionInstruction<
     TProgramAddress,
     TAccountAuthority,
     TAccountBaseMint,
@@ -335,7 +330,7 @@ export async function getWithdrawLiquidityInstructionAsync<
   }
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
-    ResolvedAccount
+    ResolvedInstructionAccount
   >
 
   // Original args.
@@ -347,11 +342,24 @@ export async function getWithdrawLiquidityInstructionAsync<
       programAddress:
         'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
       seeds: [
-        getAddressEncoder().encode(expectAddress(accounts.authority.value)),
         getAddressEncoder().encode(
-          expectAddress(accounts.baseTokenProgram.value),
+          getAddressFromResolvedInstructionAccount(
+            'authority',
+            accounts.authority.value,
+          ),
         ),
-        getAddressEncoder().encode(expectAddress(accounts.baseMint.value)),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            'baseTokenProgram',
+            accounts.baseTokenProgram.value,
+          ),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            'baseMint',
+            accounts.baseMint.value,
+          ),
+        ),
       ],
     })
   }
@@ -360,11 +368,24 @@ export async function getWithdrawLiquidityInstructionAsync<
       programAddress:
         'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
       seeds: [
-        getAddressEncoder().encode(expectAddress(accounts.authority.value)),
         getAddressEncoder().encode(
-          expectAddress(accounts.quoteTokenProgram.value),
+          getAddressFromResolvedInstructionAccount(
+            'authority',
+            accounts.authority.value,
+          ),
         ),
-        getAddressEncoder().encode(expectAddress(accounts.quoteMint.value)),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            'quoteTokenProgram',
+            accounts.quoteTokenProgram.value,
+          ),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            'quoteMint',
+            accounts.quoteMint.value,
+          ),
+        ),
       ],
     })
   }
@@ -378,8 +399,18 @@ export async function getWithdrawLiquidityInstructionAsync<
             116, 105, 111, 110,
           ]),
         ),
-        getAddressEncoder().encode(expectAddress(accounts.market.value)),
-        getAddressEncoder().encode(expectAddress(accounts.authority.value)),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            'market',
+            accounts.market.value,
+          ),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            'authority',
+            accounts.authority.value,
+          ),
+        ),
       ],
     })
   }
@@ -388,11 +419,24 @@ export async function getWithdrawLiquidityInstructionAsync<
       programAddress:
         'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
       seeds: [
-        getAddressEncoder().encode(expectAddress(accounts.market.value)),
         getAddressEncoder().encode(
-          expectAddress(accounts.baseTokenProgram.value),
+          getAddressFromResolvedInstructionAccount(
+            'market',
+            accounts.market.value,
+          ),
         ),
-        getAddressEncoder().encode(expectAddress(accounts.baseMint.value)),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            'baseTokenProgram',
+            accounts.baseTokenProgram.value,
+          ),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            'baseMint',
+            accounts.baseMint.value,
+          ),
+        ),
       ],
     })
   }
@@ -401,11 +445,24 @@ export async function getWithdrawLiquidityInstructionAsync<
       programAddress:
         'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL' as Address<'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'>,
       seeds: [
-        getAddressEncoder().encode(expectAddress(accounts.market.value)),
         getAddressEncoder().encode(
-          expectAddress(accounts.quoteTokenProgram.value),
+          getAddressFromResolvedInstructionAccount(
+            'market',
+            accounts.market.value,
+          ),
         ),
-        getAddressEncoder().encode(expectAddress(accounts.quoteMint.value)),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            'quoteTokenProgram',
+            accounts.quoteTokenProgram.value,
+          ),
+        ),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            'quoteMint',
+            accounts.quoteMint.value,
+          ),
+        ),
       ],
     })
   }
@@ -418,7 +475,12 @@ export async function getWithdrawLiquidityInstructionAsync<
             98, 111, 111, 107, 107, 101, 101, 112, 105, 110, 103,
           ]),
         ),
-        getAddressEncoder().encode(expectAddress(accounts.market.value)),
+        getAddressEncoder().encode(
+          getAddressFromResolvedInstructionAccount(
+            'market',
+            accounts.market.value,
+          ),
+        ),
       ],
     })
   }
@@ -434,30 +496,36 @@ export async function getWithdrawLiquidityInstructionAsync<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
-      getAccountMeta(accounts.authority),
-      getAccountMeta(accounts.baseMint),
-      getAccountMeta(accounts.quoteMint),
-      getAccountMeta(accounts.authorityBaseTokenAccount),
-      getAccountMeta(accounts.authorityQuoteTokenAccount),
-      getAccountMeta(accounts.market),
-      getAccountMeta(accounts.liquidityPosition),
-      getAccountMeta(accounts.baseVault),
-      getAccountMeta(accounts.quoteVault),
-      getAccountMeta(accounts.bookkeeping),
-      getAccountMeta(accounts.currentExits),
-      getAccountMeta(accounts.previousExits),
-      getAccountMeta(accounts.currentPrices),
-      getAccountMeta(accounts.previousPrices),
-      getAccountMeta(accounts.baseTokenProgram),
-      getAccountMeta(accounts.quoteTokenProgram),
-      getAccountMeta(accounts.associatedTokenProgram),
-      getAccountMeta(accounts.systemProgram),
+      getAccountMeta('authority', accounts.authority),
+      getAccountMeta('baseMint', accounts.baseMint),
+      getAccountMeta('quoteMint', accounts.quoteMint),
+      getAccountMeta(
+        'authorityBaseTokenAccount',
+        accounts.authorityBaseTokenAccount,
+      ),
+      getAccountMeta(
+        'authorityQuoteTokenAccount',
+        accounts.authorityQuoteTokenAccount,
+      ),
+      getAccountMeta('market', accounts.market),
+      getAccountMeta('liquidityPosition', accounts.liquidityPosition),
+      getAccountMeta('baseVault', accounts.baseVault),
+      getAccountMeta('quoteVault', accounts.quoteVault),
+      getAccountMeta('bookkeeping', accounts.bookkeeping),
+      getAccountMeta('currentExits', accounts.currentExits),
+      getAccountMeta('previousExits', accounts.previousExits),
+      getAccountMeta('currentPrices', accounts.currentPrices),
+      getAccountMeta('previousPrices', accounts.previousPrices),
+      getAccountMeta('baseTokenProgram', accounts.baseTokenProgram),
+      getAccountMeta('quoteTokenProgram', accounts.quoteTokenProgram),
+      getAccountMeta('associatedTokenProgram', accounts.associatedTokenProgram),
+      getAccountMeta('systemProgram', accounts.systemProgram),
     ],
-    data: getWithdrawLiquidityInstructionDataEncoder().encode(
-      args as WithdrawLiquidityInstructionDataArgs,
+    data: getCloseLiquidityPositionInstructionDataEncoder().encode(
+      args as CloseLiquidityPositionInstructionDataArgs,
     ),
     programAddress,
-  } as WithdrawLiquidityInstruction<
+  } as CloseLiquidityPositionInstruction<
     TProgramAddress,
     TAccountAuthority,
     TAccountBaseMint,
@@ -480,7 +548,7 @@ export async function getWithdrawLiquidityInstructionAsync<
   >)
 }
 
-export type WithdrawLiquidityInput<
+export type CloseLiquidityPositionInput<
   TAccountAuthority extends string = string,
   TAccountBaseMint extends string = string,
   TAccountQuoteMint extends string = string,
@@ -518,12 +586,10 @@ export type WithdrawLiquidityInput<
   quoteTokenProgram: Address<TAccountQuoteTokenProgram>
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>
   systemProgram?: Address<TAccountSystemProgram>
-  referenceIndex: WithdrawLiquidityInstructionDataArgs['referenceIndex']
-  baseLamports: WithdrawLiquidityInstructionDataArgs['baseLamports']
-  quoteLamports: WithdrawLiquidityInstructionDataArgs['quoteLamports']
+  referenceIndex: CloseLiquidityPositionInstructionDataArgs['referenceIndex']
 }
 
-export function getWithdrawLiquidityInstruction<
+export function getCloseLiquidityPositionInstruction<
   TAccountAuthority extends string,
   TAccountBaseMint extends string,
   TAccountQuoteMint extends string,
@@ -544,7 +610,7 @@ export function getWithdrawLiquidityInstruction<
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
-  input: WithdrawLiquidityInput<
+  input: CloseLiquidityPositionInput<
     TAccountAuthority,
     TAccountBaseMint,
     TAccountQuoteMint,
@@ -565,7 +631,7 @@ export function getWithdrawLiquidityInstruction<
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress },
-): WithdrawLiquidityInstruction<
+): CloseLiquidityPositionInstruction<
   TProgramAddress,
   TAccountAuthority,
   TAccountBaseMint,
@@ -630,7 +696,7 @@ export function getWithdrawLiquidityInstruction<
   }
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
-    ResolvedAccount
+    ResolvedInstructionAccount
   >
 
   // Original args.
@@ -649,30 +715,36 @@ export function getWithdrawLiquidityInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
-      getAccountMeta(accounts.authority),
-      getAccountMeta(accounts.baseMint),
-      getAccountMeta(accounts.quoteMint),
-      getAccountMeta(accounts.authorityBaseTokenAccount),
-      getAccountMeta(accounts.authorityQuoteTokenAccount),
-      getAccountMeta(accounts.market),
-      getAccountMeta(accounts.liquidityPosition),
-      getAccountMeta(accounts.baseVault),
-      getAccountMeta(accounts.quoteVault),
-      getAccountMeta(accounts.bookkeeping),
-      getAccountMeta(accounts.currentExits),
-      getAccountMeta(accounts.previousExits),
-      getAccountMeta(accounts.currentPrices),
-      getAccountMeta(accounts.previousPrices),
-      getAccountMeta(accounts.baseTokenProgram),
-      getAccountMeta(accounts.quoteTokenProgram),
-      getAccountMeta(accounts.associatedTokenProgram),
-      getAccountMeta(accounts.systemProgram),
+      getAccountMeta('authority', accounts.authority),
+      getAccountMeta('baseMint', accounts.baseMint),
+      getAccountMeta('quoteMint', accounts.quoteMint),
+      getAccountMeta(
+        'authorityBaseTokenAccount',
+        accounts.authorityBaseTokenAccount,
+      ),
+      getAccountMeta(
+        'authorityQuoteTokenAccount',
+        accounts.authorityQuoteTokenAccount,
+      ),
+      getAccountMeta('market', accounts.market),
+      getAccountMeta('liquidityPosition', accounts.liquidityPosition),
+      getAccountMeta('baseVault', accounts.baseVault),
+      getAccountMeta('quoteVault', accounts.quoteVault),
+      getAccountMeta('bookkeeping', accounts.bookkeeping),
+      getAccountMeta('currentExits', accounts.currentExits),
+      getAccountMeta('previousExits', accounts.previousExits),
+      getAccountMeta('currentPrices', accounts.currentPrices),
+      getAccountMeta('previousPrices', accounts.previousPrices),
+      getAccountMeta('baseTokenProgram', accounts.baseTokenProgram),
+      getAccountMeta('quoteTokenProgram', accounts.quoteTokenProgram),
+      getAccountMeta('associatedTokenProgram', accounts.associatedTokenProgram),
+      getAccountMeta('systemProgram', accounts.systemProgram),
     ],
-    data: getWithdrawLiquidityInstructionDataEncoder().encode(
-      args as WithdrawLiquidityInstructionDataArgs,
+    data: getCloseLiquidityPositionInstructionDataEncoder().encode(
+      args as CloseLiquidityPositionInstructionDataArgs,
     ),
     programAddress,
-  } as WithdrawLiquidityInstruction<
+  } as CloseLiquidityPositionInstruction<
     TProgramAddress,
     TAccountAuthority,
     TAccountBaseMint,
@@ -695,7 +767,7 @@ export function getWithdrawLiquidityInstruction<
   >)
 }
 
-export type ParsedWithdrawLiquidityInstruction<
+export type ParsedCloseLiquidityPositionInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
@@ -720,20 +792,25 @@ export type ParsedWithdrawLiquidityInstruction<
     associatedTokenProgram: TAccountMetas[16]
     systemProgram: TAccountMetas[17]
   }
-  data: WithdrawLiquidityInstructionData
+  data: CloseLiquidityPositionInstructionData
 }
 
-export function parseWithdrawLiquidityInstruction<
+export function parseCloseLiquidityPositionInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
-): ParsedWithdrawLiquidityInstruction<TProgram, TAccountMetas> {
+): ParsedCloseLiquidityPositionInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 18) {
-    // TODO: Coded error.
-    throw new Error('Not enough accounts')
+    throw new SolanaError(
+      SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
+      {
+        actualAccountMetas: instruction.accounts.length,
+        expectedAccountMetas: 18,
+      },
+    )
   }
   let accountIndex = 0
   const getNextAccount = () => {
@@ -763,6 +840,8 @@ export function parseWithdrawLiquidityInstruction<
       associatedTokenProgram: getNextAccount(),
       systemProgram: getNextAccount(),
     },
-    data: getWithdrawLiquidityInstructionDataDecoder().decode(instruction.data),
+    data: getCloseLiquidityPositionInstructionDataDecoder().decode(
+      instruction.data,
+    ),
   }
 }

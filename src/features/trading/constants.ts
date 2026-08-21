@@ -2,9 +2,9 @@ function readMarketId() {
   const rawMarketId = import.meta.env.VITE_MARKET_ID ?? '1'
   const marketId = Number(rawMarketId)
 
-  if (!Number.isInteger(marketId) || marketId < 0) {
+  if (!Number.isInteger(marketId) || marketId < 0 || marketId > 0xffffffff) {
     throw new Error(
-      `VITE_MARKET_ID must be a non-negative integer, got "${rawMarketId}"`,
+      `VITE_MARKET_ID must be an unsigned 32-bit integer, got "${rawMarketId}"`,
     )
   }
 
@@ -12,7 +12,7 @@ function readMarketId() {
 }
 
 export const MARKET_ID = readMarketId()
-export const ARRAY_LENGTH = 10
+export const ARRAY_LENGTH = 20
 export const SLOT_DURATION_MS = 400
 export const SLOT_DURATION_SECONDS = SLOT_DURATION_MS / 1000
 export const NATIVE_SOL_DECIMALS = 9
@@ -28,7 +28,8 @@ export const CHART_HISTORY_REQUEST_DEBOUNCE_MS = 450
 export const CLOSED_POSITION_VISIBLE_ROW_OVERSCAN_PX = 480
 export const CLOSED_POSITION_MAX_CONCURRENT_CHART_LOADS = 10
 export const CLOSED_POSITION_BATCH_GAP_SLOTS = 900
-export const MAX_BATCH_CLOSE_POSITIONS_PER_TRANSACTION = 8
+// A v1 close uses 23 account metas; two self-custodied positions fit the wire limit.
+export const MAX_BATCH_CLOSE_POSITIONS_PER_TRANSACTION = 2
 export const MAX_RECLAIM_RENT_ACCOUNTS_PER_TRANSACTION = 10
 export const POSITION_PAGE_SIZE = 10
 export const HIGH_PRICE_IMPACT_WARNING_THRESHOLD_PERCENT = 1

@@ -10,6 +10,8 @@ import {
   combineCodec,
   getStructDecoder,
   getStructEncoder,
+  getU32Decoder,
+  getU32Encoder,
   getU64Decoder,
   getU64Encoder,
   type FixedSizeCodec,
@@ -18,30 +20,30 @@ import {
 } from '@solana/kit'
 
 export type MarketUpdateEvent = {
-  marketId: bigint
   baseFlow: bigint
   quoteFlow: bigint
+  marketId: number
 }
 
 export type MarketUpdateEventArgs = {
-  marketId: number | bigint
   baseFlow: number | bigint
   quoteFlow: number | bigint
+  marketId: number
 }
 
 export function getMarketUpdateEventEncoder(): FixedSizeEncoder<MarketUpdateEventArgs> {
   return getStructEncoder([
-    ['marketId', getU64Encoder()],
     ['baseFlow', getU64Encoder()],
     ['quoteFlow', getU64Encoder()],
+    ['marketId', getU32Encoder()],
   ])
 }
 
 export function getMarketUpdateEventDecoder(): FixedSizeDecoder<MarketUpdateEvent> {
   return getStructDecoder([
-    ['marketId', getU64Decoder()],
     ['baseFlow', getU64Decoder()],
     ['quoteFlow', getU64Decoder()],
+    ['marketId', getU32Decoder()],
   ])
 }
 

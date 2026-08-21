@@ -10,11 +10,15 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
+  getAddressDecoder,
+  getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
+  SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
+  SolanaError,
   transformEncoder,
   type AccountMeta,
   type AccountSignerMeta,
@@ -25,31 +29,31 @@ import {
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
-  type ReadonlyAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
   type WritableSignerAccount,
 } from '@solana/kit'
+import {
+  getAccountMetaFactory,
+  type ResolvedInstructionAccount,
+} from '@solana/program-client-core'
 import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '../programs'
-import { getAccountMetaFactory, type ResolvedAccount } from '../shared'
 
-export const INITIALIZE_PROGRAM_CONFIG_DISCRIMINATOR = new Uint8Array([
-  6, 131, 61, 237, 40, 110, 83, 124,
+export const NOMINATE_PROGRAM_AUTHORITY_DISCRIMINATOR = new Uint8Array([
+  114, 136, 110, 22, 67, 149, 184, 248,
 ])
 
-export function getInitializeProgramConfigDiscriminatorBytes() {
+export function getNominateProgramAuthorityDiscriminatorBytes() {
   return fixEncoderSize(getBytesEncoder(), 8).encode(
-    INITIALIZE_PROGRAM_CONFIG_DISCRIMINATOR,
+    NOMINATE_PROGRAM_AUTHORITY_DISCRIMINATOR,
   )
 }
 
-export type InitializeProgramConfigInstruction<
+export type NominateProgramAuthorityInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountAuthority extends string | AccountMeta<string> = string,
   TAccountProgramConfig extends string | AccountMeta<string> = string,
-  TAccountSystemProgram extends string | AccountMeta<string> =
-    '11111111111111111111111111111111',
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -62,73 +66,73 @@ export type InitializeProgramConfigInstruction<
       TAccountProgramConfig extends string
         ? WritableAccount<TAccountProgramConfig>
         : TAccountProgramConfig,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >
 
-export type InitializeProgramConfigInstructionData = {
+export type NominateProgramAuthorityInstructionData = {
   discriminator: ReadonlyUint8Array
+  newAuthority: Address
 }
 
-export type InitializeProgramConfigInstructionDataArgs = {}
+export type NominateProgramAuthorityInstructionDataArgs = {
+  newAuthority: Address
+}
 
-export function getInitializeProgramConfigInstructionDataEncoder(): FixedSizeEncoder<InitializeProgramConfigInstructionDataArgs> {
+export function getNominateProgramAuthorityInstructionDataEncoder(): FixedSizeEncoder<NominateProgramAuthorityInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
+    getStructEncoder([
+      ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['newAuthority', getAddressEncoder()],
+    ]),
     (value) => ({
       ...value,
-      discriminator: INITIALIZE_PROGRAM_CONFIG_DISCRIMINATOR,
+      discriminator: NOMINATE_PROGRAM_AUTHORITY_DISCRIMINATOR,
     }),
   )
 }
 
-export function getInitializeProgramConfigInstructionDataDecoder(): FixedSizeDecoder<InitializeProgramConfigInstructionData> {
+export function getNominateProgramAuthorityInstructionDataDecoder(): FixedSizeDecoder<NominateProgramAuthorityInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['newAuthority', getAddressDecoder()],
   ])
 }
 
-export function getInitializeProgramConfigInstructionDataCodec(): FixedSizeCodec<
-  InitializeProgramConfigInstructionDataArgs,
-  InitializeProgramConfigInstructionData
+export function getNominateProgramAuthorityInstructionDataCodec(): FixedSizeCodec<
+  NominateProgramAuthorityInstructionDataArgs,
+  NominateProgramAuthorityInstructionData
 > {
   return combineCodec(
-    getInitializeProgramConfigInstructionDataEncoder(),
-    getInitializeProgramConfigInstructionDataDecoder(),
+    getNominateProgramAuthorityInstructionDataEncoder(),
+    getNominateProgramAuthorityInstructionDataDecoder(),
   )
 }
 
-export type InitializeProgramConfigAsyncInput<
+export type NominateProgramAuthorityAsyncInput<
   TAccountAuthority extends string = string,
   TAccountProgramConfig extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
   programConfig?: Address<TAccountProgramConfig>
-  systemProgram?: Address<TAccountSystemProgram>
+  newAuthority: NominateProgramAuthorityInstructionDataArgs['newAuthority']
 }
 
-export async function getInitializeProgramConfigInstructionAsync<
+export async function getNominateProgramAuthorityInstructionAsync<
   TAccountAuthority extends string,
   TAccountProgramConfig extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
-  input: InitializeProgramConfigAsyncInput<
+  input: NominateProgramAuthorityAsyncInput<
     TAccountAuthority,
-    TAccountProgramConfig,
-    TAccountSystemProgram
+    TAccountProgramConfig
   >,
   config?: { programAddress?: TProgramAddress },
 ): Promise<
-  InitializeProgramConfigInstruction<
+  NominateProgramAuthorityInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountProgramConfig,
-    TAccountSystemProgram
+    TAccountProgramConfig
   >
 > {
   // Program address.
@@ -138,12 +142,14 @@ export async function getInitializeProgramConfigInstructionAsync<
   const originalAccounts = {
     authority: { value: input.authority ?? null, isWritable: true },
     programConfig: { value: input.programConfig ?? null, isWritable: true },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   }
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
-    ResolvedAccount
+    ResolvedInstructionAccount
   >
+
+  // Original args.
+  const args = { ...input }
 
   // Resolve default values.
   if (!accounts.programConfig.value) {
@@ -158,55 +164,47 @@ export async function getInitializeProgramConfigInstructionAsync<
       ],
     })
   }
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
-  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
-      getAccountMeta(accounts.authority),
-      getAccountMeta(accounts.programConfig),
-      getAccountMeta(accounts.systemProgram),
+      getAccountMeta('authority', accounts.authority),
+      getAccountMeta('programConfig', accounts.programConfig),
     ],
-    data: getInitializeProgramConfigInstructionDataEncoder().encode({}),
+    data: getNominateProgramAuthorityInstructionDataEncoder().encode(
+      args as NominateProgramAuthorityInstructionDataArgs,
+    ),
     programAddress,
-  } as InitializeProgramConfigInstruction<
+  } as NominateProgramAuthorityInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountProgramConfig,
-    TAccountSystemProgram
+    TAccountProgramConfig
   >)
 }
 
-export type InitializeProgramConfigInput<
+export type NominateProgramAuthorityInput<
   TAccountAuthority extends string = string,
   TAccountProgramConfig extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
   programConfig: Address<TAccountProgramConfig>
-  systemProgram?: Address<TAccountSystemProgram>
+  newAuthority: NominateProgramAuthorityInstructionDataArgs['newAuthority']
 }
 
-export function getInitializeProgramConfigInstruction<
+export function getNominateProgramAuthorityInstruction<
   TAccountAuthority extends string,
   TAccountProgramConfig extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
-  input: InitializeProgramConfigInput<
+  input: NominateProgramAuthorityInput<
     TAccountAuthority,
-    TAccountProgramConfig,
-    TAccountSystemProgram
+    TAccountProgramConfig
   >,
   config?: { programAddress?: TProgramAddress },
-): InitializeProgramConfigInstruction<
+): NominateProgramAuthorityInstruction<
   TProgramAddress,
   TAccountAuthority,
-  TAccountProgramConfig,
-  TAccountSystemProgram
+  TAccountProgramConfig
 > {
   // Program address.
   const programAddress = config?.programAddress ?? TWOB_ANCHOR_PROGRAM_ADDRESS
@@ -215,37 +213,33 @@ export function getInitializeProgramConfigInstruction<
   const originalAccounts = {
     authority: { value: input.authority ?? null, isWritable: true },
     programConfig: { value: input.programConfig ?? null, isWritable: true },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   }
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
-    ResolvedAccount
+    ResolvedInstructionAccount
   >
 
-  // Resolve default values.
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
-  }
+  // Original args.
+  const args = { ...input }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
-      getAccountMeta(accounts.authority),
-      getAccountMeta(accounts.programConfig),
-      getAccountMeta(accounts.systemProgram),
+      getAccountMeta('authority', accounts.authority),
+      getAccountMeta('programConfig', accounts.programConfig),
     ],
-    data: getInitializeProgramConfigInstructionDataEncoder().encode({}),
+    data: getNominateProgramAuthorityInstructionDataEncoder().encode(
+      args as NominateProgramAuthorityInstructionDataArgs,
+    ),
     programAddress,
-  } as InitializeProgramConfigInstruction<
+  } as NominateProgramAuthorityInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountProgramConfig,
-    TAccountSystemProgram
+    TAccountProgramConfig
   >)
 }
 
-export type ParsedInitializeProgramConfigInstruction<
+export type ParsedNominateProgramAuthorityInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
@@ -253,22 +247,26 @@ export type ParsedInitializeProgramConfigInstruction<
   accounts: {
     authority: TAccountMetas[0]
     programConfig: TAccountMetas[1]
-    systemProgram: TAccountMetas[2]
   }
-  data: InitializeProgramConfigInstructionData
+  data: NominateProgramAuthorityInstructionData
 }
 
-export function parseInitializeProgramConfigInstruction<
+export function parseNominateProgramAuthorityInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
-): ParsedInitializeProgramConfigInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 3) {
-    // TODO: Coded error.
-    throw new Error('Not enough accounts')
+): ParsedNominateProgramAuthorityInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 2) {
+    throw new SolanaError(
+      SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
+      {
+        actualAccountMetas: instruction.accounts.length,
+        expectedAccountMetas: 2,
+      },
+    )
   }
   let accountIndex = 0
   const getNextAccount = () => {
@@ -278,12 +276,8 @@ export function parseInitializeProgramConfigInstruction<
   }
   return {
     programAddress: instruction.programAddress,
-    accounts: {
-      authority: getNextAccount(),
-      programConfig: getNextAccount(),
-      systemProgram: getNextAccount(),
-    },
-    data: getInitializeProgramConfigInstructionDataDecoder().decode(
+    accounts: { authority: getNextAccount(), programConfig: getNextAccount() },
+    data: getNominateProgramAuthorityInstructionDataDecoder().decode(
       instruction.data,
     ),
   }

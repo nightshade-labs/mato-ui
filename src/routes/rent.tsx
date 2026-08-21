@@ -2,6 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSolanaClient, useWalletSession } from '@solana/react-hooks'
 import { Wallet } from 'lucide-react'
+import type {
+  OwnedExitsAccount,
+  OwnedPricesAccount,
+} from '@/features/trading/api/rent-accounts'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -11,10 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import type {
-  OwnedExitsAccount,
-  OwnedPricesAccount,
-} from '@/features/trading/api/rent-accounts'
 import { shortenAddress } from '@/features/trading/lib/format'
 import { tradingQueries } from '@/features/trading/queries'
 
@@ -25,24 +25,27 @@ export const Route = createFileRoute('/rent')({
 type AccountRow = {
   address: string
   index: bigint
-  openPositions?: bigint
-  owner: string
+  market: string
+  openPositions?: number
+  payer: string
 }
 
-function mapPricesRows(accounts: OwnedPricesAccount[]): AccountRow[] {
+function mapPricesRows(accounts: Array<OwnedPricesAccount>): Array<AccountRow> {
   return accounts.map((account) => ({
     address: account.address.toString(),
     index: account.data.index,
-    openPositions: account.data.openPositions,
-    owner: account.data.owner.toString(),
+    market: account.data.market.toString(),
+    payer: account.data.payer.toString(),
   }))
 }
 
-function mapExitsRows(accounts: OwnedExitsAccount[]): AccountRow[] {
+function mapExitsRows(accounts: Array<OwnedExitsAccount>): Array<AccountRow> {
   return accounts.map((account) => ({
     address: account.address.toString(),
     index: account.data.index,
-    owner: account.data.owner.toString(),
+    market: account.data.market.toString(),
+    openPositions: account.data.openPositions,
+    payer: account.data.payer.toString(),
   }))
 }
 
@@ -82,13 +85,13 @@ function RentPage() {
           <h1 className="text-2xl font-semibold tracking-[-0.04em]">
             Rent Accounts
           </h1>
-          <Badge variant="accent">Wallet-owned prices + exits</Badge>
+          <Badge variant="accent">Wallet-funded prices + exits</Badge>
         </div>
 
         <p className="mb-5 max-w-3xl text-sm text-muted-foreground">
-          Connected wallet owners can reclaim rent after closing these accounts.
-          This view lists every `prices` and `exits` account owned by your
-          wallet.
+          Connected wallet payers can reclaim rent after closing these account
+          pairs. This view lists every `prices` and `exits` account funded by
+          your wallet.
         </p>
 
         {!ownerAddress ? (
@@ -147,18 +150,18 @@ function RentPage() {
 
             <div className="grid gap-6 lg:grid-cols-2">
               <OwnedAccountCard
-                description="Price snapshot accounts owned by this wallet."
-                emptyLabel="No owned prices accounts found."
+                description="Price snapshot accounts funded by this wallet."
+                emptyLabel="No funded prices accounts found."
                 isLoading={isPricesLoading}
                 rows={pricesRows}
-                showOpenPositions
                 title="Prices Accounts"
               />
               <OwnedAccountCard
-                description="Exit flow accounts owned by this wallet."
-                emptyLabel="No owned exits accounts found."
+                description="Exit flow accounts funded by this wallet."
+                emptyLabel="No funded exits accounts found."
                 isLoading={isExitsLoading}
                 rows={exitsRows}
+                showOpenPositions
                 title="Exits Accounts"
               />
             </div>
@@ -180,7 +183,7 @@ function OwnedAccountCard({
   description: string
   emptyLabel: string
   isLoading: boolean
-  rows: AccountRow[]
+  rows: Array<AccountRow>
   showOpenPositions?: boolean
   title: string
 }) {
@@ -197,15 +200,16 @@ function OwnedAccountCard({
           <p className="text-sm text-muted-foreground">{emptyLabel}</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[30rem] text-left text-sm">
+            <table className="w-full min-w-[42rem] text-left text-sm">
               <thead>
                 <tr className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
                   <th className="pb-3 pr-3 font-medium">Account</th>
                   <th className="pb-3 pr-3 font-medium">Index</th>
+                  <th className="pb-3 pr-3 font-medium">Market</th>
                   {showOpenPositions ? (
                     <th className="pb-3 pr-3 font-medium">Open Positions</th>
                   ) : null}
-                  <th className="pb-3 font-medium">Owner</th>
+                  <th className="pb-3 font-medium">Payer</th>
                 </tr>
               </thead>
               <tbody>
@@ -222,14 +226,19 @@ function OwnedAccountCard({
                     <td className="py-3 pr-3 font-mono text-xs">
                       {row.index.toString()}
                     </td>
+                    <td className="py-3 pr-3 font-mono text-xs">
+                      <span title={row.market}>
+                        {shortenAddress(row.market, 6, 6)}
+                      </span>
+                    </td>
                     {showOpenPositions ? (
                       <td className="py-3 pr-3 font-mono text-xs">
-                        {(row.openPositions ?? 0n).toString()}
+                        {(row.openPositions ?? 0).toString()}
                       </td>
                     ) : null}
                     <td className="py-3 font-mono text-xs">
-                      <span title={row.owner}>
-                        {shortenAddress(row.owner, 6, 6)}
+                      <span title={row.payer}>
+                        {shortenAddress(row.payer, 6, 6)}
                       </span>
                     </td>
                   </tr>

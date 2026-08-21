@@ -1,7 +1,8 @@
+import { computeAveragePrice } from './market'
+import { getTradePositionEndSlot, isBuyTradePosition } from './trade-position'
 import type { Address } from '@solana/kit'
 import type { TradePosition } from '@/lib/generated/twob/src/generated/accounts'
 import type { StreamingMarketState } from '../domain/models'
-import { computeAveragePrice } from './market'
 
 export interface PositionProgressMetrics {
   amountAtoms: bigint
@@ -53,9 +54,8 @@ type PersistedPositionProgress = {
 
 const lastSwappedEstimateByPosition = new Map<string, CachedSwappedEstimate>()
 const projectedEndEstimateByPosition = new Map<string, CachedTerminalEstimate>()
-let persistedPositionProgressCache: Record<
-  string,
-  PersistedPositionProgress
+let persistedPositionProgressCache: Partial<
+  Record<string, PersistedPositionProgress>
 > | null = null
 
 function clampToRange(value: number, min: number, max: number) {
@@ -199,7 +199,7 @@ export function getActivePositionMetrics({
   streamingState: StreamingMarketState | null
   endSlotBookkeepingSnapshot: bigint | null
 }): PositionProgressMetrics {
-  const isBuy = position.isBuy === 1
+  const isBuy = isBuyTradePosition(position)
   const depositedToken = isBuy ? quoteTicker : baseTicker
   const depositedDecimals = isBuy ? quoteDecimals : baseDecimals
   const swappedToken = isBuy ? baseTicker : quoteTicker
@@ -212,7 +212,7 @@ export function getActivePositionMetrics({
 
   const amountAtoms = position.amount
   const startSlot = Number(position.startSlot)
-  const endSlot = Number(position.endSlot)
+  const endSlot = Number(getTradePositionEndSlot(position))
   const durationSlots = Math.max(1, endSlot - startSlot)
   const scaledFlowAtomsPerSlot =
     (amountAtoms * FLOW_PRECISION_FACTOR) / BigInt(durationSlots)
@@ -410,23 +410,17 @@ export function getActivePositionMetrics({
     }
 
     const cachedMetrics = getCachedSwappedEstimate(positionKey)
-    if (
-      swappedAtoms !== null &&
-      cachedMetrics !== null &&
-      swappedAtoms < cachedMetrics.amount
-    ) {
+    if (cachedMetrics !== null && swappedAtoms < cachedMetrics.amount) {
       swappedAtoms = cachedMetrics.amount
       consumedAtomsForAverage = cachedMetrics.consumedAtoms
     }
 
-    if (swappedAtoms !== null) {
-      const cachedSource = getCachedSwappedEstimate(positionKey)?.source
-      setCachedSwappedEstimate(positionKey, {
-        amount: swappedAtoms,
-        consumedAtoms: consumedAtomsForAverage,
-        source: cachedSource ?? (hasPositionEnded ? 'snapshot' : 'active'),
-      })
-    }
+    const cachedSource = getCachedSwappedEstimate(positionKey)?.source
+    setCachedSwappedEstimate(positionKey, {
+      amount: swappedAtoms,
+      consumedAtoms: consumedAtomsForAverage,
+      source: cachedSource ?? (hasPositionEnded ? 'snapshot' : 'active'),
+    })
   }
 
   const averagePrice = (() => {

@@ -56,86 +56,110 @@ import {
   type TradePositionArgs,
 } from '../accounts'
 import {
+  getAcceptProgramAuthorityInstructionAsync,
   getAddLiquidityInstructionAsync,
-  getAuthorityCloseLiquidityPositionInstructionAsync,
-  getAuthorityClosePositionInstructionAsync,
-  getCloseExitsAccountInstructionAsync,
+  getAuthorityCloseTradePositionInstructionAsync,
+  getCancelProgramAuthorityNominationInstructionAsync,
+  getCloseExitsAndPricesAccountInstructionAsync,
+  getCloseLiquidityPositionInstructionAsync,
   getCloseMarketInstructionAsync,
-  getClosePricesAccountInstructionAsync,
+  getCompensateDebtInstructionAsync,
   getInitializeMarketInstructionAsync,
   getInitializeProgramConfigInstructionAsync,
+  getNominateProgramAuthorityInstructionAsync,
   getPauseMarketInstructionAsync,
+  getPauseTradePositionInstructionAsync,
   getProvideLiquidityInstructionAsync,
-  getPublicClosePositionInstructionAsync,
-  getPublicCompensateDebtInstructionAsync,
-  getPublicStopLiquidityPositionInstructionAsync,
+  getPublicCloseTradePositionInstructionAsync,
+  getStopLiquidityPositionInstructionAsync,
   getSubmitOrderInstructionAsync,
+  getUnpauseMarketInstructionAsync,
+  getUnpauseTradePositionInstructionAsync,
   getUpdateBooksInstructionAsync,
   getUpdateFeesInstructionAsync,
   getUpdateLiquidityFlowsInstructionAsync,
   getWithdrawFeesInstructionAsync,
   getWithdrawLiquidityInstructionAsync,
+  getWithdrawSwappedInstructionAsync,
+  parseAcceptProgramAuthorityInstruction,
   parseAddLiquidityInstruction,
-  parseAuthorityCloseLiquidityPositionInstruction,
-  parseAuthorityClosePositionInstruction,
-  parseCloseExitsAccountInstruction,
+  parseAuthorityCloseTradePositionInstruction,
+  parseCancelProgramAuthorityNominationInstruction,
+  parseCloseExitsAndPricesAccountInstruction,
+  parseCloseLiquidityPositionInstruction,
   parseCloseMarketInstruction,
-  parseClosePricesAccountInstruction,
+  parseCompensateDebtInstruction,
   parseInitializeMarketInstruction,
   parseInitializeProgramConfigInstruction,
+  parseNominateProgramAuthorityInstruction,
   parsePauseMarketInstruction,
+  parsePauseTradePositionInstruction,
   parseProvideLiquidityInstruction,
-  parsePublicClosePositionInstruction,
-  parsePublicCompensateDebtInstruction,
-  parsePublicStopLiquidityPositionInstruction,
+  parsePublicCloseTradePositionInstruction,
+  parseStopLiquidityPositionInstruction,
   parseSubmitOrderInstruction,
+  parseUnpauseMarketInstruction,
+  parseUnpauseTradePositionInstruction,
   parseUpdateBooksInstruction,
   parseUpdateFeesInstruction,
   parseUpdateLiquidityFlowsInstruction,
   parseWithdrawFeesInstruction,
   parseWithdrawLiquidityInstruction,
+  parseWithdrawSwappedInstruction,
+  type AcceptProgramAuthorityAsyncInput,
   type AddLiquidityAsyncInput,
-  type AuthorityCloseLiquidityPositionAsyncInput,
-  type AuthorityClosePositionAsyncInput,
-  type CloseExitsAccountAsyncInput,
+  type AuthorityCloseTradePositionAsyncInput,
+  type CancelProgramAuthorityNominationAsyncInput,
+  type CloseExitsAndPricesAccountAsyncInput,
+  type CloseLiquidityPositionAsyncInput,
   type CloseMarketAsyncInput,
-  type ClosePricesAccountAsyncInput,
+  type CompensateDebtAsyncInput,
   type InitializeMarketAsyncInput,
   type InitializeProgramConfigAsyncInput,
+  type NominateProgramAuthorityAsyncInput,
+  type ParsedAcceptProgramAuthorityInstruction,
   type ParsedAddLiquidityInstruction,
-  type ParsedAuthorityCloseLiquidityPositionInstruction,
-  type ParsedAuthorityClosePositionInstruction,
-  type ParsedCloseExitsAccountInstruction,
+  type ParsedAuthorityCloseTradePositionInstruction,
+  type ParsedCancelProgramAuthorityNominationInstruction,
+  type ParsedCloseExitsAndPricesAccountInstruction,
+  type ParsedCloseLiquidityPositionInstruction,
   type ParsedCloseMarketInstruction,
-  type ParsedClosePricesAccountInstruction,
+  type ParsedCompensateDebtInstruction,
   type ParsedInitializeMarketInstruction,
   type ParsedInitializeProgramConfigInstruction,
+  type ParsedNominateProgramAuthorityInstruction,
   type ParsedPauseMarketInstruction,
+  type ParsedPauseTradePositionInstruction,
   type ParsedProvideLiquidityInstruction,
-  type ParsedPublicClosePositionInstruction,
-  type ParsedPublicCompensateDebtInstruction,
-  type ParsedPublicStopLiquidityPositionInstruction,
+  type ParsedPublicCloseTradePositionInstruction,
+  type ParsedStopLiquidityPositionInstruction,
   type ParsedSubmitOrderInstruction,
+  type ParsedUnpauseMarketInstruction,
+  type ParsedUnpauseTradePositionInstruction,
   type ParsedUpdateBooksInstruction,
   type ParsedUpdateFeesInstruction,
   type ParsedUpdateLiquidityFlowsInstruction,
   type ParsedWithdrawFeesInstruction,
   type ParsedWithdrawLiquidityInstruction,
+  type ParsedWithdrawSwappedInstruction,
   type PauseMarketAsyncInput,
+  type PauseTradePositionAsyncInput,
   type ProvideLiquidityAsyncInput,
-  type PublicClosePositionAsyncInput,
-  type PublicCompensateDebtAsyncInput,
-  type PublicStopLiquidityPositionAsyncInput,
+  type PublicCloseTradePositionAsyncInput,
+  type StopLiquidityPositionAsyncInput,
   type SubmitOrderAsyncInput,
+  type UnpauseMarketAsyncInput,
+  type UnpauseTradePositionAsyncInput,
   type UpdateBooksAsyncInput,
   type UpdateFeesAsyncInput,
   type UpdateLiquidityFlowsAsyncInput,
   type WithdrawFeesAsyncInput,
   type WithdrawLiquidityAsyncInput,
+  type WithdrawSwappedAsyncInput,
 } from '../instructions'
 
 export const TWOB_ANCHOR_PROGRAM_ADDRESS =
-  'CCAmAqvza37EWzou7LoYCaGKzdJsCu1CLPMp3Wvx3Bc5' as Address<'CCAmAqvza37EWzou7LoYCaGKzdJsCu1CLPMp3Wvx3Bc5'>
+  'CCAd78ZgUBAFNQmCCD5z4oGuFzb8uXLw5kfnBcRvDw16' as Address<'CCAd78ZgUBAFNQmCCD5z4oGuFzb8uXLw5kfnBcRvDw16'>
 
 export enum TwobAnchorAccount {
   Bookkeeping,
@@ -235,31 +259,48 @@ export function identifyTwobAnchorAccount(
 }
 
 export enum TwobAnchorInstruction {
+  AcceptProgramAuthority,
   AddLiquidity,
-  AuthorityCloseLiquidityPosition,
-  AuthorityClosePosition,
-  CloseExitsAccount,
+  AuthorityCloseTradePosition,
+  CancelProgramAuthorityNomination,
+  CloseExitsAndPricesAccount,
+  CloseLiquidityPosition,
   CloseMarket,
-  ClosePricesAccount,
+  CompensateDebt,
   InitializeMarket,
   InitializeProgramConfig,
+  NominateProgramAuthority,
   PauseMarket,
+  PauseTradePosition,
   ProvideLiquidity,
-  PublicClosePosition,
-  PublicCompensateDebt,
-  PublicStopLiquidityPosition,
+  PublicCloseTradePosition,
+  StopLiquidityPosition,
   SubmitOrder,
+  UnpauseMarket,
+  UnpauseTradePosition,
   UpdateBooks,
   UpdateFees,
   UpdateLiquidityFlows,
   WithdrawFees,
   WithdrawLiquidity,
+  WithdrawSwapped,
 }
 
 export function identifyTwobAnchorInstruction(
   instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array,
 ): TwobAnchorInstruction {
   const data = 'data' in instruction ? instruction.data : instruction
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([224, 193, 101, 195, 243, 34, 10, 108]),
+      ),
+      0,
+    )
+  ) {
+    return TwobAnchorInstruction.AcceptProgramAuthority
+  }
   if (
     containsBytes(
       data,
@@ -275,34 +316,45 @@ export function identifyTwobAnchorInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([169, 197, 227, 231, 81, 124, 125, 1]),
+        new Uint8Array([122, 9, 159, 161, 73, 91, 188, 216]),
       ),
       0,
     )
   ) {
-    return TwobAnchorInstruction.AuthorityCloseLiquidityPosition
+    return TwobAnchorInstruction.AuthorityCloseTradePosition
   }
   if (
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([198, 43, 155, 228, 243, 10, 227, 45]),
+        new Uint8Array([239, 32, 97, 130, 58, 193, 233, 90]),
       ),
       0,
     )
   ) {
-    return TwobAnchorInstruction.AuthorityClosePosition
+    return TwobAnchorInstruction.CancelProgramAuthorityNomination
   }
   if (
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([241, 198, 24, 114, 18, 89, 131, 244]),
+        new Uint8Array([24, 39, 124, 223, 183, 214, 51, 28]),
       ),
       0,
     )
   ) {
-    return TwobAnchorInstruction.CloseExitsAccount
+    return TwobAnchorInstruction.CloseExitsAndPricesAccount
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([34, 168, 107, 163, 194, 68, 131, 24]),
+      ),
+      0,
+    )
+  ) {
+    return TwobAnchorInstruction.CloseLiquidityPosition
   }
   if (
     containsBytes(
@@ -319,12 +371,12 @@ export function identifyTwobAnchorInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([244, 43, 217, 128, 151, 50, 171, 17]),
+        new Uint8Array([179, 164, 115, 50, 11, 123, 101, 15]),
       ),
       0,
     )
   ) {
-    return TwobAnchorInstruction.ClosePricesAccount
+    return TwobAnchorInstruction.CompensateDebt
   }
   if (
     containsBytes(
@@ -352,12 +404,34 @@ export function identifyTwobAnchorInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([114, 136, 110, 22, 67, 149, 184, 248]),
+      ),
+      0,
+    )
+  ) {
+    return TwobAnchorInstruction.NominateProgramAuthority
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([216, 238, 4, 164, 65, 11, 162, 91]),
       ),
       0,
     )
   ) {
     return TwobAnchorInstruction.PauseMarket
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([93, 3, 178, 173, 29, 165, 4, 9]),
+      ),
+      0,
+    )
+  ) {
+    return TwobAnchorInstruction.PauseTradePosition
   }
   if (
     containsBytes(
@@ -374,34 +448,23 @@ export function identifyTwobAnchorInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([42, 36, 239, 26, 46, 226, 194, 200]),
+        new Uint8Array([84, 88, 98, 249, 38, 129, 179, 30]),
       ),
       0,
     )
   ) {
-    return TwobAnchorInstruction.PublicClosePosition
+    return TwobAnchorInstruction.PublicCloseTradePosition
   }
   if (
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([244, 213, 26, 253, 142, 158, 25, 31]),
+        new Uint8Array([235, 140, 4, 132, 40, 50, 92, 60]),
       ),
       0,
     )
   ) {
-    return TwobAnchorInstruction.PublicCompensateDebt
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([202, 106, 27, 254, 67, 103, 203, 189]),
-      ),
-      0,
-    )
-  ) {
-    return TwobAnchorInstruction.PublicStopLiquidityPosition
+    return TwobAnchorInstruction.StopLiquidityPosition
   }
   if (
     containsBytes(
@@ -413,6 +476,28 @@ export function identifyTwobAnchorInstruction(
     )
   ) {
     return TwobAnchorInstruction.SubmitOrder
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([219, 203, 199, 170, 212, 45, 170, 80]),
+      ),
+      0,
+    )
+  ) {
+    return TwobAnchorInstruction.UnpauseMarket
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([212, 116, 103, 81, 196, 132, 86, 153]),
+      ),
+      0,
+    )
+  ) {
+    return TwobAnchorInstruction.UnpauseTradePosition
   }
   if (
     containsBytes(
@@ -469,6 +554,17 @@ export function identifyTwobAnchorInstruction(
   ) {
     return TwobAnchorInstruction.WithdrawLiquidity
   }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([196, 235, 42, 103, 30, 197, 174, 94]),
+      ),
+      0,
+    )
+  ) {
+    return TwobAnchorInstruction.WithdrawSwapped
+  }
   throw new SolanaError(
     SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_INSTRUCTION,
     { instructionData: data, programName: 'twobAnchor' },
@@ -476,26 +572,32 @@ export function identifyTwobAnchorInstruction(
 }
 
 export type ParsedTwobAnchorInstruction<
-  TProgram extends string = 'CCAmAqvza37EWzou7LoYCaGKzdJsCu1CLPMp3Wvx3Bc5',
+  TProgram extends string = 'CCAd78ZgUBAFNQmCCD5z4oGuFzb8uXLw5kfnBcRvDw16',
 > =
+  | ({
+      instructionType: TwobAnchorInstruction.AcceptProgramAuthority
+    } & ParsedAcceptProgramAuthorityInstruction<TProgram>)
   | ({
       instructionType: TwobAnchorInstruction.AddLiquidity
     } & ParsedAddLiquidityInstruction<TProgram>)
   | ({
-      instructionType: TwobAnchorInstruction.AuthorityCloseLiquidityPosition
-    } & ParsedAuthorityCloseLiquidityPositionInstruction<TProgram>)
+      instructionType: TwobAnchorInstruction.AuthorityCloseTradePosition
+    } & ParsedAuthorityCloseTradePositionInstruction<TProgram>)
   | ({
-      instructionType: TwobAnchorInstruction.AuthorityClosePosition
-    } & ParsedAuthorityClosePositionInstruction<TProgram>)
+      instructionType: TwobAnchorInstruction.CancelProgramAuthorityNomination
+    } & ParsedCancelProgramAuthorityNominationInstruction<TProgram>)
   | ({
-      instructionType: TwobAnchorInstruction.CloseExitsAccount
-    } & ParsedCloseExitsAccountInstruction<TProgram>)
+      instructionType: TwobAnchorInstruction.CloseExitsAndPricesAccount
+    } & ParsedCloseExitsAndPricesAccountInstruction<TProgram>)
+  | ({
+      instructionType: TwobAnchorInstruction.CloseLiquidityPosition
+    } & ParsedCloseLiquidityPositionInstruction<TProgram>)
   | ({
       instructionType: TwobAnchorInstruction.CloseMarket
     } & ParsedCloseMarketInstruction<TProgram>)
   | ({
-      instructionType: TwobAnchorInstruction.ClosePricesAccount
-    } & ParsedClosePricesAccountInstruction<TProgram>)
+      instructionType: TwobAnchorInstruction.CompensateDebt
+    } & ParsedCompensateDebtInstruction<TProgram>)
   | ({
       instructionType: TwobAnchorInstruction.InitializeMarket
     } & ParsedInitializeMarketInstruction<TProgram>)
@@ -503,23 +605,32 @@ export type ParsedTwobAnchorInstruction<
       instructionType: TwobAnchorInstruction.InitializeProgramConfig
     } & ParsedInitializeProgramConfigInstruction<TProgram>)
   | ({
+      instructionType: TwobAnchorInstruction.NominateProgramAuthority
+    } & ParsedNominateProgramAuthorityInstruction<TProgram>)
+  | ({
       instructionType: TwobAnchorInstruction.PauseMarket
     } & ParsedPauseMarketInstruction<TProgram>)
+  | ({
+      instructionType: TwobAnchorInstruction.PauseTradePosition
+    } & ParsedPauseTradePositionInstruction<TProgram>)
   | ({
       instructionType: TwobAnchorInstruction.ProvideLiquidity
     } & ParsedProvideLiquidityInstruction<TProgram>)
   | ({
-      instructionType: TwobAnchorInstruction.PublicClosePosition
-    } & ParsedPublicClosePositionInstruction<TProgram>)
+      instructionType: TwobAnchorInstruction.PublicCloseTradePosition
+    } & ParsedPublicCloseTradePositionInstruction<TProgram>)
   | ({
-      instructionType: TwobAnchorInstruction.PublicCompensateDebt
-    } & ParsedPublicCompensateDebtInstruction<TProgram>)
-  | ({
-      instructionType: TwobAnchorInstruction.PublicStopLiquidityPosition
-    } & ParsedPublicStopLiquidityPositionInstruction<TProgram>)
+      instructionType: TwobAnchorInstruction.StopLiquidityPosition
+    } & ParsedStopLiquidityPositionInstruction<TProgram>)
   | ({
       instructionType: TwobAnchorInstruction.SubmitOrder
     } & ParsedSubmitOrderInstruction<TProgram>)
+  | ({
+      instructionType: TwobAnchorInstruction.UnpauseMarket
+    } & ParsedUnpauseMarketInstruction<TProgram>)
+  | ({
+      instructionType: TwobAnchorInstruction.UnpauseTradePosition
+    } & ParsedUnpauseTradePositionInstruction<TProgram>)
   | ({
       instructionType: TwobAnchorInstruction.UpdateBooks
     } & ParsedUpdateBooksInstruction<TProgram>)
@@ -535,12 +646,22 @@ export type ParsedTwobAnchorInstruction<
   | ({
       instructionType: TwobAnchorInstruction.WithdrawLiquidity
     } & ParsedWithdrawLiquidityInstruction<TProgram>)
+  | ({
+      instructionType: TwobAnchorInstruction.WithdrawSwapped
+    } & ParsedWithdrawSwappedInstruction<TProgram>)
 
 export function parseTwobAnchorInstruction<TProgram extends string>(
   instruction: Instruction<TProgram> & InstructionWithData<ReadonlyUint8Array>,
 ): ParsedTwobAnchorInstruction<TProgram> {
   const instructionType = identifyTwobAnchorInstruction(instruction)
   switch (instructionType) {
+    case TwobAnchorInstruction.AcceptProgramAuthority: {
+      assertIsInstructionWithAccounts(instruction)
+      return {
+        instructionType: TwobAnchorInstruction.AcceptProgramAuthority,
+        ...parseAcceptProgramAuthorityInstruction(instruction),
+      }
+    }
     case TwobAnchorInstruction.AddLiquidity: {
       assertIsInstructionWithAccounts(instruction)
       return {
@@ -548,25 +669,32 @@ export function parseTwobAnchorInstruction<TProgram extends string>(
         ...parseAddLiquidityInstruction(instruction),
       }
     }
-    case TwobAnchorInstruction.AuthorityCloseLiquidityPosition: {
+    case TwobAnchorInstruction.AuthorityCloseTradePosition: {
       assertIsInstructionWithAccounts(instruction)
       return {
-        instructionType: TwobAnchorInstruction.AuthorityCloseLiquidityPosition,
-        ...parseAuthorityCloseLiquidityPositionInstruction(instruction),
+        instructionType: TwobAnchorInstruction.AuthorityCloseTradePosition,
+        ...parseAuthorityCloseTradePositionInstruction(instruction),
       }
     }
-    case TwobAnchorInstruction.AuthorityClosePosition: {
+    case TwobAnchorInstruction.CancelProgramAuthorityNomination: {
       assertIsInstructionWithAccounts(instruction)
       return {
-        instructionType: TwobAnchorInstruction.AuthorityClosePosition,
-        ...parseAuthorityClosePositionInstruction(instruction),
+        instructionType: TwobAnchorInstruction.CancelProgramAuthorityNomination,
+        ...parseCancelProgramAuthorityNominationInstruction(instruction),
       }
     }
-    case TwobAnchorInstruction.CloseExitsAccount: {
+    case TwobAnchorInstruction.CloseExitsAndPricesAccount: {
       assertIsInstructionWithAccounts(instruction)
       return {
-        instructionType: TwobAnchorInstruction.CloseExitsAccount,
-        ...parseCloseExitsAccountInstruction(instruction),
+        instructionType: TwobAnchorInstruction.CloseExitsAndPricesAccount,
+        ...parseCloseExitsAndPricesAccountInstruction(instruction),
+      }
+    }
+    case TwobAnchorInstruction.CloseLiquidityPosition: {
+      assertIsInstructionWithAccounts(instruction)
+      return {
+        instructionType: TwobAnchorInstruction.CloseLiquidityPosition,
+        ...parseCloseLiquidityPositionInstruction(instruction),
       }
     }
     case TwobAnchorInstruction.CloseMarket: {
@@ -576,11 +704,11 @@ export function parseTwobAnchorInstruction<TProgram extends string>(
         ...parseCloseMarketInstruction(instruction),
       }
     }
-    case TwobAnchorInstruction.ClosePricesAccount: {
+    case TwobAnchorInstruction.CompensateDebt: {
       assertIsInstructionWithAccounts(instruction)
       return {
-        instructionType: TwobAnchorInstruction.ClosePricesAccount,
-        ...parseClosePricesAccountInstruction(instruction),
+        instructionType: TwobAnchorInstruction.CompensateDebt,
+        ...parseCompensateDebtInstruction(instruction),
       }
     }
     case TwobAnchorInstruction.InitializeMarket: {
@@ -597,11 +725,25 @@ export function parseTwobAnchorInstruction<TProgram extends string>(
         ...parseInitializeProgramConfigInstruction(instruction),
       }
     }
+    case TwobAnchorInstruction.NominateProgramAuthority: {
+      assertIsInstructionWithAccounts(instruction)
+      return {
+        instructionType: TwobAnchorInstruction.NominateProgramAuthority,
+        ...parseNominateProgramAuthorityInstruction(instruction),
+      }
+    }
     case TwobAnchorInstruction.PauseMarket: {
       assertIsInstructionWithAccounts(instruction)
       return {
         instructionType: TwobAnchorInstruction.PauseMarket,
         ...parsePauseMarketInstruction(instruction),
+      }
+    }
+    case TwobAnchorInstruction.PauseTradePosition: {
+      assertIsInstructionWithAccounts(instruction)
+      return {
+        instructionType: TwobAnchorInstruction.PauseTradePosition,
+        ...parsePauseTradePositionInstruction(instruction),
       }
     }
     case TwobAnchorInstruction.ProvideLiquidity: {
@@ -611,25 +753,18 @@ export function parseTwobAnchorInstruction<TProgram extends string>(
         ...parseProvideLiquidityInstruction(instruction),
       }
     }
-    case TwobAnchorInstruction.PublicClosePosition: {
+    case TwobAnchorInstruction.PublicCloseTradePosition: {
       assertIsInstructionWithAccounts(instruction)
       return {
-        instructionType: TwobAnchorInstruction.PublicClosePosition,
-        ...parsePublicClosePositionInstruction(instruction),
+        instructionType: TwobAnchorInstruction.PublicCloseTradePosition,
+        ...parsePublicCloseTradePositionInstruction(instruction),
       }
     }
-    case TwobAnchorInstruction.PublicCompensateDebt: {
+    case TwobAnchorInstruction.StopLiquidityPosition: {
       assertIsInstructionWithAccounts(instruction)
       return {
-        instructionType: TwobAnchorInstruction.PublicCompensateDebt,
-        ...parsePublicCompensateDebtInstruction(instruction),
-      }
-    }
-    case TwobAnchorInstruction.PublicStopLiquidityPosition: {
-      assertIsInstructionWithAccounts(instruction)
-      return {
-        instructionType: TwobAnchorInstruction.PublicStopLiquidityPosition,
-        ...parsePublicStopLiquidityPositionInstruction(instruction),
+        instructionType: TwobAnchorInstruction.StopLiquidityPosition,
+        ...parseStopLiquidityPositionInstruction(instruction),
       }
     }
     case TwobAnchorInstruction.SubmitOrder: {
@@ -637,6 +772,20 @@ export function parseTwobAnchorInstruction<TProgram extends string>(
       return {
         instructionType: TwobAnchorInstruction.SubmitOrder,
         ...parseSubmitOrderInstruction(instruction),
+      }
+    }
+    case TwobAnchorInstruction.UnpauseMarket: {
+      assertIsInstructionWithAccounts(instruction)
+      return {
+        instructionType: TwobAnchorInstruction.UnpauseMarket,
+        ...parseUnpauseMarketInstruction(instruction),
+      }
+    }
+    case TwobAnchorInstruction.UnpauseTradePosition: {
+      assertIsInstructionWithAccounts(instruction)
+      return {
+        instructionType: TwobAnchorInstruction.UnpauseTradePosition,
+        ...parseUnpauseTradePositionInstruction(instruction),
       }
     }
     case TwobAnchorInstruction.UpdateBooks: {
@@ -674,6 +823,13 @@ export function parseTwobAnchorInstruction<TProgram extends string>(
         ...parseWithdrawLiquidityInstruction(instruction),
       }
     }
+    case TwobAnchorInstruction.WithdrawSwapped: {
+      assertIsInstructionWithAccounts(instruction)
+      return {
+        instructionType: TwobAnchorInstruction.WithdrawSwapped,
+        ...parseWithdrawSwappedInstruction(instruction),
+      }
+    }
     default:
       throw new SolanaError(
         SOLANA_ERROR__PROGRAM_CLIENTS__UNRECOGNIZED_INSTRUCTION_TYPE,
@@ -707,29 +863,37 @@ export type TwobAnchorPluginAccounts = {
 }
 
 export type TwobAnchorPluginInstructions = {
+  acceptProgramAuthority: (
+    input: AcceptProgramAuthorityAsyncInput,
+  ) => ReturnType<typeof getAcceptProgramAuthorityInstructionAsync> &
+    SelfPlanAndSendFunctions
   addLiquidity: (
     input: AddLiquidityAsyncInput,
   ) => ReturnType<typeof getAddLiquidityInstructionAsync> &
     SelfPlanAndSendFunctions
-  authorityCloseLiquidityPosition: (
-    input: AuthorityCloseLiquidityPositionAsyncInput,
-  ) => ReturnType<typeof getAuthorityCloseLiquidityPositionInstructionAsync> &
+  authorityCloseTradePosition: (
+    input: MakeOptional<AuthorityCloseTradePositionAsyncInput, 'payer'>,
+  ) => ReturnType<typeof getAuthorityCloseTradePositionInstructionAsync> &
     SelfPlanAndSendFunctions
-  authorityClosePosition: (
-    input: AuthorityClosePositionAsyncInput,
-  ) => ReturnType<typeof getAuthorityClosePositionInstructionAsync> &
+  cancelProgramAuthorityNomination: (
+    input: CancelProgramAuthorityNominationAsyncInput,
+  ) => ReturnType<typeof getCancelProgramAuthorityNominationInstructionAsync> &
     SelfPlanAndSendFunctions
-  closeExitsAccount: (
-    input: CloseExitsAccountAsyncInput,
-  ) => ReturnType<typeof getCloseExitsAccountInstructionAsync> &
+  closeExitsAndPricesAccount: (
+    input: MakeOptional<CloseExitsAndPricesAccountAsyncInput, 'payer'>,
+  ) => ReturnType<typeof getCloseExitsAndPricesAccountInstructionAsync> &
+    SelfPlanAndSendFunctions
+  closeLiquidityPosition: (
+    input: CloseLiquidityPositionAsyncInput,
+  ) => ReturnType<typeof getCloseLiquidityPositionInstructionAsync> &
     SelfPlanAndSendFunctions
   closeMarket: (
     input: MakeOptional<CloseMarketAsyncInput, 'payer'>,
   ) => ReturnType<typeof getCloseMarketInstructionAsync> &
     SelfPlanAndSendFunctions
-  closePricesAccount: (
-    input: ClosePricesAccountAsyncInput,
-  ) => ReturnType<typeof getClosePricesAccountInstructionAsync> &
+  compensateDebt: (
+    input: CompensateDebtAsyncInput,
+  ) => ReturnType<typeof getCompensateDebtInstructionAsync> &
     SelfPlanAndSendFunctions
   initializeMarket: (
     input: MakeOptional<InitializeMarketAsyncInput, 'payer'>,
@@ -739,36 +903,48 @@ export type TwobAnchorPluginInstructions = {
     input: MakeOptional<InitializeProgramConfigAsyncInput, 'payer'>,
   ) => ReturnType<typeof getInitializeProgramConfigInstructionAsync> &
     SelfPlanAndSendFunctions
+  nominateProgramAuthority: (
+    input: NominateProgramAuthorityAsyncInput,
+  ) => ReturnType<typeof getNominateProgramAuthorityInstructionAsync> &
+    SelfPlanAndSendFunctions
   pauseMarket: (
-    input: MakeOptional<PauseMarketAsyncInput, 'payer'>,
+    input: PauseMarketAsyncInput,
   ) => ReturnType<typeof getPauseMarketInstructionAsync> &
+    SelfPlanAndSendFunctions
+  pauseTradePosition: (
+    input: PauseTradePositionAsyncInput,
+  ) => ReturnType<typeof getPauseTradePositionInstructionAsync> &
     SelfPlanAndSendFunctions
   provideLiquidity: (
     input: ProvideLiquidityAsyncInput,
   ) => ReturnType<typeof getProvideLiquidityInstructionAsync> &
     SelfPlanAndSendFunctions
-  publicClosePosition: (
-    input: PublicClosePositionAsyncInput,
-  ) => ReturnType<typeof getPublicClosePositionInstructionAsync> &
+  publicCloseTradePosition: (
+    input: MakeOptional<PublicCloseTradePositionAsyncInput, 'payer'>,
+  ) => ReturnType<typeof getPublicCloseTradePositionInstructionAsync> &
     SelfPlanAndSendFunctions
-  publicCompensateDebt: (
-    input: PublicCompensateDebtAsyncInput,
-  ) => ReturnType<typeof getPublicCompensateDebtInstructionAsync> &
-    SelfPlanAndSendFunctions
-  publicStopLiquidityPosition: (
-    input: PublicStopLiquidityPositionAsyncInput,
-  ) => ReturnType<typeof getPublicStopLiquidityPositionInstructionAsync> &
+  stopLiquidityPosition: (
+    input: StopLiquidityPositionAsyncInput,
+  ) => ReturnType<typeof getStopLiquidityPositionInstructionAsync> &
     SelfPlanAndSendFunctions
   submitOrder: (
-    input: SubmitOrderAsyncInput,
+    input: MakeOptional<SubmitOrderAsyncInput, 'payer'>,
   ) => ReturnType<typeof getSubmitOrderInstructionAsync> &
+    SelfPlanAndSendFunctions
+  unpauseMarket: (
+    input: UnpauseMarketAsyncInput,
+  ) => ReturnType<typeof getUnpauseMarketInstructionAsync> &
+    SelfPlanAndSendFunctions
+  unpauseTradePosition: (
+    input: UnpauseTradePositionAsyncInput,
+  ) => ReturnType<typeof getUnpauseTradePositionInstructionAsync> &
     SelfPlanAndSendFunctions
   updateBooks: (
     input: UpdateBooksAsyncInput,
   ) => ReturnType<typeof getUpdateBooksInstructionAsync> &
     SelfPlanAndSendFunctions
   updateFees: (
-    input: MakeOptional<UpdateFeesAsyncInput, 'payer'>,
+    input: UpdateFeesAsyncInput,
   ) => ReturnType<typeof getUpdateFeesInstructionAsync> &
     SelfPlanAndSendFunctions
   updateLiquidityFlows: (
@@ -776,12 +952,16 @@ export type TwobAnchorPluginInstructions = {
   ) => ReturnType<typeof getUpdateLiquidityFlowsInstructionAsync> &
     SelfPlanAndSendFunctions
   withdrawFees: (
-    input: MakeOptional<WithdrawFeesAsyncInput, 'payer'>,
+    input: WithdrawFeesAsyncInput,
   ) => ReturnType<typeof getWithdrawFeesInstructionAsync> &
     SelfPlanAndSendFunctions
   withdrawLiquidity: (
     input: WithdrawLiquidityAsyncInput,
   ) => ReturnType<typeof getWithdrawLiquidityInstructionAsync> &
+    SelfPlanAndSendFunctions
+  withdrawSwapped: (
+    input: WithdrawSwappedAsyncInput,
+  ) => ReturnType<typeof getWithdrawSwappedInstructionAsync> &
     SelfPlanAndSendFunctions
 }
 
@@ -810,25 +990,41 @@ export function twobAnchorProgram() {
           tradePosition: addSelfFetchFunctions(client, getTradePositionCodec()),
         },
         instructions: {
+          acceptProgramAuthority: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getAcceptProgramAuthorityInstructionAsync(input),
+            ),
           addLiquidity: (input) =>
             addSelfPlanAndSendFunctions(
               client,
               getAddLiquidityInstructionAsync(input),
             ),
-          authorityCloseLiquidityPosition: (input) =>
+          authorityCloseTradePosition: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getAuthorityCloseLiquidityPositionInstructionAsync(input),
+              getAuthorityCloseTradePositionInstructionAsync({
+                ...input,
+                payer: input.payer ?? client.payer.address,
+              }),
             ),
-          authorityClosePosition: (input) =>
+          cancelProgramAuthorityNomination: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getAuthorityClosePositionInstructionAsync(input),
+              getCancelProgramAuthorityNominationInstructionAsync(input),
             ),
-          closeExitsAccount: (input) =>
+          closeExitsAndPricesAccount: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getCloseExitsAccountInstructionAsync(input),
+              getCloseExitsAndPricesAccountInstructionAsync({
+                ...input,
+                payer: input.payer ?? client.payer.address,
+              }),
+            ),
+          closeLiquidityPosition: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getCloseLiquidityPositionInstructionAsync(input),
             ),
           closeMarket: (input) =>
             addSelfPlanAndSendFunctions(
@@ -838,10 +1034,10 @@ export function twobAnchorProgram() {
                 payer: input.payer ?? client.payer,
               }),
             ),
-          closePricesAccount: (input) =>
+          compensateDebt: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getClosePricesAccountInstructionAsync(input),
+              getCompensateDebtInstructionAsync(input),
             ),
           initializeMarket: (input) =>
             addSelfPlanAndSendFunctions(
@@ -859,38 +1055,56 @@ export function twobAnchorProgram() {
                 payer: input.payer ?? client.payer,
               }),
             ),
+          nominateProgramAuthority: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getNominateProgramAuthorityInstructionAsync(input),
+            ),
           pauseMarket: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getPauseMarketInstructionAsync({
-                ...input,
-                payer: input.payer ?? client.payer,
-              }),
+              getPauseMarketInstructionAsync(input),
+            ),
+          pauseTradePosition: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getPauseTradePositionInstructionAsync(input),
             ),
           provideLiquidity: (input) =>
             addSelfPlanAndSendFunctions(
               client,
               getProvideLiquidityInstructionAsync(input),
             ),
-          publicClosePosition: (input) =>
+          publicCloseTradePosition: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getPublicClosePositionInstructionAsync(input),
+              getPublicCloseTradePositionInstructionAsync({
+                ...input,
+                payer: input.payer ?? client.payer.address,
+              }),
             ),
-          publicCompensateDebt: (input) =>
+          stopLiquidityPosition: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getPublicCompensateDebtInstructionAsync(input),
-            ),
-          publicStopLiquidityPosition: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getPublicStopLiquidityPositionInstructionAsync(input),
+              getStopLiquidityPositionInstructionAsync(input),
             ),
           submitOrder: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getSubmitOrderInstructionAsync(input),
+              getSubmitOrderInstructionAsync({
+                ...input,
+                payer: input.payer ?? client.payer,
+              }),
+            ),
+          unpauseMarket: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getUnpauseMarketInstructionAsync(input),
+            ),
+          unpauseTradePosition: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getUnpauseTradePositionInstructionAsync(input),
             ),
           updateBooks: (input) =>
             addSelfPlanAndSendFunctions(
@@ -900,10 +1114,7 @@ export function twobAnchorProgram() {
           updateFees: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getUpdateFeesInstructionAsync({
-                ...input,
-                payer: input.payer ?? client.payer,
-              }),
+              getUpdateFeesInstructionAsync(input),
             ),
           updateLiquidityFlows: (input) =>
             addSelfPlanAndSendFunctions(
@@ -913,15 +1124,17 @@ export function twobAnchorProgram() {
           withdrawFees: (input) =>
             addSelfPlanAndSendFunctions(
               client,
-              getWithdrawFeesInstructionAsync({
-                ...input,
-                payer: input.payer ?? client.payer,
-              }),
+              getWithdrawFeesInstructionAsync(input),
             ),
           withdrawLiquidity: (input) =>
             addSelfPlanAndSendFunctions(
               client,
               getWithdrawLiquidityInstructionAsync(input),
+            ),
+          withdrawSwapped: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getWithdrawSwappedInstructionAsync(input),
             ),
         },
       },

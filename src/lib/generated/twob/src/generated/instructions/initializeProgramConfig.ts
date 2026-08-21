@@ -15,6 +15,8 @@ import {
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
+  getU32Decoder,
+  getU32Encoder,
   SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
   SolanaError,
   transformEncoder,
@@ -51,7 +53,8 @@ export function getInitializeProgramConfigDiscriminatorBytes() {
 
 export type InitializeProgramConfigInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
-  TAccountAuthority extends string | AccountMeta<string> = string,
+  TAccountAuthority extends string | AccountMeta<string> =
+    '8pAXoQJYKJoZejheXwirXjUi1MdRrLkqKBydkv967KnN',
   TAccountPayer extends string | AccountMeta<string> = string,
   TAccountProgramConfig extends string | AccountMeta<string> = string,
   TAccountSystemProgram extends string | AccountMeta<string> =
@@ -81,13 +84,19 @@ export type InitializeProgramConfigInstruction<
 
 export type InitializeProgramConfigInstructionData = {
   discriminator: ReadonlyUint8Array
+  authorityTransferDelaySlots: number
 }
 
-export type InitializeProgramConfigInstructionDataArgs = {}
+export type InitializeProgramConfigInstructionDataArgs = {
+  authorityTransferDelaySlots: number
+}
 
 export function getInitializeProgramConfigInstructionDataEncoder(): FixedSizeEncoder<InitializeProgramConfigInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
+    getStructEncoder([
+      ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['authorityTransferDelaySlots', getU32Encoder()],
+    ]),
     (value) => ({
       ...value,
       discriminator: INITIALIZE_PROGRAM_CONFIG_DISCRIMINATOR,
@@ -98,6 +107,7 @@ export function getInitializeProgramConfigInstructionDataEncoder(): FixedSizeEnc
 export function getInitializeProgramConfigInstructionDataDecoder(): FixedSizeDecoder<InitializeProgramConfigInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['authorityTransferDelaySlots', getU32Decoder()],
   ])
 }
 
@@ -117,10 +127,15 @@ export type InitializeProgramConfigAsyncInput<
   TAccountProgramConfig extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  authority: TransactionSigner<TAccountAuthority>
+  /**
+   * Pinned to the deployer so the first caller after a deployment cannot claim the program.
+   * Hand it over afterwards with `nominate_program_authority` and `accept_program_authority`
+   */
+  authority?: TransactionSigner<TAccountAuthority>
   payer: TransactionSigner<TAccountPayer>
   programConfig?: Address<TAccountProgramConfig>
   systemProgram?: Address<TAccountSystemProgram>
+  authorityTransferDelaySlots: InitializeProgramConfigInstructionDataArgs['authorityTransferDelaySlots']
 }
 
 export async function getInitializeProgramConfigInstructionAsync<
@@ -161,7 +176,14 @@ export async function getInitializeProgramConfigInstructionAsync<
     ResolvedInstructionAccount
   >
 
+  // Original args.
+  const args = { ...input }
+
   // Resolve default values.
+  if (!accounts.authority.value) {
+    accounts.authority.value =
+      '8pAXoQJYKJoZejheXwirXjUi1MdRrLkqKBydkv967KnN' as Address<'8pAXoQJYKJoZejheXwirXjUi1MdRrLkqKBydkv967KnN'>
+  }
   if (!accounts.programConfig.value) {
     accounts.programConfig.value = await getProgramDerivedAddress({
       programAddress,
@@ -187,7 +209,9 @@ export async function getInitializeProgramConfigInstructionAsync<
       getAccountMeta('programConfig', accounts.programConfig),
       getAccountMeta('systemProgram', accounts.systemProgram),
     ],
-    data: getInitializeProgramConfigInstructionDataEncoder().encode({}),
+    data: getInitializeProgramConfigInstructionDataEncoder().encode(
+      args as InitializeProgramConfigInstructionDataArgs,
+    ),
     programAddress,
   } as InitializeProgramConfigInstruction<
     TProgramAddress,
@@ -204,10 +228,15 @@ export type InitializeProgramConfigInput<
   TAccountProgramConfig extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  authority: TransactionSigner<TAccountAuthority>
+  /**
+   * Pinned to the deployer so the first caller after a deployment cannot claim the program.
+   * Hand it over afterwards with `nominate_program_authority` and `accept_program_authority`
+   */
+  authority?: TransactionSigner<TAccountAuthority>
   payer: TransactionSigner<TAccountPayer>
   programConfig: Address<TAccountProgramConfig>
   systemProgram?: Address<TAccountSystemProgram>
+  authorityTransferDelaySlots: InitializeProgramConfigInstructionDataArgs['authorityTransferDelaySlots']
 }
 
 export function getInitializeProgramConfigInstruction<
@@ -246,7 +275,14 @@ export function getInitializeProgramConfigInstruction<
     ResolvedInstructionAccount
   >
 
+  // Original args.
+  const args = { ...input }
+
   // Resolve default values.
+  if (!accounts.authority.value) {
+    accounts.authority.value =
+      '8pAXoQJYKJoZejheXwirXjUi1MdRrLkqKBydkv967KnN' as Address<'8pAXoQJYKJoZejheXwirXjUi1MdRrLkqKBydkv967KnN'>
+  }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
       '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
@@ -260,7 +296,9 @@ export function getInitializeProgramConfigInstruction<
       getAccountMeta('programConfig', accounts.programConfig),
       getAccountMeta('systemProgram', accounts.systemProgram),
     ],
-    data: getInitializeProgramConfigInstructionDataEncoder().encode({}),
+    data: getInitializeProgramConfigInstructionDataEncoder().encode(
+      args as InitializeProgramConfigInstructionDataArgs,
+    ),
     programAddress,
   } as InitializeProgramConfigInstruction<
     TProgramAddress,
@@ -277,6 +315,10 @@ export type ParsedInitializeProgramConfigInstruction<
 > = {
   programAddress: Address<TProgram>
   accounts: {
+    /**
+     * Pinned to the deployer so the first caller after a deployment cannot claim the program.
+     * Hand it over afterwards with `nominate_program_authority` and `accept_program_authority`
+     */
     authority: TAccountMetas[0]
     payer: TAccountMetas[1]
     programConfig: TAccountMetas[2]

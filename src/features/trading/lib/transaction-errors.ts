@@ -1,5 +1,7 @@
 const GENERIC_TRANSACTION_PLAN_MESSAGE =
   'The provided transaction plan failed to execute.'
+const STALE_MARKET_ACCOUNTS_MESSAGE =
+  'Market state changed while the transaction was awaiting approval. Please try again.'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -68,7 +70,7 @@ function extractMessage(error: unknown): string | null {
   return null
 }
 
-function extractLogs(error: unknown): string[] | null {
+function extractLogs(error: unknown): Array<string> | null {
   if (!isRecord(error)) return null
   const context = isRecord(error.context) ? error.context : null
   return readLogs(context?.logs) ?? readLogs(error.logs)
@@ -91,6 +93,26 @@ function extractPlanHint(value: unknown): string | null {
   return hint.length > 0 ? hint : null
 }
 
+function serializeError(value: unknown) {
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return ''
+  }
+}
+
+function isWrongExitsAccountError(...values: Array<unknown>) {
+  const detail = values
+    .map((value) => (typeof value === 'string' ? value : serializeError(value)))
+    .join(' ')
+
+  return (
+    /"Custom"\s*:\s*6006/.test(detail) ||
+    /custom program error:\s*0x1776/i.test(detail) ||
+    /WrongExitsAccount/i.test(detail)
+  )
+}
+
 export function formatTransactionError(error: unknown, fallback: string) {
   const transactionPlanResult = isRecord(error)
     ? (error.transactionPlanResult ??
@@ -102,6 +124,10 @@ export function formatTransactionError(error: unknown, fallback: string) {
 
   const message =
     extractMessage(nestedError) ?? extractMessage(error) ?? fallback
+
+  if (isWrongExitsAccountError(message, nestedError, error)) {
+    return STALE_MARKET_ACCOUNTS_MESSAGE
+  }
 
   const logs = extractLogs(nestedError) ?? extractLogs(error)
   if (!logs || logs.length === 0) {

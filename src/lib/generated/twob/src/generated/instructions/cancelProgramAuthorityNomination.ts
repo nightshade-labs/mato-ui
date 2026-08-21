@@ -15,6 +15,8 @@ import {
   getProgramDerivedAddress,
   getStructDecoder,
   getStructEncoder,
+  SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
+  SolanaError,
   transformEncoder,
   type AccountMeta,
   type AccountSignerMeta,
@@ -25,30 +27,31 @@ import {
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
-  type ReadonlyAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
   type WritableSignerAccount,
 } from '@solana/kit'
+import {
+  getAccountMetaFactory,
+  type ResolvedInstructionAccount,
+} from '@solana/program-client-core'
 import { TWOB_ANCHOR_PROGRAM_ADDRESS } from '../programs'
-import { getAccountMetaFactory, type ResolvedAccount } from '../shared'
 
-export const CLOSE_MARKET_DISCRIMINATOR = new Uint8Array([
-  88, 154, 248, 186, 48, 14, 123, 244,
-])
+export const CANCEL_PROGRAM_AUTHORITY_NOMINATION_DISCRIMINATOR = new Uint8Array(
+  [239, 32, 97, 130, 58, 193, 233, 90],
+)
 
-export function getCloseMarketDiscriminatorBytes() {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(CLOSE_MARKET_DISCRIMINATOR)
+export function getCancelProgramAuthorityNominationDiscriminatorBytes() {
+  return fixEncoderSize(getBytesEncoder(), 8).encode(
+    CANCEL_PROGRAM_AUTHORITY_NOMINATION_DISCRIMINATOR,
+  )
 }
 
-export type CloseMarketInstruction<
+export type CancelProgramAuthorityNominationInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountAuthority extends string | AccountMeta<string> = string,
   TAccountProgramConfig extends string | AccountMeta<string> = string,
-  TAccountMarket extends string | AccountMeta<string> = string,
-  TAccountSystemProgram extends string | AccountMeta<string> =
-    '11111111111111111111111111111111',
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -59,78 +62,67 @@ export type CloseMarketInstruction<
             AccountSignerMeta<TAccountAuthority>
         : TAccountAuthority,
       TAccountProgramConfig extends string
-        ? ReadonlyAccount<TAccountProgramConfig>
+        ? WritableAccount<TAccountProgramConfig>
         : TAccountProgramConfig,
-      TAccountMarket extends string
-        ? WritableAccount<TAccountMarket>
-        : TAccountMarket,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
       ...TRemainingAccounts,
     ]
   >
 
-export type CloseMarketInstructionData = { discriminator: ReadonlyUint8Array }
+export type CancelProgramAuthorityNominationInstructionData = {
+  discriminator: ReadonlyUint8Array
+}
 
-export type CloseMarketInstructionDataArgs = {}
+export type CancelProgramAuthorityNominationInstructionDataArgs = {}
 
-export function getCloseMarketInstructionDataEncoder(): FixedSizeEncoder<CloseMarketInstructionDataArgs> {
+export function getCancelProgramAuthorityNominationInstructionDataEncoder(): FixedSizeEncoder<CancelProgramAuthorityNominationInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
-    (value) => ({ ...value, discriminator: CLOSE_MARKET_DISCRIMINATOR }),
+    (value) => ({
+      ...value,
+      discriminator: CANCEL_PROGRAM_AUTHORITY_NOMINATION_DISCRIMINATOR,
+    }),
   )
 }
 
-export function getCloseMarketInstructionDataDecoder(): FixedSizeDecoder<CloseMarketInstructionData> {
+export function getCancelProgramAuthorityNominationInstructionDataDecoder(): FixedSizeDecoder<CancelProgramAuthorityNominationInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
   ])
 }
 
-export function getCloseMarketInstructionDataCodec(): FixedSizeCodec<
-  CloseMarketInstructionDataArgs,
-  CloseMarketInstructionData
+export function getCancelProgramAuthorityNominationInstructionDataCodec(): FixedSizeCodec<
+  CancelProgramAuthorityNominationInstructionDataArgs,
+  CancelProgramAuthorityNominationInstructionData
 > {
   return combineCodec(
-    getCloseMarketInstructionDataEncoder(),
-    getCloseMarketInstructionDataDecoder(),
+    getCancelProgramAuthorityNominationInstructionDataEncoder(),
+    getCancelProgramAuthorityNominationInstructionDataDecoder(),
   )
 }
 
-export type CloseMarketAsyncInput<
+export type CancelProgramAuthorityNominationAsyncInput<
   TAccountAuthority extends string = string,
   TAccountProgramConfig extends string = string,
-  TAccountMarket extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
   programConfig?: Address<TAccountProgramConfig>
-  market: Address<TAccountMarket>
-  systemProgram?: Address<TAccountSystemProgram>
 }
 
-export async function getCloseMarketInstructionAsync<
+export async function getCancelProgramAuthorityNominationInstructionAsync<
   TAccountAuthority extends string,
   TAccountProgramConfig extends string,
-  TAccountMarket extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
-  input: CloseMarketAsyncInput<
+  input: CancelProgramAuthorityNominationAsyncInput<
     TAccountAuthority,
-    TAccountProgramConfig,
-    TAccountMarket,
-    TAccountSystemProgram
+    TAccountProgramConfig
   >,
   config?: { programAddress?: TProgramAddress },
 ): Promise<
-  CloseMarketInstruction<
+  CancelProgramAuthorityNominationInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountProgramConfig,
-    TAccountMarket,
-    TAccountSystemProgram
+    TAccountProgramConfig
   >
 > {
   // Program address.
@@ -139,13 +131,11 @@ export async function getCloseMarketInstructionAsync<
   // Original accounts.
   const originalAccounts = {
     authority: { value: input.authority ?? null, isWritable: true },
-    programConfig: { value: input.programConfig ?? null, isWritable: false },
-    market: { value: input.market ?? null, isWritable: true },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
+    programConfig: { value: input.programConfig ?? null, isWritable: true },
   }
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
-    ResolvedAccount
+    ResolvedInstructionAccount
   >
 
   // Resolve default values.
@@ -161,62 +151,46 @@ export async function getCloseMarketInstructionAsync<
       ],
     })
   }
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
-  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
-      getAccountMeta(accounts.authority),
-      getAccountMeta(accounts.programConfig),
-      getAccountMeta(accounts.market),
-      getAccountMeta(accounts.systemProgram),
+      getAccountMeta('authority', accounts.authority),
+      getAccountMeta('programConfig', accounts.programConfig),
     ],
-    data: getCloseMarketInstructionDataEncoder().encode({}),
+    data: getCancelProgramAuthorityNominationInstructionDataEncoder().encode(
+      {},
+    ),
     programAddress,
-  } as CloseMarketInstruction<
+  } as CancelProgramAuthorityNominationInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountProgramConfig,
-    TAccountMarket,
-    TAccountSystemProgram
+    TAccountProgramConfig
   >)
 }
 
-export type CloseMarketInput<
+export type CancelProgramAuthorityNominationInput<
   TAccountAuthority extends string = string,
   TAccountProgramConfig extends string = string,
-  TAccountMarket extends string = string,
-  TAccountSystemProgram extends string = string,
 > = {
   authority: TransactionSigner<TAccountAuthority>
   programConfig: Address<TAccountProgramConfig>
-  market: Address<TAccountMarket>
-  systemProgram?: Address<TAccountSystemProgram>
 }
 
-export function getCloseMarketInstruction<
+export function getCancelProgramAuthorityNominationInstruction<
   TAccountAuthority extends string,
   TAccountProgramConfig extends string,
-  TAccountMarket extends string,
-  TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
 >(
-  input: CloseMarketInput<
+  input: CancelProgramAuthorityNominationInput<
     TAccountAuthority,
-    TAccountProgramConfig,
-    TAccountMarket,
-    TAccountSystemProgram
+    TAccountProgramConfig
   >,
   config?: { programAddress?: TProgramAddress },
-): CloseMarketInstruction<
+): CancelProgramAuthorityNominationInstruction<
   TProgramAddress,
   TAccountAuthority,
-  TAccountProgramConfig,
-  TAccountMarket,
-  TAccountSystemProgram
+  TAccountProgramConfig
 > {
   // Program address.
   const programAddress = config?.programAddress ?? TWOB_ANCHOR_PROGRAM_ADDRESS
@@ -224,41 +198,31 @@ export function getCloseMarketInstruction<
   // Original accounts.
   const originalAccounts = {
     authority: { value: input.authority ?? null, isWritable: true },
-    programConfig: { value: input.programConfig ?? null, isWritable: false },
-    market: { value: input.market ?? null, isWritable: true },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
+    programConfig: { value: input.programConfig ?? null, isWritable: true },
   }
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
-    ResolvedAccount
+    ResolvedInstructionAccount
   >
-
-  // Resolve default values.
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>
-  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId')
   return Object.freeze({
     accounts: [
-      getAccountMeta(accounts.authority),
-      getAccountMeta(accounts.programConfig),
-      getAccountMeta(accounts.market),
-      getAccountMeta(accounts.systemProgram),
+      getAccountMeta('authority', accounts.authority),
+      getAccountMeta('programConfig', accounts.programConfig),
     ],
-    data: getCloseMarketInstructionDataEncoder().encode({}),
+    data: getCancelProgramAuthorityNominationInstructionDataEncoder().encode(
+      {},
+    ),
     programAddress,
-  } as CloseMarketInstruction<
+  } as CancelProgramAuthorityNominationInstruction<
     TProgramAddress,
     TAccountAuthority,
-    TAccountProgramConfig,
-    TAccountMarket,
-    TAccountSystemProgram
+    TAccountProgramConfig
   >)
 }
 
-export type ParsedCloseMarketInstruction<
+export type ParsedCancelProgramAuthorityNominationInstruction<
   TProgram extends string = typeof TWOB_ANCHOR_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
@@ -266,23 +230,26 @@ export type ParsedCloseMarketInstruction<
   accounts: {
     authority: TAccountMetas[0]
     programConfig: TAccountMetas[1]
-    market: TAccountMetas[2]
-    systemProgram: TAccountMetas[3]
   }
-  data: CloseMarketInstructionData
+  data: CancelProgramAuthorityNominationInstructionData
 }
 
-export function parseCloseMarketInstruction<
+export function parseCancelProgramAuthorityNominationInstruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
-): ParsedCloseMarketInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
-    // TODO: Coded error.
-    throw new Error('Not enough accounts')
+): ParsedCancelProgramAuthorityNominationInstruction<TProgram, TAccountMetas> {
+  if (instruction.accounts.length < 2) {
+    throw new SolanaError(
+      SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
+      {
+        actualAccountMetas: instruction.accounts.length,
+        expectedAccountMetas: 2,
+      },
+    )
   }
   let accountIndex = 0
   const getNextAccount = () => {
@@ -292,12 +259,9 @@ export function parseCloseMarketInstruction<
   }
   return {
     programAddress: instruction.programAddress,
-    accounts: {
-      authority: getNextAccount(),
-      programConfig: getNextAccount(),
-      market: getNextAccount(),
-      systemProgram: getNextAccount(),
-    },
-    data: getCloseMarketInstructionDataDecoder().decode(instruction.data),
+    accounts: { authority: getNextAccount(), programConfig: getNextAccount() },
+    data: getCancelProgramAuthorityNominationInstructionDataDecoder().decode(
+      instruction.data,
+    ),
   }
 }
