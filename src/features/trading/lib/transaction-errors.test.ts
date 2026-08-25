@@ -44,14 +44,11 @@ describe('formatTransactionError', () => {
   })
 
   it('explains when the RPC provider is rate-limiting requests', () => {
-    const error = new SolanaError(
-      SOLANA_ERROR__RPC__TRANSPORT_HTTP_ERROR,
-      {
-        headers: new Headers(),
-        message: '',
-        statusCode: 429,
-      },
-    )
+    const error = new SolanaError(SOLANA_ERROR__RPC__TRANSPORT_HTTP_ERROR, {
+      headers: new Headers(),
+      message: '',
+      statusCode: 429,
+    })
 
     expect(formatTransactionError(error, 'fallback')).toBe(
       'The Solana RPC is temporarily rate-limited. Please wait a few seconds and try again.',
@@ -109,6 +106,38 @@ describe('formatTransactionError', () => {
 
     expect(formatTransactionError(error, 'fallback')).toBe(
       'There are no new swapped funds to withdraw yet.',
+    )
+  })
+
+  it('explains the insecure wallet browser error', () => {
+    const error = {
+      context: { __code: 3_610_000 },
+      message:
+        'Solana error #3610000: Decode this error by running `npx @solana/errors decode -- 3610000`',
+    }
+
+    expect(formatTransactionError(error, 'fallback')).toBe(
+      'This wallet browser cannot securely prepare Solana transactions. Update the wallet app or open Mato in another wallet browser, then try again.',
+    )
+  })
+
+  it('decodes the production Solana message inside a failed plan', () => {
+    const error = {
+      context: {
+        transactionPlanResult: {
+          kind: 'single',
+          status: 'failed',
+          error: {
+            message:
+              'Solana error #3610000: Decode this error by running `npx @solana/errors decode -- 3610000`',
+          },
+        },
+      },
+      message: 'The provided transaction plan failed to execute.',
+    }
+
+    expect(formatTransactionError(error, 'fallback')).toBe(
+      'This wallet browser cannot securely prepare Solana transactions. Update the wallet app or open Mato in another wallet browser, then try again.',
     )
   })
 })
