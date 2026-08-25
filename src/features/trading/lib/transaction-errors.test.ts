@@ -59,4 +59,36 @@ describe('formatTransactionError', () => {
       'fallback Details: SimulationFailure / 1001 / Instruction 0 failed',
     )
   })
+
+  it('explains the insecure wallet browser error', () => {
+    const error = {
+      context: { __code: 3_610_000 },
+      message:
+        'Solana error #3610000: Decode this error by running `npx @solana/errors decode -- 3610000`',
+    }
+
+    expect(formatTransactionError(error, 'fallback')).toBe(
+      'This wallet browser cannot securely prepare Solana transactions. Update the wallet app or open Mato in another wallet browser, then try again.',
+    )
+  })
+
+  it('decodes the production Solana message inside a failed plan', () => {
+    const error = {
+      context: {
+        transactionPlanResult: {
+          kind: 'single',
+          status: 'failed',
+          error: {
+            message:
+              'Solana error #3610000: Decode this error by running `npx @solana/errors decode -- 3610000`',
+          },
+        },
+      },
+      message: 'The provided transaction plan failed to execute.',
+    }
+
+    expect(formatTransactionError(error, 'fallback')).toBe(
+      'This wallet browser cannot securely prepare Solana transactions. Update the wallet app or open Mato in another wallet browser, then try again.',
+    )
+  })
 })
