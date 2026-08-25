@@ -13,6 +13,16 @@
     },
   ],
   "env": {
+    "devnet": {
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [
+        {
+          "pattern": "devnet.mato.markets",
+          "custom_domain": true,
+        },
+      ],
+    },
     "preview": {
       "workers_dev": true,
       "preview_urls": true,
