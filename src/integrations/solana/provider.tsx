@@ -9,10 +9,12 @@ import {
   getBrowserSolanaRpcEndpoint,
   getBrowserSolanaWebsocketEndpoint,
 } from './env'
+import { createSolanaRpcWithRateLimitRetry } from './rpc'
 import type { SolanaClient, WalletConnector } from '@solana/client'
 
 const endpoint = getBrowserSolanaRpcEndpoint()
 const websocketEndpoint = getBrowserSolanaWebsocketEndpoint(endpoint)
+const browserRpc = createSolanaRpcWithRateLimitRetry(endpoint)
 
 function getInitialWalletConnectors() {
   if (typeof window === 'undefined') return []
@@ -43,6 +45,10 @@ function createSolanaClient(
     websocketEndpoint,
     walletConnectors,
   })
+
+  // createClient replaces its RPC during initial cluster setup, so install the
+  // retrying transport after construction while preserving its shared runtime.
+  Object.assign(client.runtime, { rpc: browserRpc })
 
   const previousWallet = previousClient?.store.getState().wallet
   if (previousWallet && previousWallet.status !== 'disconnected') {

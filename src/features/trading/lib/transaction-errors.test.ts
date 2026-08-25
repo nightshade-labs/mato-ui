@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import {
+  SOLANA_ERROR__RPC__TRANSPORT_HTTP_ERROR,
+  SolanaError,
+} from '@solana/kit'
 import { formatTransactionError } from './transaction-errors'
 
 describe('formatTransactionError', () => {
@@ -37,6 +41,21 @@ describe('formatTransactionError', () => {
         'fallback',
       ),
     ).toBe('fallback')
+  })
+
+  it('explains when the RPC provider is rate-limiting requests', () => {
+    const error = new SolanaError(
+      SOLANA_ERROR__RPC__TRANSPORT_HTTP_ERROR,
+      {
+        headers: new Headers(),
+        message: '',
+        statusCode: 429,
+      },
+    )
+
+    expect(formatTransactionError(error, 'fallback')).toBe(
+      'The Solana RPC is temporarily rate-limited. Please wait a few seconds and try again.',
+    )
   })
 
   it('adds a plan hint when the planner only returns structured metadata', () => {
