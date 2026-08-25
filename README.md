@@ -43,6 +43,17 @@ Cloudflare deploys the build to the isolated `mato-ui-preview` Worker on
 `workers.dev`. The production `mato-ui` Worker and `mato.markets` remain
 unchanged.
 
+Deploy the devnet version to its isolated `mato-ui-devnet` Worker and custom
+domain:
+
+```bash
+pnpm deploy:devnet
+```
+
+The devnet deployment is served at `https://devnet.mato.markets`. Its metadata
+uses the devnet URL and tells search engines not to index it. Deploying devnet
+does not change the production Worker or `mato.markets` route.
+
 ## Testing
 
 This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:

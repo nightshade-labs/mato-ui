@@ -11,6 +11,7 @@
     "format": "prettier",
     "check": "prettier --write . && eslint --fix",
     "deploy": "pnpm run build && wrangler deploy",
+    "deploy:devnet": "CLOUDFLARE_ENV=devnet VITE_SITE_URL=https://devnet.mato.markets pnpm run build && wrangler deploy",
     "deploy:preview": "CLOUDFLARE_ENV=preview pnpm run build && wrangler deploy",
     "cf-typegen": "wrangler types",
     "generate:client": "tsx scripts/generate-client.ts"

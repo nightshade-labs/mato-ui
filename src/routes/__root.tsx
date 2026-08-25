@@ -27,6 +27,10 @@ interface MyRouterContext {
   queryClient: QueryClient
 }
 
+const PRODUCTION_SITE_URL = 'https://mato.markets'
+const siteUrl =
+  import.meta.env.VITE_SITE_URL?.replace(/\/$/, '') ?? PRODUCTION_SITE_URL
+
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   head: () => ({
     meta: [
@@ -54,11 +58,11 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
       {
         property: 'og:image',
-        content: 'https://mato.markets/icon-512.png',
+        content: `${siteUrl}/icon-512.png`,
       },
       {
         property: 'og:url',
-        content: 'https://mato.markets',
+        content: siteUrl,
       },
       {
         property: 'og:type',
@@ -78,10 +82,17 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
       {
         name: 'twitter:image',
-        content: 'https://mato.markets/icon-512.png',
+        content: `${siteUrl}/icon-512.png`,
       },
+      ...(siteUrl === PRODUCTION_SITE_URL
+        ? []
+        : [{ name: 'robots', content: 'noindex, nofollow' }]),
     ],
     links: [
+      {
+        rel: 'canonical',
+        href: siteUrl,
+      },
       {
         rel: 'stylesheet',
         href: appCss,
