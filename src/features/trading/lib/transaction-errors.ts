@@ -1,7 +1,11 @@
+import { isRpcRateLimitError } from '@/integrations/solana/rpc'
+
 const GENERIC_TRANSACTION_PLAN_MESSAGE =
   'The provided transaction plan failed to execute.'
 const STALE_MARKET_ACCOUNTS_MESSAGE =
   'Market state changed while the transaction was awaiting approval. Please try again.'
+const RPC_RATE_LIMIT_MESSAGE =
+  'The Solana RPC is temporarily rate-limited. Please wait a few seconds and try again.'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -154,6 +158,10 @@ export function formatTransactionError(error: unknown, fallback: string) {
 
   const failedPlan = findFirstFailedPlanResult(transactionPlanResult)
   const nestedError = failedPlan?.error ?? unwrapCause(error)
+
+  if (isRpcRateLimitError(nestedError) || isRpcRateLimitError(error)) {
+    return RPC_RATE_LIMIT_MESSAGE
+  }
 
   const message =
     extractMessage(nestedError) ?? extractMessage(error) ?? fallback

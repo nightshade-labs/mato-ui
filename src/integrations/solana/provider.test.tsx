@@ -18,6 +18,9 @@ const mocks = vi.hoisted(() => {
             config.walletConnectors.find((connector) => connector.id === id),
         },
         destroy: vi.fn(),
+        runtime: {
+          rpc: null,
+        },
         store: {
           getState: vi.fn(() => ({
             wallet: client.wallet,
