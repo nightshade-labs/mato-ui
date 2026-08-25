@@ -1,5 +1,13 @@
 const GENERIC_TRANSACTION_PLAN_MESSAGE =
   'The provided transaction plan failed to execute.'
+const SOLANA_SECURE_CONTEXT_ERROR_CODE = 3_610_000
+const SOLANA_BROWSER_CRYPTO_ERROR_CODES = new Set([
+  3_610_001, 3_610_002, 3_610_003, 3_610_004, 3_610_005, 3_610_006, 3_611_000,
+])
+const SECURE_CONTEXT_MESSAGE =
+  'This wallet browser cannot securely prepare Solana transactions. Update the wallet app or open Mato in another wallet browser, then try again.'
+const BROWSER_CRYPTO_MESSAGE =
+  'This wallet browser is missing cryptography required for Solana transactions. Update the wallet app or open Mato in another wallet browser, then try again.'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -11,6 +19,40 @@ function readString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0
     ? value.trim()
     : null
+}
+
+function readNumber(value: unknown) {
+  return typeof value === 'number' && Number.isSafeInteger(value) ? value : null
+}
+
+function extractSolanaErrorCode(error: unknown): number | null {
+  if (!isRecord(error)) {
+    const message = readString(error)
+    const match = message?.match(/Solana error #(\d+)/i)
+    return match?.[1] ? Number(match[1]) : null
+  }
+
+  const context = isRecord(error.context) ? error.context : null
+  const structuredCode =
+    readNumber(context?.__code) ??
+    readNumber(error.__code) ??
+    readNumber(error.code)
+  if (structuredCode !== null) return structuredCode
+
+  const message = readString(error.message)
+  const match = message?.match(/Solana error #(\d+)/i)
+  return match?.[1] ? Number(match[1]) : null
+}
+
+function extractKnownSolanaMessage(error: unknown): string | null {
+  const code = extractSolanaErrorCode(error)
+  if (code === SOLANA_SECURE_CONTEXT_ERROR_CODE) {
+    return SECURE_CONTEXT_MESSAGE
+  }
+  if (code !== null && SOLANA_BROWSER_CRYPTO_ERROR_CODES.has(code)) {
+    return BROWSER_CRYPTO_MESSAGE
+  }
+  return null
 }
 
 function readLogs(value: unknown) {
@@ -68,7 +110,7 @@ function extractMessage(error: unknown): string | null {
   return null
 }
 
-function extractLogs(error: unknown): string[] | null {
+function extractLogs(error: unknown): Array<string> | null {
   if (!isRecord(error)) return null
   const context = isRecord(error.context) ? error.context : null
   return readLogs(context?.logs) ?? readLogs(error.logs)
@@ -99,6 +141,10 @@ export function formatTransactionError(error: unknown, fallback: string) {
 
   const failedPlan = findFirstFailedPlanResult(transactionPlanResult)
   const nestedError = failedPlan?.error ?? unwrapCause(error)
+
+  const knownSolanaMessage =
+    extractKnownSolanaMessage(nestedError) ?? extractKnownSolanaMessage(error)
+  if (knownSolanaMessage) return knownSolanaMessage
 
   const message =
     extractMessage(nestedError) ?? extractMessage(error) ?? fallback
