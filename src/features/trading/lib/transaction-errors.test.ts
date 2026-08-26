@@ -91,4 +91,36 @@ describe('formatTransactionError', () => {
       'This wallet browser cannot securely prepare Solana transactions. Update the wallet app or open Mato in another wallet browser, then try again.',
     )
   })
+
+  it('explains the production wrong-exits-account error', () => {
+    const error = {
+      context: {
+        __code: 4_615_026,
+        code: 6006,
+        logs: [
+          'Program CCAmAqvza37EWzou7LoYCaGKzdJsCu1CLPMp3Wvx3Bc5 consumed 54787 of 200000 compute units',
+          'Program CCAmAqvza37EWzou7LoYCaGKzdJsCu1CLPMp3Wvx3Bc5 failed: custom program error: 0x1776',
+        ],
+      },
+      message:
+        'Solana error #4615026: Decode this error by running `npx @solana/errors decode -- 4615026`',
+    }
+
+    expect(formatTransactionError(error, 'fallback')).toBe(
+      'Market timing changed while the transaction was awaiting wallet approval. Please try again.',
+    )
+  })
+
+  it.each([6007, 6010])(
+    'explains stale market account error %s from confirmation',
+    (code) => {
+      const error = new Error(
+        `Transaction failed during confirmation: {"InstructionError":[0,{"Custom":${code}}]}`,
+      )
+
+      expect(formatTransactionError(error, 'fallback')).toBe(
+        'Market timing changed while the transaction was awaiting wallet approval. Please try again.',
+      )
+    },
+  )
 })

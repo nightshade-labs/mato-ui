@@ -259,6 +259,22 @@ export function getReferenceIndex(
   )
 }
 
+export function getApprovalSafeReferenceIndex(
+  currentSlot: number,
+  bookkeepingLastUpdateSlot: bigint | number,
+  endSlotInterval: bigint,
+) {
+  const slotsPerAccount = ARRAY_LENGTH * Number(endSlotInterval)
+  const currentIndex = Math.floor(currentSlot / slotsPerAccount)
+  const lastUpdateIndex = Math.floor(
+    Number(bookkeepingLastUpdateSlot) / slotsPerAccount,
+  )
+
+  return BigInt(
+    lastUpdateIndex === currentIndex ? currentIndex + 1 : currentIndex,
+  )
+}
+
 export function getPreviousIndex(referenceIndex: bigint) {
   return referenceIndex - 1n
 }
@@ -502,9 +518,6 @@ export async function sendSubmitOrder({
   const marketAccount = await fetchMarket(client.runtime.rpc, marketAddress, {
     commitment: 'confirmed',
   })
-  const currentSlot = Number(
-    await client.runtime.rpc.getSlot({ commitment: 'confirmed' }).send(),
-  )
   const mint = isBuy
     ? marketAccount.data.quoteMint
     : marketAccount.data.baseMint
@@ -513,8 +526,32 @@ export async function sendSubmitOrder({
     mint,
     'confirmed',
   )
-  const referenceIndex = getReferenceIndex(
+
+  const wrapInstructions =
+    wrapShortfall > 0n
+      ? (
+          await client.wsol.prepareWrap({
+            amount: wrapShortfall,
+            authority: walletSigner,
+            commitment: 'confirmed',
+            owner: session.account.address,
+          })
+        ).message.instructions
+      : []
+
+  const bookkeepingAddress = await deriveBookkeepingAddress(marketAddress)
+  const [currentSlotResponse, bookkeepingAccount, blockhashResponse] =
+    await Promise.all([
+      client.runtime.rpc.getSlot({ commitment: 'confirmed' }).send(),
+      fetchBookkeeping(client.runtime.rpc, bookkeepingAddress, {
+        commitment: 'confirmed',
+      }),
+      client.runtime.rpc.getLatestBlockhash({ commitment: 'confirmed' }).send(),
+    ])
+  const currentSlot = Number(currentSlotResponse)
+  const referenceIndex = getApprovalSafeReferenceIndex(
     currentSlot,
+    bookkeepingAccount.data.lastUpdateSlot,
     marketAccount.data.endSlotInterval,
   )
   const previousIndex = getPreviousIndex(referenceIndex)
@@ -552,22 +589,8 @@ export async function sendSubmitOrder({
     tokenProgram: tokenProgram.programAddress,
   })
 
-  const wrapInstructions =
-    wrapShortfall > 0n
-      ? (
-          await client.wsol.prepareWrap({
-            amount: wrapShortfall,
-            authority: walletSigner,
-            commitment: 'confirmed',
-            owner: session.account.address,
-          })
-        ).message.instructions
-      : []
-
   onBeforeSend?.()
-  const { value: blockhashLifetime } = await client.runtime.rpc
-    .getLatestBlockhash({ commitment: 'confirmed' })
-    .send()
+  const { value: blockhashLifetime } = blockhashResponse
 
   const transactionMessage = pipe(
     createTransactionMessage({ version: 0 }),
