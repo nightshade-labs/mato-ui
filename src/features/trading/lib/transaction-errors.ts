@@ -1,5 +1,8 @@
 const GENERIC_TRANSACTION_PLAN_MESSAGE =
   'The provided transaction plan failed to execute.'
+const STALE_MARKET_ACCOUNTS_MESSAGE =
+  'Market timing changed while the transaction was awaiting wallet approval. Please try again.'
+const SOLANA_CUSTOM_INSTRUCTION_ERROR_CODE = 4_615_026
 const SOLANA_SECURE_CONTEXT_ERROR_CODE = 3_610_000
 const SOLANA_BROWSER_CRYPTO_ERROR_CODES = new Set([
   3_610_001, 3_610_002, 3_610_003, 3_610_004, 3_610_005, 3_610_006, 3_611_000,
@@ -53,6 +56,43 @@ function extractKnownSolanaMessage(error: unknown): string | null {
     return BROWSER_CRYPTO_MESSAGE
   }
   return null
+}
+
+function hasStructuredCustomProgramError(error: unknown, code: number) {
+  if (!isRecord(error)) return false
+
+  const context = isRecord(error.context) ? error.context : null
+  const outerCode = extractSolanaErrorCode(error)
+  const programCode = readNumber(context?.code) ?? readNumber(error.code)
+
+  return (
+    outerCode === SOLANA_CUSTOM_INSTRUCTION_ERROR_CODE && programCode === code
+  )
+}
+
+function serializeError(value: unknown) {
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return ''
+  }
+}
+
+function isStaleMarketAccountError(...values: Array<unknown>) {
+  const detail = values
+    .map((value) => (typeof value === 'string' ? value : serializeError(value)))
+    .join(' ')
+
+  return (
+    values.some(
+      (value) =>
+        hasStructuredCustomProgramError(value, 6006) ||
+        hasStructuredCustomProgramError(value, 6007) ||
+        hasStructuredCustomProgramError(value, 6010),
+    ) ||
+    /"Custom"\s*:\s*(?:6006|6007|6010)/.test(detail) ||
+    /custom program error:\s*0x(?:1776|1777|177a)/i.test(detail)
+  )
 }
 
 function readLogs(value: unknown) {
@@ -148,6 +188,10 @@ export function formatTransactionError(error: unknown, fallback: string) {
 
   const message =
     extractMessage(nestedError) ?? extractMessage(error) ?? fallback
+
+  if (isStaleMarketAccountError(message, nestedError, error)) {
+    return STALE_MARKET_ACCOUNTS_MESSAGE
+  }
 
   const logs = extractLogs(nestedError) ?? extractLogs(error)
   if (!logs || logs.length === 0) {
