@@ -3,9 +3,10 @@ import { isRpcRateLimitError } from '@/integrations/solana/rpc'
 const GENERIC_TRANSACTION_PLAN_MESSAGE =
   'The provided transaction plan failed to execute.'
 const STALE_MARKET_ACCOUNTS_MESSAGE =
-  'Market state changed while the transaction was awaiting approval. Please try again.'
+  'Market timing changed while the transaction was awaiting wallet approval. Please try again.'
 const RPC_RATE_LIMIT_MESSAGE =
   'The Solana RPC is temporarily rate-limited. Please wait a few seconds and try again.'
+const SOLANA_CUSTOM_INSTRUCTION_ERROR_CODE = 4_615_026
 const SOLANA_SECURE_CONTEXT_ERROR_CODE = 3_610_000
 const SOLANA_BROWSER_CRYPTO_ERROR_CODES = new Set([
   3_610_001, 3_610_002, 3_610_003, 3_610_004, 3_610_005, 3_610_006, 3_611_000,
@@ -59,6 +60,18 @@ function extractKnownSolanaMessage(error: unknown): string | null {
     return BROWSER_CRYPTO_MESSAGE
   }
   return null
+}
+
+function hasStructuredCustomProgramError(error: unknown, code: number) {
+  if (!isRecord(error)) return false
+
+  const context = isRecord(error.context) ? error.context : null
+  const outerCode = extractSolanaErrorCode(error)
+  const programCode = readNumber(context?.code) ?? readNumber(error.code)
+
+  return (
+    outerCode === SOLANA_CUSTOM_INSTRUCTION_ERROR_CODE && programCode === code
+  )
 }
 
 function readLogs(value: unknown) {
@@ -170,6 +183,12 @@ function isStaleMarketAccountError(...values: Array<unknown>) {
   const detail = serializeErrorDetails(values)
 
   return (
+    values.some(
+      (value) =>
+        hasStructuredCustomProgramError(value, 6006) ||
+        hasStructuredCustomProgramError(value, 6007) ||
+        hasStructuredCustomProgramError(value, 6010),
+    ) ||
     hasCustomProgramError(detail, 6006, '1776', 'WrongExitsAccount') ||
     hasCustomProgramError(detail, 6007, '1777', 'WrongPricesAccount') ||
     hasCustomProgramError(detail, 6010, '177a', 'BookNotUpToDate')

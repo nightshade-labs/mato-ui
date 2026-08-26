@@ -5,6 +5,7 @@ import {
   deriveTemporaryWithdrawTokenAddress,
   fetchMarketTradePositions,
   fetchTradePositions,
+  getApprovalSafeReferenceIndex,
   getReferenceIndex,
   getSwappedPositionAsset,
   getUnpausedEndSlot,
@@ -179,5 +180,17 @@ describe('twob v1 client helpers', () => {
       },
     })
     expect(positions.map((position) => position.data.marketId)).toEqual([4])
+  })
+
+  it('uses the next interval account when bookkeeping is current', () => {
+    expect(getApprovalSafeReferenceIndex(5_000, 4_900n, 107)).toBe(3n)
+  })
+
+  it('keeps the current account when bookkeeping is still in the previous window', () => {
+    expect(getApprovalSafeReferenceIndex(5_000, 4_200n, 107)).toBe(2n)
+  })
+
+  it('advances at the account boundary', () => {
+    expect(getApprovalSafeReferenceIndex(6_420, 6_420n, 107)).toBe(4n)
   })
 })
