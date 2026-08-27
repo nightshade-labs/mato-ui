@@ -10,8 +10,9 @@
     "lint": "eslint",
     "format": "prettier",
     "check": "prettier --write . && eslint --fix",
-    "deploy": "pnpm run build && wrangler deploy",
-    "deploy:preview": "CLOUDFLARE_ENV=preview pnpm run build && wrangler deploy",
+    "verify:production-rpc": "node --import tsx scripts/verify-production-rpc.ts",
+    "deploy": "pnpm run verify:production-rpc && pnpm run build && wrangler deploy",
+    "deploy:preview": "CLOUDFLARE_ENV=preview vite build --mode preview && wrangler deploy",
     "cf-typegen": "wrangler types",
     "generate:client": "tsx scripts/generate-client.ts"
   },

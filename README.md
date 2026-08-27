@@ -20,7 +20,11 @@ pnpm build
 ## Deploying to Cloudflare
 
 Production is deployed to Cloudflare Workers at `mato.markets`. The Worker and
-custom domain are configured in `wrangler.jsonc`.
+custom domain are configured in `wrangler.jsonc`. Copy
+`.env.production.example` to `.env.production.local` and add the direct mainnet
+RPC and WebSocket endpoints before deploying. The `.local` file is ignored by
+Git, but its `VITE_` values are visible in the browser bundle, so use a
+frontend-safe or restricted provider endpoint.
 
 ```bash
 pnpm deploy
