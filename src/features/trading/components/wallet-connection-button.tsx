@@ -22,6 +22,7 @@ import {
   formatExplorerTransactionUrl,
   shortenAddress,
 } from '../lib/format'
+import { formatWalletConnectionError } from '../lib/wallet-connection-errors'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -65,15 +66,6 @@ export function WalletConnectionButton() {
     if (open) return
     reclaimRent.clearFeedback()
   }, [open, reclaimRent.clearFeedback])
-
-  useEffect(() => {
-    if (status !== 'error') return
-
-    toast.error('Wallet connection failed', {
-      description: 'Try another connector.',
-      id: 'wallet-connection-error',
-    })
-  }, [status])
 
   useEffect(() => {
     const signature = reclaimRent.signature
@@ -142,6 +134,21 @@ export function WalletConnectionButton() {
     await navigator.clipboard.writeText(address)
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1_500)
+  }
+
+  const handleConnect = async (
+    connectorId: string,
+    connectorName: string,
+  ): Promise<void> => {
+    try {
+      await connect(connectorId)
+      setOpen(false)
+    } catch (error) {
+      toast.error(`Could not connect to ${connectorName}`, {
+        description: formatWalletConnectionError(error, connectorName),
+        id: 'wallet-connection-error',
+      })
+    }
   }
 
   const showReclaimRentButton = connected && reclaimRent.closeableCount > 0
@@ -253,8 +260,8 @@ export function WalletConnectionButton() {
                     Wallet Standard
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Choose a desktop wallet. The web app uses Wallet Standard
-                    instead of the mobile adapter.
+                    Choose an available wallet. On mobile, open Mato inside your
+                    wallet&apos;s browser.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -262,15 +269,15 @@ export function WalletConnectionButton() {
                     <Button
                       key={connector.id}
                       className="w-full justify-between rounded-xl"
+                      disabled={status === 'connecting'}
                       variant="outline"
                       onClick={() => {
-                        void connect(connector.id, { autoConnect: true })
-                        setOpen(false)
+                        void handleConnect(connector.id, connector.name)
                       }}
                     >
                       {connector.name}
                       <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                        Connect
+                        {status === 'connecting' ? 'Connecting' : 'Connect'}
                       </span>
                     </Button>
                   ))}
