@@ -6,8 +6,12 @@ function normalizeEnvValue(value: unknown) {
     : undefined
 }
 
-function readViteEnv(name: string) {
-  return normalizeEnvValue(import.meta.env[name])
+function readViteSolanaRpcUrl() {
+  return normalizeEnvValue(import.meta.env.VITE_SOLANA_RPC_URL)
+}
+
+function readViteSolanaWebsocketUrl() {
+  return normalizeEnvValue(import.meta.env.VITE_SOLANA_WS_URL)
 }
 
 function readProcessEnv(name: string) {
@@ -30,17 +34,14 @@ function toWebsocketEndpoint(endpoint: string) {
 }
 
 export function getBrowserSolanaRpcEndpoint() {
-  return firstDefined(
-    [readViteEnv('VITE_SOLANA_RPC_URL')],
-    DEFAULT_SOLANA_RPC_ENDPOINT,
-  )
+  return firstDefined([readViteSolanaRpcUrl()], DEFAULT_SOLANA_RPC_ENDPOINT)
 }
 
 export function getBrowserSolanaWebsocketEndpoint(
   endpoint = getBrowserSolanaRpcEndpoint(),
 ) {
   return firstDefined(
-    [readViteEnv('VITE_SOLANA_WS_URL')],
+    [readViteSolanaWebsocketUrl()],
     toWebsocketEndpoint(endpoint),
   )
 }
@@ -50,7 +51,7 @@ export function getSolanaRpcEndpoint() {
     [
       readProcessEnv('SOLANA_RPC_URL'),
       readProcessEnv('VITE_SOLANA_RPC_URL'),
-      readViteEnv('VITE_SOLANA_RPC_URL'),
+      readViteSolanaRpcUrl(),
     ],
     DEFAULT_SOLANA_RPC_ENDPOINT,
   )
@@ -61,7 +62,7 @@ export function getSolanaWebsocketEndpoint(endpoint = getSolanaRpcEndpoint()) {
     [
       readProcessEnv('SOLANA_WS_URL'),
       readProcessEnv('VITE_SOLANA_WS_URL'),
-      readViteEnv('VITE_SOLANA_WS_URL'),
+      readViteSolanaWebsocketUrl(),
     ],
     toWebsocketEndpoint(endpoint),
   )
